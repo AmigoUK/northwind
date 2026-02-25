@@ -20,21 +20,106 @@ built with **Python + Textual + SQLite** as a university learning project.
 
 ## Screenshots
 
-![Dashboard](screenshots/dashboard.png)
-![Customers](screenshots/customers.png)
-![Adding a customer](screenshots/adding%20customer.png)
-![Orders](screenshots/orders.png)
-![New order](screenshots/new%20order.png)
-![Editing existing order](screenshots/editing%20existing%20order.png)
-![Products](screenshots/products.png)
-![Employees](screenshots/employees.png)
-![Suppliers](screenshots/supliers.png)
-![Categories](screenshots/categories.png)
-![Shippers](screenshots/shippers.png)
-![Regions & Territories](screenshots/regions%20and%20terretories1.png)
-![Reports](screenshots/reports.png)
-![CSV export](screenshots/csv%20export.png)
-![Settings](screenshots/settings.png)
+> Click any thumbnail to view full size.
+
+### Main panels
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" width="260" alt="Dashboard"/></a><br/>
+      <sub><b>Dashboard</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/customers.png"><img src="screenshots/customers.png" width="260" alt="Customers"/></a><br/>
+      <sub><b>Customers</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/orders.png"><img src="screenshots/orders.png" width="260" alt="Orders"/></a><br/>
+      <sub><b>Orders</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/products.png"><img src="screenshots/products.png" width="260" alt="Products"/></a><br/>
+      <sub><b>Products</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/employees.png"><img src="screenshots/employees.png" width="260" alt="Employees"/></a><br/>
+      <sub><b>Employees</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/supliers.png"><img src="screenshots/supliers.png" width="260" alt="Suppliers"/></a><br/>
+      <sub><b>Suppliers</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/categories.png"><img src="screenshots/categories.png" width="260" alt="Categories"/></a><br/>
+      <sub><b>Categories</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/shippers.png"><img src="screenshots/shippers.png" width="260" alt="Shippers"/></a><br/>
+      <sub><b>Shippers</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/regions and terretories1.png"><img src="screenshots/regions and terretories1.png" width="260" alt="Regions &amp; Territories"/></a><br/>
+      <sub><b>Regions &amp; Territories</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Admin &amp; advanced features
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/sql-query.png"><img src="screenshots/sql-query.png" width="260" alt="SQL Query"/></a><br/>
+      <sub><b>SQL Query editor</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/usermanagement.png"><img src="screenshots/usermanagement.png" width="260" alt="User Management"/></a><br/>
+      <sub><b>User Management</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/settings-currency.png"><img src="screenshots/settings-currency.png" width="260" alt="Currency Settings"/></a><br/>
+      <sub><b>Currency Settings</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/reports.png"><img src="screenshots/reports.png" width="260" alt="Reports"/></a><br/>
+      <sub><b>Reports</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/csv export.png"><img src="screenshots/csv export.png" width="260" alt="CSV Export"/></a><br/>
+      <sub><b>CSV Export</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/settings.png"><img src="screenshots/settings.png" width="260" alt="Settings"/></a><br/>
+      <sub><b>Settings</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Forms &amp; modals in action
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/adding customer.png"><img src="screenshots/adding customer.png" width="260" alt="Adding a customer"/></a><br/>
+      <sub><b>Adding a customer</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/new order.png"><img src="screenshots/new order.png" width="260" alt="New order"/></a><br/>
+      <sub><b>New order</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/editing existing order.png"><img src="screenshots/editing existing order.png" width="260" alt="Editing an order"/></a><br/>
+      <sub><b>Editing an order</b></sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -101,7 +186,7 @@ northwind/
 
 | Key | Action |
 |-----|--------|
-| `Q` | Quit |
+| `ctrl+Q` | Quit (shows confirmation dialog) |
 | `N` | New record (in active panel) |
 | `F` | Focus search box (in active panel) |
 | `ctrl+r` | Run SQL query (SQL Query panel) |
