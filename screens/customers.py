@@ -29,24 +29,35 @@ class CustomerFormModal(ModalScreen):
                 yield Input(id="f-id", max_length=5, placeholder="CSTMR")
             yield Label("Company Name *:")
             yield Input(id="f-company", placeholder="Company Name")
-            yield Label("Contact Name:")
-            yield Input(id="f-contact", placeholder="Contact Name")
-            yield Label("Contact Title:")
-            yield Input(id="f-title", placeholder="Contact Title")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Contact Name:")
+                    yield Input(id="f-contact", placeholder="Contact Name")
+                with Vertical(classes="form-field"):
+                    yield Label("Contact Title:")
+                    yield Input(id="f-title", placeholder="Contact Title")
             yield Label("Address:")
             yield Input(id="f-address", placeholder="Address")
-            yield Label("City:")
-            yield Input(id="f-city", placeholder="City")
-            yield Label("Region:")
-            yield Input(id="f-region", placeholder="Region")
-            yield Label("Postal Code:")
-            yield Input(id="f-postal", placeholder="Postal Code")
-            yield Label("Country:")
-            yield Input(id="f-country", placeholder="Country")
-            yield Label("Phone:")
-            yield Input(id="f-phone", placeholder="Phone")
-            yield Label("Fax:")
-            yield Input(id="f-fax", placeholder="Fax")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("City:")
+                    yield Input(id="f-city", placeholder="City")
+                with Vertical(classes="form-field"):
+                    yield Label("Region:")
+                    yield Input(id="f-region", placeholder="Region")
+                with Vertical(classes="form-field"):
+                    yield Label("Postal Code:")
+                    yield Input(id="f-postal", placeholder="Postal Code")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Country:")
+                    yield Input(id="f-country", placeholder="Country")
+                with Vertical(classes="form-field"):
+                    yield Label("Phone:")
+                    yield Input(id="f-phone", placeholder="Phone")
+                with Vertical(classes="form-field"):
+                    yield Label("Fax:")
+                    yield Input(id="f-fax", placeholder="Fax")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")

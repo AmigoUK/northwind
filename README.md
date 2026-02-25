@@ -15,6 +15,8 @@ built with **Python + Textual + SQLite** as a university learning project.
 - **Configurable currency** — symbol and name saved to SQLite ($ → £ → € etc.)
 - **PIN-based login** with role management (admin / user)
 - **Role-based UI** — admin sees SQL Query, Users, and Settings panels; regular users do not
+- **Compact multi-column form modals** — related fields (name, address, dates) displayed
+  side-by-side using CSS `1fr` columns, reducing modal height and eliminating scrolling
 
 ---
 
@@ -107,16 +109,30 @@ built with **Python + Textual + SQLite** as a university learning project.
 <table>
   <tr>
     <td align="center">
+      <a href="screenshots/better-modal-windows.png"><img src="screenshots/better-modal-windows.png" width="260" alt="Multi-column form modal"/></a><br/>
+      <sub><b>Multi-column form (Customer)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/better-modal-windows2.png"><img src="screenshots/better-modal-windows2.png" width="260" alt="Multi-column form modal 2"/></a><br/>
+      <sub><b>Multi-column form (Employee)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/modal3.png"><img src="screenshots/modal3.png" width="260" alt="Multi-column form modal 3"/></a><br/>
+      <sub><b>Multi-column form (Order)</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <a href="screenshots/adding customer.png"><img src="screenshots/adding customer.png" width="260" alt="Adding a customer"/></a><br/>
-      <sub><b>Adding a customer</b></sub>
+      <sub><b>Adding a customer (before)</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/new order.png"><img src="screenshots/new order.png" width="260" alt="New order"/></a><br/>
-      <sub><b>New order</b></sub>
+      <sub><b>New order (before)</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/editing existing order.png"><img src="screenshots/editing existing order.png" width="260" alt="Editing an order"/></a><br/>
-      <sub><b>Editing an order</b></sub>
+      <sub><b>Editing an order (before)</b></sub>
     </td>
   </tr>
 </table>
@@ -179,6 +195,7 @@ northwind/
 | `TextArea` widget for multi-line code input | `screens/sql.py` |
 | CSV export with Python's `csv` module | `screens/sql.py`, reports |
 | MVC-style layered architecture (`data/` + `screens/`) | whole project |
+| Textual CSS `1fr` columns (`Horizontal` + `Vertical`) for multi-column form rows | `northwind.tcss`, all form modals |
 
 ---
 

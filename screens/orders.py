@@ -81,12 +81,16 @@ class LineItemFormModal(ModalScreen):
             with Horizontal():
                 yield Label("(none)", id="lbl-product")
                 yield Button("Pick Product", id="btn-pick-prod")
-            yield Label("Unit Price:")
-            yield Input(id="f-price", placeholder="0.00")
-            yield Label("Quantity:")
-            yield Input(id="f-qty", value="1", placeholder="1")
-            yield Label("Discount (0.00 - 1.00):")
-            yield Input(id="f-disc", value="0.00", placeholder="0.00")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Unit Price:")
+                    yield Input(id="f-price", placeholder="0.00")
+                with Vertical(classes="form-field"):
+                    yield Label("Quantity:")
+                    yield Input(id="f-qty", value="1", placeholder="1")
+                with Vertical(classes="form-field"):
+                    yield Label("Discount (0.00 - 1.00):")
+                    yield Input(id="f-disc", value="0.00", placeholder="0.00")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Add", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
@@ -168,22 +172,30 @@ class OrderFormModal(ModalScreen):
             with Horizontal():
                 yield Label("(none)", id="lbl-shipper")
                 yield Button("Pick Shipper", id="btn-pick-ship")
-            yield Label("Order Date (YYYY-MM-DD):")
-            yield Input(id="f-orderdate", placeholder="1996-07-04")
-            yield Label("Required Date (YYYY-MM-DD):")
-            yield Input(id="f-reqdate",   placeholder="1996-08-01")
-            yield Label("Freight:")
-            yield Input(id="f-freight",   value="0.00", placeholder="0.00")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Order Date (YYYY-MM-DD):")
+                    yield Input(id="f-orderdate", placeholder="1996-07-04")
+                with Vertical(classes="form-field"):
+                    yield Label("Required Date (YYYY-MM-DD):")
+                    yield Input(id="f-reqdate", placeholder="1996-08-01")
+                with Vertical(classes="form-field"):
+                    yield Label("Freight:")
+                    yield Input(id="f-freight", value="0.00", placeholder="0.00")
             yield Label("Ship Name:")
-            yield Input(id="f-shipname",  placeholder="Ship Name")
+            yield Input(id="f-shipname", placeholder="Ship Name")
             yield Label("Ship Address:")
-            yield Input(id="f-shipaddr",  placeholder="Ship Address")
-            yield Label("Ship City:")
-            yield Input(id="f-shipcity",  placeholder="Ship City")
-            yield Label("Ship Region:")
-            yield Input(id="f-shipreg",   placeholder="Ship Region")
-            yield Label("Ship Postal Code:")
-            yield Input(id="f-shippost",  placeholder="Ship Postal Code")
+            yield Input(id="f-shipaddr", placeholder="Ship Address")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Ship City:")
+                    yield Input(id="f-shipcity", placeholder="Ship City")
+                with Vertical(classes="form-field"):
+                    yield Label("Ship Region:")
+                    yield Input(id="f-shipreg", placeholder="Ship Region")
+                with Vertical(classes="form-field"):
+                    yield Label("Ship Postal Code:")
+                    yield Input(id="f-shippost", placeholder="Ship Postal Code")
             yield Label("Ship Country:")
             yield Input(id="f-shipcntry", placeholder="Ship Country")
             with Horizontal(classes="modal-buttons"):
@@ -479,26 +491,34 @@ class OrderHeaderEditModal(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
             yield Label(f"Edit Order #{self.order_id} Header", classes="modal-title")
-            yield Label("Order Date (YYYY-MM-DD):")
-            yield Input(id="f-orderdate", placeholder="1996-07-04")
-            yield Label("Required Date (YYYY-MM-DD):")
-            yield Input(id="f-reqdate",   placeholder="1996-08-01")
-            yield Label("Freight:")
-            yield Input(id="f-freight",   placeholder="0.00")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Order Date (YYYY-MM-DD):")
+                    yield Input(id="f-orderdate", placeholder="1996-07-04")
+                with Vertical(classes="form-field"):
+                    yield Label("Required Date (YYYY-MM-DD):")
+                    yield Input(id="f-reqdate", placeholder="1996-08-01")
+                with Vertical(classes="form-field"):
+                    yield Label("Freight:")
+                    yield Input(id="f-freight", placeholder="0.00")
             yield Label("Shipper:")
             with Horizontal():
                 yield Label("(current)", id="lbl-shipper")
                 yield Button("Change Shipper", id="btn-pick-ship")
             yield Label("Ship Name:")
-            yield Input(id="f-shipname",  placeholder="Ship Name")
+            yield Input(id="f-shipname", placeholder="Ship Name")
             yield Label("Ship Address:")
-            yield Input(id="f-shipaddr",  placeholder="Ship Address")
-            yield Label("Ship City:")
-            yield Input(id="f-shipcity",  placeholder="Ship City")
-            yield Label("Ship Region:")
-            yield Input(id="f-shipreg",   placeholder="Ship Region")
-            yield Label("Ship Postal Code:")
-            yield Input(id="f-shippost",  placeholder="Ship Postal Code")
+            yield Input(id="f-shipaddr", placeholder="Ship Address")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Ship City:")
+                    yield Input(id="f-shipcity", placeholder="Ship City")
+                with Vertical(classes="form-field"):
+                    yield Label("Ship Region:")
+                    yield Input(id="f-shipreg", placeholder="Ship Region")
+                with Vertical(classes="form-field"):
+                    yield Label("Ship Postal Code:")
+                    yield Input(id="f-shippost", placeholder="Ship Postal Code")
             yield Label("Ship Country:")
             yield Input(id="f-shipcntry", placeholder="Ship Country")
             with Horizontal(classes="modal-buttons"):

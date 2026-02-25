@@ -67,34 +67,51 @@ class EmployeeFormModal(ModalScreen):
                 "Add Employee" if not self.pk else f"Edit Employee #{self.pk}",
                 classes="modal-title",
             )
-            yield Label("Last Name *:")
-            yield Input(id="f-lastname",  placeholder="Last Name")
-            yield Label("First Name *:")
-            yield Input(id="f-firstname", placeholder="First Name")
-            yield Label("Title:")
-            yield Input(id="f-title",     placeholder="Title")
-            yield Label("Title of Courtesy:")
-            yield Input(id="f-toc",       placeholder="Mr./Ms./Dr.")
-            yield Label("Birth Date (YYYY-MM-DD):")
-            yield Input(id="f-birth",     placeholder="1970-01-01")
-            yield Label("Hire Date (YYYY-MM-DD):")
-            yield Input(id="f-hire",      placeholder="2000-01-01")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Last Name *:")
+                    yield Input(id="f-lastname", placeholder="Last Name")
+                with Vertical(classes="form-field"):
+                    yield Label("First Name *:")
+                    yield Input(id="f-firstname", placeholder="First Name")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Title:")
+                    yield Input(id="f-title", placeholder="Title")
+                with Vertical(classes="form-field"):
+                    yield Label("Title of Courtesy:")
+                    yield Input(id="f-toc", placeholder="Mr./Ms./Dr.")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Birth Date (YYYY-MM-DD):")
+                    yield Input(id="f-birth", placeholder="1970-01-01")
+                with Vertical(classes="form-field"):
+                    yield Label("Hire Date (YYYY-MM-DD):")
+                    yield Input(id="f-hire", placeholder="2000-01-01")
             yield Label("Address:")
-            yield Input(id="f-address",   placeholder="Address")
-            yield Label("City:")
-            yield Input(id="f-city",      placeholder="City")
-            yield Label("Region:")
-            yield Input(id="f-region",    placeholder="Region")
-            yield Label("Postal Code:")
-            yield Input(id="f-postal",    placeholder="Postal Code")
-            yield Label("Country:")
-            yield Input(id="f-country",   placeholder="Country")
-            yield Label("Home Phone:")
-            yield Input(id="f-phone",     placeholder="Phone")
-            yield Label("Extension:")
-            yield Input(id="f-ext",       placeholder="Extension")
+            yield Input(id="f-address", placeholder="Address")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("City:")
+                    yield Input(id="f-city", placeholder="City")
+                with Vertical(classes="form-field"):
+                    yield Label("Region:")
+                    yield Input(id="f-region", placeholder="Region")
+                with Vertical(classes="form-field"):
+                    yield Label("Postal Code:")
+                    yield Input(id="f-postal", placeholder="Postal Code")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Country:")
+                    yield Input(id="f-country", placeholder="Country")
+                with Vertical(classes="form-field"):
+                    yield Label("Home Phone:")
+                    yield Input(id="f-phone", placeholder="Phone")
+                with Vertical(classes="form-field"):
+                    yield Label("Extension:")
+                    yield Input(id="f-ext", placeholder="Extension")
             yield Label("Notes:")
-            yield Input(id="f-notes",     placeholder="Notes")
+            yield Input(id="f-notes", placeholder="Notes")
             yield Label("Reports To:")
             with Horizontal():
                 yield Label("(none)", id="lbl-manager")

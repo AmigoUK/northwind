@@ -27,19 +27,26 @@ class ProductFormModal(ModalScreen):
                 classes="modal-title",
             )
             yield Label("Product Name *:")
-            yield Input(id="f-name",  placeholder="Product Name")
+            yield Input(id="f-name", placeholder="Product Name")
             yield Label("Quantity Per Unit:")
-            yield Input(id="f-qty",   placeholder="e.g. 10 boxes x 20 bags")
-            yield Label("Unit Price:")
-            yield Input(id="f-price", placeholder="0.00")
-            yield Label("Units In Stock:")
-            yield Input(id="f-stock", placeholder="0")
-            yield Label("Units On Order:")
-            yield Input(id="f-order", placeholder="0")
-            yield Label("Reorder Level:")
-            yield Input(id="f-reord", placeholder="0")
-            yield Label("Discontinued:")
-            yield Switch(id="sw-discontinued", value=False)
+            yield Input(id="f-qty", placeholder="e.g. 10 boxes x 20 bags")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Unit Price:")
+                    yield Input(id="f-price", placeholder="0.00")
+                with Vertical(classes="form-field"):
+                    yield Label("Units In Stock:")
+                    yield Input(id="f-stock", placeholder="0")
+                with Vertical(classes="form-field"):
+                    yield Label("Reorder Level:")
+                    yield Input(id="f-reord", placeholder="0")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Units On Order:")
+                    yield Input(id="f-order", placeholder="0")
+                with Vertical(classes="form-field"):
+                    yield Label("Discontinued:")
+                    yield Switch(id="sw-discontinued", value=False)
             yield Label("Category:")
             with Horizontal():
                 yield Label("(none)", id="lbl-category")

@@ -30,18 +30,21 @@ class UserFormModal(ModalScreen):
         title = "Edit User" if self._user else "New User"
         with Vertical(classes="modal-dialog"):
             yield Label(title, classes="modal-title")
-            yield Label("Username")
-            yield Input(
-                value=self._user["username"] if self._user else "",
-                placeholder="username",
-                id="f-username",
-            )
-            yield Label("Display Name")
-            yield Input(
-                value=self._user["display_name"] if self._user else "",
-                placeholder="Display Name",
-                id="f-display-name",
-            )
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Username")
+                    yield Input(
+                        value=self._user["username"] if self._user else "",
+                        placeholder="username",
+                        id="f-username",
+                    )
+                with Vertical(classes="form-field"):
+                    yield Label("Display Name")
+                    yield Input(
+                        value=self._user["display_name"] if self._user else "",
+                        placeholder="Display Name",
+                        id="f-display-name",
+                    )
             yield Label("PIN (leave blank to keep existing)" if self._user else "PIN (4 digits)")
             yield Input(placeholder="••••", id="f-pin", password=True, max_length=4)
             yield Label("Role")

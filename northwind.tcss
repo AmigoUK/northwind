@@ -348,6 +348,31 @@ LoginScreen {
     content-align: left middle;
 }
 
+/* ── Multi-column form rows ────────────────────────────────────────────────*/
+.form-row {
+    height: auto;
+    margin-top: 1;
+}
+
+.form-field {
+    width: 1fr;
+    height: auto;
+    padding-right: 1;
+}
+
+.form-field:last-child {
+    padding-right: 0;
+}
+
+.form-field Label {
+    height: 1;
+    margin-top: 0;
+}
+
+.form-field Input {
+    width: 1fr;
+}
+
 /* ── Modal ESC hint ─────────────────────────────────────────────────────────*/
 .modal-hint {
     color: $text-muted;
