@@ -20,6 +20,7 @@ class ConfirmDeleteModal(ModalScreen[bool]):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Delete", id="btn-yes", variant="error")
                 yield Button("Cancel", id="btn-no", variant="primary")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         self.query_one("#btn-no").focus()
@@ -92,6 +93,7 @@ class PickerModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Select", id="btn-select", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         tbl = self.query_one("#picker-tbl", DataTable)

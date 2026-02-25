@@ -347,3 +347,13 @@ LoginScreen {
     height: 2;
     content-align: left middle;
 }
+
+/* ── Modal ESC hint ─────────────────────────────────────────────────────────*/
+.modal-hint {
+    color: $text-muted;
+    height: 1;
+    margin-top: 0;
+    text-align: right;
+    content-align: right middle;
+    width: 1fr;
+}

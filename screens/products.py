@@ -7,6 +7,7 @@ from textual.widgets import Button, DataTable, Input, Label, Static, Switch
 from textual import on
 
 import data.products as pdata
+from data.settings import get_currency_symbol
 import data.categories as cdata
 import data.suppliers as sdata
 from screens.modals import ConfirmDeleteModal, PickerModal
@@ -50,6 +51,7 @@ class ProductFormModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         if self.pk:
@@ -168,11 +170,13 @@ class ProductDetailModal(ModalScreen):
                 yield Button("Edit",   id="btn-edit",   variant="primary")
                 yield Button("Delete", id="btn-delete", variant="error")
                 yield Button("Close",  id="btn-close")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         self._load()
 
     def _load(self) -> None:
+        sym = get_currency_symbol()
         row = pdata.get_by_pk(self.pk)
         if not row:
             self.dismiss(self._changed)
@@ -184,7 +188,7 @@ class ProductDetailModal(ModalScreen):
             f"[b]Category:[/b]       #{row.get('CategoryID', '')} {row.get('CategoryName') or ''}",
             f"[b]Supplier:[/b]       #{row.get('SupplierID', '')} {row.get('SupplierName') or ''}",
             f"[b]Qty Per Unit:[/b]   {row.get('QuantityPerUnit') or ''}",
-            f"[b]Unit Price:[/b]     ${row.get('UnitPrice', 0.0):.2f}",
+            f"[b]Unit Price:[/b]     {sym}{row.get('UnitPrice', 0.0):.2f}",
             f"[b]Units In Stock:[/b] {row.get('UnitsInStock', 0)}",
             f"[b]Units On Order:[/b] {row.get('UnitsOnOrder', 0)}",
             f"[b]Reorder Level:[/b]  {row.get('ReorderLevel', 0)}",

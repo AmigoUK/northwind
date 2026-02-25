@@ -19,6 +19,7 @@ class OrgChartModal(ModalScreen):
             yield Tree("Northwind Traders", id="org-tree")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Close", id="btn-close", variant="primary")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         tree = self.query_one(Tree)
@@ -101,6 +102,7 @@ class EmployeeFormModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         if self.pk:
@@ -214,6 +216,7 @@ class EmployeeDetailModal(ModalScreen):
                 yield Button("Edit",   id="btn-edit",   variant="primary")
                 yield Button("Delete", id="btn-delete", variant="error")
                 yield Button("Close",  id="btn-close")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         self._load()

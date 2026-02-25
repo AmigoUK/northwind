@@ -53,6 +53,7 @@ class UserFormModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_key(self, event: Key) -> None:
         if event.key == "escape":

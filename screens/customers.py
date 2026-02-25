@@ -50,6 +50,7 @@ class CustomerFormModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         if self.pk:
@@ -124,6 +125,7 @@ class CustomerDetailModal(ModalScreen):
                 yield Button("Edit",   id="btn-edit",   variant="primary")
                 yield Button("Delete", id="btn-delete", variant="error")
                 yield Button("Close",  id="btn-close")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         self._load()

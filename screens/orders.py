@@ -8,6 +8,7 @@ from textual.widgets import Button, DataTable, Input, Label, Static
 from textual import on
 
 import data.orders as odata
+from data.settings import get_currency_symbol
 import data.customers as cdata
 import data.employees as edata
 import data.shippers as shdata
@@ -30,6 +31,7 @@ class ShipOrderModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         from datetime import date
@@ -88,6 +90,7 @@ class LineItemFormModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Add", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     @on(Button.Pressed, "#btn-pick-prod")
     def on_pick_product(self) -> None:
@@ -186,6 +189,7 @@ class OrderFormModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Create Order", id="btn-save", variant="primary")
                 yield Button("Cancel",       id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         from datetime import date
@@ -327,6 +331,7 @@ class OrderDetailModal(ModalScreen):
                 yield Button("- Item",      id="btn-remove", variant="warning")
                 yield Button("Delete",      id="btn-delete", variant="error")
                 yield Button("Close",       id="btn-close")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         tbl = self.query_one("#lines-tbl", DataTable)
@@ -338,6 +343,7 @@ class OrderDetailModal(ModalScreen):
         self._load()
 
     def _load(self) -> None:
+        sym = get_currency_symbol()
         hdr = odata.get_by_pk(self.order_id)
         if not hdr:
             self.dismiss(self._changed)
@@ -366,9 +372,9 @@ class OrderDetailModal(ModalScreen):
                 str(ln["ProductID"]),
                 ln["ProductName"],
                 str(ln["Quantity"]),
-                f"${ln['UnitPrice']:.2f}",
+                f"{sym}{ln['UnitPrice']:.2f}",
                 f"{ln['Discount']*100:.0f}%",
-                f"${ln['LineTotal']:.2f}",
+                f"{sym}{ln['LineTotal']:.2f}",
                 key=str(ln["ProductID"]),
             )
 
@@ -379,9 +385,9 @@ class OrderDetailModal(ModalScreen):
             freight  = totals["Freight"] or 0.0
             grand    = subtotal + freight
             totals_text = (
-                f"[b]Subtotal:[/b]    ${subtotal:>10.2f}\n"
-                f"[b]Freight:[/b]     ${freight:>10.2f}\n"
-                f"[b]GRAND TOTAL:[/b] ${grand:>9.2f}"
+                f"[b]Subtotal:[/b]    {sym}{subtotal:>10.2f}\n"
+                f"[b]Freight:[/b]     {sym}{freight:>10.2f}\n"
+                f"[b]GRAND TOTAL:[/b] {sym}{grand:>9.2f}"
             )
             self.query_one("#order-totals", Static).update(totals_text)
 
@@ -498,6 +504,7 @@ class OrderHeaderEditModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save",   id="btn-save",   variant="primary")
                 yield Button("Cancel", id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
         row = odata.get_by_pk(self.order_id)
