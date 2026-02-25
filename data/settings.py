@@ -26,3 +26,7 @@ def set_setting(key: str, value: str) -> None:
 
 def get_currency_symbol() -> str:
     return get_setting("currency_symbol", "$")
+
+
+def get_theme_name() -> str:
+    return get_setting("theme", "textual-dark")

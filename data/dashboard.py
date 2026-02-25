@@ -1,5 +1,6 @@
 """data/dashboard.py — KPI queries and recent-orders snapshot for the Dashboard panel."""
 from db import get_connection
+from data.settings import get_currency_symbol
 
 
 def kpis() -> dict:
@@ -25,6 +26,7 @@ def kpis() -> dict:
 
 def recent_orders(n: int = 10) -> list:
     """Return the last n orders as list of lists: [ID, Customer, OrderDate, ShippedDate, Total]."""
+    sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
         """SELECT o.OrderID,
@@ -42,6 +44,6 @@ def recent_orders(n: int = 10) -> list:
     ).fetchall()
     conn.close()
     return [
-        [r["OrderID"], r["Customer"], r["OrderDate"] or "", r["Shipped"], f"${r['Total']:.2f}"]
+        [r["OrderID"], r["Customer"], r["OrderDate"] or "", r["Shipped"], f"{sym}{r['Total']:.2f}"]
         for r in rows
     ]

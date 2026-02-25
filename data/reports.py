@@ -1,8 +1,10 @@
 """data/reports.py — SQL-only aggregation queries."""
 from db import get_connection
+from data.settings import get_currency_symbol
 
 
 def sales_by_customer() -> tuple[list, list]:
+    sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
         """SELECT c.CustomerID,
@@ -17,11 +19,12 @@ def sales_by_customer() -> tuple[list, list]:
     ).fetchall()
     conn.close()
     headers = [("ID", 6), ("Company Name", 30), ("Orders", 7), ("Revenue", 12)]
-    data = [[r["CustomerID"], r["CompanyName"], r["Orders"], f"${r['Revenue']:.2f}"] for r in rows]
+    data = [[r["CustomerID"], r["CompanyName"], r["Orders"], f"{sym}{r['Revenue']:.2f}"] for r in rows]
     return headers, data
 
 
 def sales_by_product() -> tuple[list, list]:
+    sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
         """SELECT p.ProductID, p.ProductName, c.CategoryName,
@@ -35,11 +38,12 @@ def sales_by_product() -> tuple[list, list]:
     ).fetchall()
     conn.close()
     headers = [("ID", 4), ("Product Name", 26), ("Category", 16), ("Units Sold", 10), ("Revenue", 12)]
-    data = [[r["ProductID"], r["ProductName"], r["CategoryName"], r["UnitsSold"], f"${r['Revenue']:.2f}"] for r in rows]
+    data = [[r["ProductID"], r["ProductName"], r["CategoryName"], r["UnitsSold"], f"{sym}{r['Revenue']:.2f}"] for r in rows]
     return headers, data
 
 
 def sales_by_employee() -> tuple[list, list]:
+    sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
         """SELECT e.EmployeeID,
@@ -55,11 +59,12 @@ def sales_by_employee() -> tuple[list, list]:
     ).fetchall()
     conn.close()
     headers = [("ID", 4), ("Employee Name", 22), ("Title", 26), ("Orders", 7), ("Revenue", 12)]
-    data = [[r["EmployeeID"], r["EmployeeName"], r["Title"], r["Orders"], f"${r['Revenue']:.2f}"] for r in rows]
+    data = [[r["EmployeeID"], r["EmployeeName"], r["Title"], r["Orders"], f"{sym}{r['Revenue']:.2f}"] for r in rows]
     return headers, data
 
 
 def top_10() -> tuple[list, list]:
+    sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
         """SELECT p.ProductName, c.CategoryName,
@@ -74,7 +79,7 @@ def top_10() -> tuple[list, list]:
     ).fetchall()
     conn.close()
     headers = [("Rank", 5), ("Product Name", 26), ("Category", 16), ("Units Sold", 10), ("Revenue", 12)]
-    data = [[i + 1, r["ProductName"], r["CategoryName"], r["UnitsSold"], f"${r['Revenue']:.2f}"] for i, r in enumerate(rows)]
+    data = [[i + 1, r["ProductName"], r["CategoryName"], r["UnitsSold"], f"{sym}{r['Revenue']:.2f}"] for i, r in enumerate(rows)]
     return headers, data
 
 
@@ -95,6 +100,7 @@ def low_stock_alert() -> tuple[list, list]:
 
 
 def orders_by_date_range(date_from: str, date_to: str) -> tuple[list, list]:
+    sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
         """SELECT o.OrderID,
@@ -112,5 +118,5 @@ def orders_by_date_range(date_from: str, date_to: str) -> tuple[list, list]:
     ).fetchall()
     conn.close()
     headers = [("ID", 6), ("Customer", 25), ("Employee", 20), ("Order Date", 12), ("Shipped", 12), ("Total", 10)]
-    data = [[r["OrderID"], r["Customer"], r["Employee"], r["OrderDate"], r["ShippedDate"] or "(pending)", f"${r['Total']:.2f}"] for r in rows]
+    data = [[r["OrderID"], r["Customer"], r["Employee"], r["OrderDate"], r["ShippedDate"] or "(pending)", f"{sym}{r['Total']:.2f}"] for r in rows]
     return headers, data

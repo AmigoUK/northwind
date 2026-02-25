@@ -112,10 +112,18 @@ class NorthwindApp(App):
         self.push_screen(LoginScreen(), callback=self._on_login)
 
     def _on_login(self, user: dict) -> None:
+        from data.settings import get_theme_name
         self._current_user = user
         nav = self.query_one("#nav-list", ListView)
         nav.index = 0
         self._apply_role_visibility()
+        self.theme = get_theme_name()
+
+    def watch_theme(self, theme: str) -> None:
+        """Auto-save theme whenever it changes (via ^p palette or settings)."""
+        if self._current_user is not None:
+            from data.settings import set_setting
+            set_setting("theme", theme)
 
     def _apply_role_visibility(self) -> None:
         """Show admin-only sidebar items only for admin users."""

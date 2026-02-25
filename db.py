@@ -415,6 +415,7 @@ def _seed_settings() -> None:
     conn = get_connection()
     conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("currency_symbol", "$"))
     conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("currency_name",   "USD"))
+    conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("theme",            "textual-dark"))
     conn.commit()
     conn.close()
 
