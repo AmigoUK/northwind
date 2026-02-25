@@ -1,0 +1,277 @@
+/* northwind.tcss — Textual CSS for Northwind Traders TUI */
+
+/* ── Global ────────────────────────────────────────────────────────────────── */
+Screen {
+    layers: base modal;
+}
+
+/* ── Two-panel layout ────────────────────────────────────────────────────────*/
+#sidebar {
+    width: 20;
+    height: 1fr;
+    background: $panel;
+    border-right: solid $primary-darken-1;
+    dock: left;
+}
+
+#sidebar-title {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+    padding: 0 1;
+    height: 3;
+    content-align: center middle;
+    width: 1fr;
+}
+
+#nav-list {
+    height: 1fr;
+    background: $panel;
+}
+
+#nav-list > ListItem {
+    padding: 0 1;
+}
+
+#nav-list > ListItem.--highlight {
+    background: $accent;
+    color: $text;
+}
+
+#content {
+    height: 1fr;
+}
+
+/* ── Panel containers ───────────────────────────────────────────────────────*/
+.panel-container {
+    height: 1fr;
+    padding: 0 1;
+}
+
+.panel-container Vertical {
+    height: 1fr;
+}
+
+.panel-container Input#search-box {
+    height: 3;
+    margin-bottom: 0;
+}
+
+.panel-container DataTable {
+    height: 1fr;
+    border: solid $primary-darken-2;
+}
+
+.panel-title {
+    text-style: bold;
+    color: $accent;
+    height: 2;
+    content-align: left middle;
+    padding-left: 1;
+}
+
+.section-label {
+    text-style: bold;
+    height: 2;
+    content-align: left middle;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────────────────*/
+.toolbar {
+    height: 3;
+    align: left middle;
+    margin-top: 1;
+}
+
+.toolbar Button {
+    margin-right: 1;
+}
+
+/* ── Modal backdrop ─────────────────────────────────────────────────────────*/
+ModalScreen {
+    align: center middle;
+    background: $background 75%;
+}
+
+/* ── Standard modal dialog ──────────────────────────────────────────────────*/
+.modal-dialog {
+    width: 72;
+    max-height: 46;
+    background: $surface;
+    border: double $primary;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+.modal-dialog Label.modal-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+    width: 1fr;
+}
+
+.modal-subtitle {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+.modal-dialog Label {
+    height: 1;
+    margin-top: 1;
+}
+
+.modal-dialog Input {
+    margin-bottom: 0;
+}
+
+.modal-dialog Switch {
+    margin-bottom: 1;
+}
+
+/* ── Confirm dialog (smaller) ───────────────────────────────────────────────*/
+.confirm-dialog {
+    width: 52;
+    height: auto;
+    background: $surface;
+    border: double $error;
+    padding: 1 2;
+}
+
+.confirm-dialog Label.modal-title {
+    text-style: bold;
+    color: $error;
+    margin-bottom: 1;
+}
+
+/* ── Order detail dialog (taller) ───────────────────────────────────────────*/
+.order-detail-dialog {
+    width: 90;
+    max-height: 50;
+    background: $surface;
+    border: double $primary;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+.order-detail-dialog Label.modal-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+.order-detail-dialog DataTable {
+    height: 12;
+    border: solid $primary-darken-2;
+    margin: 0 0 1 0;
+}
+
+/* ── Org chart dialog ───────────────────────────────────────────────────────*/
+.org-dialog {
+    width: 72;
+    height: 38;
+    background: $surface;
+    border: double $primary;
+    padding: 1 2;
+}
+
+.org-dialog Label.modal-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+.org-dialog Tree {
+    height: 1fr;
+    border: solid $primary-darken-2;
+}
+
+/* ── Modal buttons row ──────────────────────────────────────────────────────*/
+.modal-buttons {
+    align: right middle;
+    height: 3;
+    margin-top: 1;
+}
+
+.modal-buttons Button {
+    margin-left: 1;
+}
+
+/* ── Picker modal table ─────────────────────────────────────────────────────*/
+.modal-dialog DataTable {
+    height: 14;
+    border: solid $primary-darken-2;
+    margin: 1 0;
+}
+
+/* ── Reports panel ──────────────────────────────────────────────────────────*/
+#report-type {
+    height: 3;
+    margin-bottom: 1;
+}
+
+.date-range-hidden {
+    display: none;
+}
+
+.date-range-visible {
+    display: block;
+    height: 3;
+    margin-bottom: 1;
+}
+
+.date-range-visible Input {
+    width: 1fr;
+    margin-right: 1;
+}
+
+/* ── Record count label ─────────────────────────────────────────────────────*/
+.count-label {
+    width: 1fr;
+    text-align: right;
+    color: $text-muted;
+}
+
+/* ── Dashboard KPI cards ─────────────────────────────────────────────────────*/
+.kpi-card {
+    border: round $primary;
+    width: 1fr;
+    height: 5;
+    padding: 1;
+}
+
+.kpi-value {
+    text-style: bold;
+    color: $accent;
+    height: 2;
+    content-align: center middle;
+    width: 1fr;
+}
+
+.kpi-title {
+    color: $text-muted;
+    height: 1;
+    content-align: center middle;
+    width: 1fr;
+}
+
+#dashboard-recent-label {
+    text-style: bold;
+    color: $accent;
+    height: 2;
+    content-align: left middle;
+    padding-left: 1;
+}
+
+/* ── TabbedContent (Regions panel) ─────────────────────────────────────────*/
+#regions-tabs {
+    height: 1fr;
+}
+
+#regions-tabs ContentSwitcher {
+    height: 1fr;
+}
+
+#tab-regions .panel-container,
+#tab-territories .panel-container {
+    height: 1fr;
+}
