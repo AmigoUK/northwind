@@ -2,6 +2,8 @@
 app.py — Northwind Traders v2.0
 Textual TUI entry point.
 """
+from __future__ import annotations
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
@@ -27,6 +29,10 @@ from screens.categories import CategoriesPanel
 from screens.shippers   import ShippersPanel
 from screens.regions    import RegionsPanel
 from screens.reports    import ReportsPanel
+from screens.login      import LoginScreen
+from screens.sql        import SqlPanel
+from screens.users      import UsersPanel
+from screens.settings   import SettingsPanel
 
 
 _SECTIONS = [
@@ -40,7 +46,14 @@ _SECTIONS = [
     ("shippers",   "Shippers"),
     ("regions",    "Regions"),
     ("reports",    "Reports"),
+    # Admin-only sections (hidden for non-admin users)
+    ("sql",        "SQL Query"),
+    ("users",      "Users"),
+    ("settings",   "Settings"),
 ]
+
+# IDs of sections visible only to admins
+_ADMIN_SECTIONS = {"sql", "users", "settings"}
 
 
 class SidebarNav(Widget):
@@ -71,6 +84,8 @@ class NorthwindApp(App):
         Binding("escape", "escape",  "Back",   show=False),
     ]
 
+    _current_user: dict | None = None
+
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal():
@@ -86,24 +101,43 @@ class NorthwindApp(App):
                 yield ShippersPanel(id="shippers")
                 yield RegionsPanel(id="regions")
                 yield ReportsPanel(id="reports")
+                yield SqlPanel(id="sql")
+                yield UsersPanel(id="users")
+                yield SettingsPanel(id="settings")
         yield Footer()
 
     def on_mount(self) -> None:
         init_db()
-        # Highlight first nav item
+        self.push_screen(LoginScreen(), callback=self._on_login)
+
+    def _on_login(self, user: dict) -> None:
+        self._current_user = user
         nav = self.query_one("#nav-list", ListView)
         nav.index = 0
+        self._apply_role_visibility()
+
+    def _apply_role_visibility(self) -> None:
+        """Show admin-only sidebar items only for admin users."""
+        is_admin = self._current_user and self._current_user["role"] == "admin"
+        for section_id in _ADMIN_SECTIONS:
+            try:
+                item = self.query_one(f"#nav-{section_id}", ListItem)
+                item.display = is_admin
+            except Exception:
+                pass
 
     def switch_section(self, section: str) -> None:
-        """Switch the active content panel."""
+        """Switch the active content panel and update sidebar highlight."""
         self.query_one(ContentSwitcher).current = section
-        # Update sidebar highlight
         for key, _ in _SECTIONS:
-            item = self.query_one(f"#nav-{key}", ListItem)
-            if key == section:
-                item.add_class("active-nav")
-            else:
-                item.remove_class("active-nav")
+            try:
+                item = self.query_one(f"#nav-{key}", ListItem)
+                if key == section:
+                    item.add_class("active-nav")
+                else:
+                    item.remove_class("active-nav")
+            except Exception:
+                pass
 
     def action_new(self) -> None:
         """Delegate N key to the active panel."""

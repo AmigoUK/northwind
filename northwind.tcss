@@ -275,3 +275,75 @@ ModalScreen {
 #tab-territories .panel-container {
     height: 1fr;
 }
+
+/* ── Login screen ───────────────────────────────────────────────────────────*/
+LoginScreen {
+    background: $background;
+    align: center middle;
+}
+
+.login-box {
+    width: 50;
+    height: auto;
+    border: double $primary;
+    background: $surface;
+    padding: 2 3;
+}
+
+.login-title {
+    text-style: bold;
+    color: $accent;
+    text-align: center;
+    height: 3;
+    content-align: center middle;
+    width: 1fr;
+}
+
+.login-subtitle {
+    color: $text-muted;
+    text-align: center;
+    height: 2;
+    content-align: center middle;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+.login-error {
+    color: $error;
+    height: 1;
+    text-align: center;
+    content-align: center middle;
+    width: 1fr;
+    margin-top: 1;
+}
+
+/* ── SQL panel ──────────────────────────────────────────────────────────────*/
+#sql-input {
+    height: 8;
+    border: solid $primary-darken-2;
+    margin-bottom: 1;
+}
+
+#sql-error {
+    color: $error;
+    height: 2;
+}
+
+.sql-status {
+    color: $text-muted;
+}
+
+/* ── Settings panel ─────────────────────────────────────────────────────────*/
+.settings-section {
+    border: round $primary-darken-2;
+    padding: 1;
+    margin-bottom: 1;
+    height: auto;
+}
+
+.settings-label {
+    text-style: bold;
+    color: $accent;
+    height: 2;
+    content-align: left middle;
+}

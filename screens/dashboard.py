@@ -5,6 +5,7 @@ from textual.widget import Widget
 from textual.widgets import DataTable, Label, Static
 
 import data.dashboard as ddata
+from data.settings import get_currency_symbol
 
 
 class DashboardPanel(Widget):
@@ -46,7 +47,8 @@ class DashboardPanel(Widget):
             self.query_one("#kpi-customers-val", Static).update(str(kpis["customers"]))
             self.query_one("#kpi-orders-val",    Static).update(str(kpis["orders"]))
             self.query_one("#kpi-lowstock-val",  Static).update(str(kpis["low_stock"]))
-            self.query_one("#kpi-revenue-val",   Static).update(f"${kpis['revenue']:,.0f}")
+            symbol = get_currency_symbol()
+            self.query_one("#kpi-revenue-val",   Static).update(f"{symbol}{kpis['revenue']:,.0f}")
         except Exception as e:
             self.notify(f"KPI error: {e}", severity="error")
 

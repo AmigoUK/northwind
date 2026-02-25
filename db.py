@@ -1,9 +1,10 @@
 """
 db.py - Database connection, schema DDL, and seed data for Northwind Traders
 """
+import hashlib
 import sqlite3
 import os
-from datetime import date
+from datetime import date, datetime
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "northwind.db")
 
@@ -20,6 +21,20 @@ def create_tables():
     c = conn.cursor()
 
     c.executescript("""
+    CREATE TABLE IF NOT EXISTS AppSettings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS AppUsers (
+        user_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        username     TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        pin_hash     TEXT NOT NULL,
+        role         TEXT NOT NULL DEFAULT 'user',
+        created_at   TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS Categories (
         CategoryID   INTEGER PRIMARY KEY AUTOINCREMENT,
         CategoryName TEXT NOT NULL,
@@ -390,6 +405,39 @@ def seed_data():
     conn.close()
 
 
+def _seed_settings() -> None:
+    """Seed AppSettings with defaults if the table is empty."""
+    conn = get_connection()
+    count = conn.execute("SELECT COUNT(*) FROM AppSettings").fetchone()[0]
+    conn.close()
+    if count > 0:
+        return
+    conn = get_connection()
+    conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("currency_symbol", "$"))
+    conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("currency_name",   "USD"))
+    conn.commit()
+    conn.close()
+
+
+def _seed_users() -> None:
+    """Seed AppUsers with a default admin account if the table is empty."""
+    conn = get_connection()
+    count = conn.execute("SELECT COUNT(*) FROM AppUsers").fetchone()[0]
+    conn.close()
+    if count > 0:
+        return
+    pin_hash = hashlib.sha256("1234".encode()).hexdigest()
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO AppUsers (username, display_name, pin_hash, role, created_at) VALUES (?,?,?,?,?)",
+        ("admin", "Administrator", pin_hash, "admin", datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
 def init_db():
     create_tables()
     seed_data()
+    _seed_settings()
+    _seed_users()
