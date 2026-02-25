@@ -33,6 +33,7 @@ from screens.login      import LoginScreen
 from screens.sql        import SqlPanel
 from screens.users      import UsersPanel
 from screens.settings   import SettingsPanel
+from screens.modals     import QuitConfirmModal
 
 
 _SECTIONS = [
@@ -78,10 +79,10 @@ class NorthwindApp(App):
     CSS_PATH = "northwind.tcss"
 
     BINDINGS = [
-        Binding("q",      "quit",    "Quit"),
-        Binding("n",      "new",     "New",    show=True),
-        Binding("f",      "search",  "Search", show=True),
-        Binding("escape", "escape",  "Back",   show=False),
+        Binding("ctrl+q", "confirm_quit", "Quit"),
+        Binding("n",      "new",          "New",    show=True),
+        Binding("f",      "search",       "Search", show=True),
+        Binding("escape", "escape",       "Back",   show=False),
     ]
 
     _current_user: dict | None = None
@@ -156,6 +157,14 @@ class NorthwindApp(App):
             panel.action_focus_search()
         except Exception:
             pass
+
+    def action_confirm_quit(self) -> None:
+        """Show a confirmation dialog before quitting."""
+        self.push_screen(QuitConfirmModal(), self._on_quit_confirmed)
+
+    def _on_quit_confirmed(self, confirmed: bool) -> None:
+        if confirmed:
+            self.exit()
 
     def action_escape(self) -> None:
         """ESC is handled by individual modals; here it's a no-op at top level."""

@@ -20,17 +20,21 @@ built with **Python + Textual + SQLite** as a university learning project.
 
 ## Screenshots
 
-> Run `python3 app.py` and take screenshots with your terminal tool or
-> `screencapture -i screenshots/<name>.png` on macOS.
-
-Place screenshots in the `screenshots/` folder and embed them here:
-
-```
-![Login screen](screenshots/login.png)
 ![Dashboard](screenshots/dashboard.png)
-![SQL Query panel](screenshots/sql.png)
-![User management](screenshots/users.png)
-```
+![Customers](screenshots/customers.png)
+![Adding a customer](screenshots/adding%20customer.png)
+![Orders](screenshots/orders.png)
+![New order](screenshots/new%20order.png)
+![Editing existing order](screenshots/editing%20existing%20order.png)
+![Products](screenshots/products.png)
+![Employees](screenshots/employees.png)
+![Suppliers](screenshots/supliers.png)
+![Categories](screenshots/categories.png)
+![Shippers](screenshots/shippers.png)
+![Regions & Territories](screenshots/regions%20and%20terretories1.png)
+![Reports](screenshots/reports.png)
+![CSV export](screenshots/csv%20export.png)
+![Settings](screenshots/settings.png)
 
 ---
 

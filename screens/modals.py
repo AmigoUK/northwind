@@ -39,6 +39,35 @@ class ConfirmDeleteModal(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class QuitConfirmModal(ModalScreen[bool]):
+    """Ask the user to confirm quitting the app. Returns True if confirmed."""
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="confirm-dialog"):
+            yield Label("Quit Northwind Traders?", classes="modal-title")
+            yield Label("Press Y to quit or N / ESC to cancel.", classes="modal-subtitle")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Quit", id="btn-yes", variant="error")
+                yield Button("Cancel", id="btn-no", variant="primary")
+
+    def on_mount(self) -> None:
+        self.query_one("#btn-no").focus()  # safe default: Cancel focused
+
+    def on_key(self, event) -> None:
+        if event.key == "y":
+            self.dismiss(True)
+        elif event.key in ("n", "escape"):
+            self.dismiss(False)
+
+    @on(Button.Pressed, "#btn-yes")
+    def on_yes(self) -> None:
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#btn-no")
+    def on_no(self) -> None:
+        self.dismiss(False)
+
+
 class PickerModal(ModalScreen):
     """Reusable record picker. Returns the selected pk string or None."""
 
