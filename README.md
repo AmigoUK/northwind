@@ -12,7 +12,23 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v1.4** | Foundation | 9 CRUD panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
 | **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank Account, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
 | **v2.1** | PDF Export | Branded A4 PDF delivery notes (WZ) & invoices (FV) — company logo, theme colours, totals, linked WZ references |
+| **v2.2** | PDF All Docs + UX | PDF export for PZ, KP, KW & Bank entries; Business Details tabbed layout with docked Save button |
 | ... | ... | ... |
+
+---
+
+## Features (v2.2)
+
+### New in v2.2 — PDF for All Documents + UX Fixes
+
+- **PDF export extended to all document types:**
+  - **PZ Goods Receipts** — "Receive From" supplier box, line items table with unit cost and total cost row
+  - **KP Cash Receipts** — voucher with customer name, FV reference, prominent amount box, signature line
+  - **KW Cash Payments** — voucher with supplier name, PZ reference, prominent amount box, signature line
+  - **Bank Account Entries** — direction badge (green MONEY IN / red MONEY OUT), counterparty, FV/PZ references, amount box
+- **Business Details panel reorganised into 3 tabs** — Company, Tax & Legal, Documents — prevents content overflow
+- **Save button always visible** — docked to the bottom of the Business Details panel
+- **Tab content scrollable** — long forms scroll within the tab rather than clipping off-screen
 
 ---
 
