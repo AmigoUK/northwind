@@ -567,6 +567,26 @@ def _seed_settings() -> None:
         ("theme",             "textual-dark"),
         ("backorder_allowed", "false"),
         ("show_discontinued", "false"),
+        # Business / company identity
+        ("co_name",           ""),
+        ("co_address",        ""),
+        ("co_city",           ""),
+        ("co_postal",         ""),
+        ("co_country",        ""),
+        ("co_phone",          ""),
+        ("co_email",          ""),
+        ("co_website",        ""),
+        ("co_vat",            ""),
+        ("co_tax_id",         ""),
+        ("co_bank_account",   ""),
+        ("co_logo_path",      ""),
+        # Document defaults
+        ("doc_footer",        ""),
+        ("doc_theme",         "default"),
+        ("doc_title_wz",      "Delivery Note"),
+        ("doc_title_fv",      "Invoice"),
+        ("doc_title_pz",      "Goods Receipt"),
+        ("doc_wz_show_prices","true"),
     ]
     for key, value in defaults:
         conn.execute(

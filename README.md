@@ -9,12 +9,10 @@ A terminal-based warehouse/distribution management application built on the clas
 
 | Version | Theme | Key additions |
 |---------|-------|---------------|
-| **v1.4** | Foundation | Full CRUD across 9 panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
-| **v2.0** | Insights | ASCII charts (3 views), 5 new analytical reports, extended dashboard KPIs |
-| v2.1 | Documents | PDF delivery notes + invoices *(planned)* |
-| v2.2 | Barcodes | GS1-128 on PDFs, EAN on products *(planned)* |
-| v2.3 | Network | LAN REST API, QR codes on PDFs *(planned)* |
-| v3.0 | Dispatch | Scanner input, batch print, purchase orders, audit log *(planned)* |
+| **v1.4** | Foundation | 9 CRUD panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
+| **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Kasa & Bank, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
+| v2.1 | PDF Export | PDF delivery notes & invoices, company branding *(planned)* |
+| ... | ... | ... |
 
 ---
 
@@ -23,30 +21,37 @@ A terminal-based warehouse/distribution management application built on the clas
 ### Core (v1.4)
 - **9 CRUD panels** — Customers, Orders, Products, Employees, Suppliers, Categories,
   Shippers, Regions, Reports
-- **Dashboard** with live KPI cards
+- **Dashboard** with 10 live KPI cards
 - **SQL Query editor** — type any SQL, press `ctrl+r`, see results in a table
-- **Reports** with CSV export
+- **Reports** with CSV export (11 report types)
 - **Configurable currency** — symbol and name saved to SQLite ($ → £ → € etc.)
 - **PIN-based login** with role management (admin / user)
-- **Role-based UI** — admin sees SQL Query, Users, and Settings panels; regular users do not
+- **Role-based UI** — admin sees SQL Query, Users, Settings and Business Details panels; regular users do not
 - **Compact multi-column form modals** — related fields shown side-by-side via CSS `1fr` columns
 
-### New in v2.0 — Insights
-- **Charts panel** — 3 tab views rendered as ANSI ASCII art via `plotext`:
+### New in v2.0 — Documents & Finance
+
+#### Document Workflow
+- **WZ — Delivery Notes** — create draft, add/remove line items, issue WZ (deducts stock)
+- **FV — Invoices** — generate from WZ or standalone; track payment status
+- **PZ — Goods Receipts** — record supplier deliveries, update stock on issue
+- **PW/RW — Stock Movements** — internal stock adjustments (receipts and issues)
+
+#### Finance
+- **Kasa (Cash Register)** — KP income entries, KW expense entries with running balance
+- **Bank** — bank statement entries with cross-referenced Kasa transfers
+
+#### Analytics
+- **Charts panel** — 4 tab views rendered as ANSI ASCII art via `plotext`:
   - *Sales Trend* — line chart of monthly revenue (rolling 12 months)
   - *Category Mix* — horizontal bar chart of revenue % by product category
   - *Top Employees* — bar chart of orders per employee
+  - *Cash & Bank* — combined cash-flow view
   - Press `R` to refresh charts
-- **5 new report types** added to the Reports dropdown:
-  - Monthly Revenue Trend
-  - Order Fulfilment Time (avg days per employee)
-  - Category Revenue (units + revenue)
-  - Repeat Customers (LTV)
-  - Overdue Orders (unshipped past due date)
-- **Extended Dashboard KPIs** — 3 new cards:
-  - Pending Orders (unshipped count)
-  - Avg Fulfil Days (rolling average)
-  - This Month revenue with trend arrow (↑ / ↓) and delta %
+- **10 KPI dashboard cards** — Orders Today, Revenue MTD, Low Stock, Pending Orders,
+  Avg Fulfil Days, This Month trend arrow (↑/↓) and delta %, Kasa Balance, Bank Balance,
+  Open Invoices, Open WZ
+- **11 report types** in the Reports dropdown with date-range filter and CSV export
 
 ---
 
@@ -54,115 +59,84 @@ A terminal-based warehouse/distribution management application built on the clas
 
 > Click any thumbnail to view full size.
 
-### Main panels
+### Dashboard & Analytics
 
 <table>
   <tr>
     <td align="center">
       <a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" width="260" alt="Dashboard"/></a><br/>
-      <sub><b>Dashboard</b></sub>
+      <sub><b>Dashboard (10 KPI cards + recent orders)</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/customers.png"><img src="screenshots/customers.png" width="260" alt="Customers"/></a><br/>
-      <sub><b>Customers</b></sub>
+      <a href="screenshots/charts.png"><img src="screenshots/charts.png" width="260" alt="Charts"/></a><br/>
+      <sub><b>Charts (Sales Trend sparkline + period selector)</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/orders.png"><img src="screenshots/orders.png" width="260" alt="Orders"/></a><br/>
-      <sub><b>Orders</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="screenshots/products.png"><img src="screenshots/products.png" width="260" alt="Products"/></a><br/>
-      <sub><b>Products</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/employees.png"><img src="screenshots/employees.png" width="260" alt="Employees"/></a><br/>
-      <sub><b>Employees</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/supliers.png"><img src="screenshots/supliers.png" width="260" alt="Suppliers"/></a><br/>
-      <sub><b>Suppliers</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="screenshots/categories.png"><img src="screenshots/categories.png" width="260" alt="Categories"/></a><br/>
-      <sub><b>Categories</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/shippers.png"><img src="screenshots/shippers.png" width="260" alt="Shippers"/></a><br/>
-      <sub><b>Shippers</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/regions and terretories1.png"><img src="screenshots/regions and terretories1.png" width="260" alt="Regions &amp; Territories"/></a><br/>
-      <sub><b>Regions &amp; Territories</b></sub>
+      <a href="screenshots/reports-lv.png"><img src="screenshots/reports-lv.png" width="260" alt="Reports"/></a><br/>
+      <sub><b>Reports (11 report types + date range filter)</b></sub>
     </td>
   </tr>
 </table>
 
-### Admin &amp; advanced features
+### Master Data
 
 <table>
   <tr>
     <td align="center">
-      <a href="screenshots/sql-query.png"><img src="screenshots/sql-query.png" width="260" alt="SQL Query"/></a><br/>
+      <a href="screenshots/customers-lv.png"><img src="screenshots/customers-lv.png" width="260" alt="Customers list"/></a><br/>
+      <sub><b>Customers list view</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/customers-dv.png"><img src="screenshots/customers-dv.png" width="260" alt="Customer detail"/></a><br/>
+      <sub><b>Customer detail modal</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/products-lv.png"><img src="screenshots/products-lv.png" width="260" alt="Products"/></a><br/>
+      <sub><b>Products list (Low Stock toggle)</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Document Workflow
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/wz-dv.png"><img src="screenshots/wz-dv.png" width="260" alt="WZ Delivery Note"/></a><br/>
+      <sub><b>WZ Delivery Note detail</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/inv-dv-from-delivery-notes.png"><img src="screenshots/inv-dv-from-delivery-notes.png" width="260" alt="FV Invoice"/></a><br/>
+      <sub><b>FV Invoice (generated from delivery note)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/odrers-dv.png"><img src="screenshots/odrers-dv.png" width="260" alt="Order detail"/></a><br/>
+      <sub><b>Order detail view</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Finance & Admin
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/cash-lv.png"><img src="screenshots/cash-lv.png" width="260" alt="Kasa"/></a><br/>
+      <sub><b>Kasa (cash register) with KP/KW tabs</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/bank-lv.png"><img src="screenshots/bank-lv.png" width="260" alt="Bank"/></a><br/>
+      <sub><b>Bank entries</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/SQL-Query.png"><img src="screenshots/SQL-Query.png" width="260" alt="SQL Query"/></a><br/>
       <sub><b>SQL Query editor</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/usermanagement.png"><img src="screenshots/usermanagement.png" width="260" alt="User Management"/></a><br/>
-      <sub><b>User Management</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/settings-currency.png"><img src="screenshots/settings-currency.png" width="260" alt="Currency Settings"/></a><br/>
-      <sub><b>Currency Settings</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="screenshots/reports.png"><img src="screenshots/reports.png" width="260" alt="Reports"/></a><br/>
-      <sub><b>Reports</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/csv export.png"><img src="screenshots/csv export.png" width="260" alt="CSV Export"/></a><br/>
-      <sub><b>CSV Export</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/settings.png"><img src="screenshots/settings.png" width="260" alt="Settings"/></a><br/>
-      <sub><b>Settings</b></sub>
-    </td>
-  </tr>
-</table>
-
-### Forms &amp; modals in action
-
-<table>
-  <tr>
-    <td align="center">
-      <a href="screenshots/better-modal-windows.png"><img src="screenshots/better-modal-windows.png" width="260" alt="Multi-column form modal"/></a><br/>
-      <sub><b>Multi-column form (Customer)</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/better-modal-windows2.png"><img src="screenshots/better-modal-windows2.png" width="260" alt="Multi-column form modal 2"/></a><br/>
-      <sub><b>Multi-column form (Employee)</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/modal3.png"><img src="screenshots/modal3.png" width="260" alt="Multi-column form modal 3"/></a><br/>
-      <sub><b>Multi-column form (Order)</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="screenshots/adding customer.png"><img src="screenshots/adding customer.png" width="260" alt="Adding a customer"/></a><br/>
-      <sub><b>Adding a customer</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/new order.png"><img src="screenshots/new order.png" width="260" alt="New order"/></a><br/>
-      <sub><b>New order</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/editing existing order.png"><img src="screenshots/editing existing order.png" width="260" alt="Editing an order"/></a><br/>
-      <sub><b>Editing an order</b></sub>
+      <a href="screenshots/themes.png"><img src="screenshots/themes.png" width="260" alt="Theme picker"/></a><br/>
+      <sub><b>Theme picker</b></sub>
     </td>
   </tr>
 </table>
@@ -200,9 +174,6 @@ Default login: **username** `admin` / **PIN** `1234`
 | `fpdf2` | ≥ 2.7 | PDF generation — delivery notes & invoices *(v2.1)* |
 | `python-barcode` | ≥ 0.15 | GS1-128 / EAN-13 barcodes in PDFs *(v2.2)* |
 | `Pillow` | ≥ 10.0 | PNG barcode image rendering *(v2.2)* |
-| `fastapi` | ≥ 0.110 | LAN REST API server *(v2.3)* |
-| `uvicorn` | ≥ 0.29 | ASGI server for FastAPI *(v2.3)* |
-| `qrcode` | ≥ 7.4 | QR codes on PDFs *(v2.3)* |
 
 Install all at once:
 ```bash
@@ -220,19 +191,30 @@ northwind/
 ├── northwind.tcss      # Textual CSS (layout, modals, panels, charts)
 ├── requirements.txt    # Python dependencies
 ├── data/               # Data-access layer (pure SQL, no UI)
-│   ├── settings.py     # AppSettings key-value store (currency, theme)
+│   ├── settings.py     # AppSettings key-value store (currency, theme, business details)
 │   ├── users.py        # AppUsers CRUD + PIN authentication
 │   ├── dashboard.py    # KPI aggregations + kpis_extended()
 │   ├── reports.py      # 11 report queries (sales, stock, trend, overdue…)
+│   ├── wz.py           # WZ document CRUD + issue workflow
+│   ├── fv.py           # FV invoice CRUD
+│   ├── pz.py           # PZ goods receipt CRUD
+│   ├── kassa.py        # Kasa (cash) entries
+│   ├── bank.py         # Bank entries
 │   └── ...             # customers, orders, products, employees, …
 └── screens/            # Textual Widget subclasses (one per section)
     ├── login.py        # LoginScreen modal (PIN gate)
     ├── dashboard.py    # Dashboard KPI cards + recent orders
-    ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees
+    ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank
     ├── reports.py      # Reports panel with 11 report types + CSV export
     ├── sql.py          # SQL Query panel
-    ├── settings.py     # Settings panel (currency, theme)
+    ├── settings.py     # Settings panel (currency, theme, stock control)
+    ├── business.py     # Business Details panel (company info, doc defaults)
     ├── users.py        # User management panel
+    ├── wz.py           # WZ Delivery Notes panel + modals
+    ├── fv.py           # FV Invoices panel + modals
+    ├── pz.py           # PZ Goods Receipts panel + modals
+    ├── kassa.py        # Kasa (cash register) panel
+    ├── bank.py         # Bank entries panel
     └── ...             # customers, orders, products, employees, …
 ```
 
@@ -270,3 +252,5 @@ northwind/
 | `plotext` for ANSI ASCII charts inside Textual `Static` widgets | `screens/charts.py` |
 | `TabbedContent` + `TabPane` for multi-view panels | `screens/charts.py`, regions |
 | SQL window functions: `strftime`, `julianday`, `AVG` | `data/reports.py`, `data/dashboard.py` |
+| Document workflow state machine (draft → issued) | `data/wz.py`, `data/fv.py`, `data/pz.py` |
+| Key-value settings store for business/document config | `data/settings.py`, `screens/business.py` |

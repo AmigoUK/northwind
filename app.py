@@ -41,6 +41,7 @@ from screens.pz              import PZPanel
 from screens.stock_movements import StockMovementsPanel
 from screens.kassa           import KassaPanel
 from screens.bank            import BankPanel
+from screens.business        import BusinessDetailsPanel
 
 
 _NAV_GROUPS = [
@@ -72,6 +73,7 @@ _NAV_GROUPS = [
     ("── Admin ──", "nav-group-admin", [
         ("sql",        "SQL Query"),
         ("users",      "Users"),
+        ("business",   "Business Details"),
         ("settings",   "Settings"),
     ]),
 ]
@@ -80,7 +82,7 @@ _NAV_GROUPS = [
 _SECTIONS = [(key, label) for _, _, items in _NAV_GROUPS for key, label in items]
 
 # IDs of sections visible only to admins
-_ADMIN_SECTIONS = {"sql", "users", "settings"}
+_ADMIN_SECTIONS = {"sql", "users", "business", "settings"}
 
 
 class SidebarNav(Widget):
@@ -140,6 +142,7 @@ class NorthwindApp(App):
                 yield BankPanel(id="bank")
                 yield SqlPanel(id="sql")
                 yield UsersPanel(id="users")
+                yield BusinessDetailsPanel(id="business")
                 yield SettingsPanel(id="settings")
         yield Footer()
 

@@ -207,12 +207,15 @@ class WZDetailModal(ModalScreen):
             yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
+        from data.settings import get_setting
+        self._show_prices = get_setting("doc_wz_show_prices", "true").lower() == "true"
         tbl = self.query_one("#items-tbl", DataTable)
-        for label, width in [
-            ("ProdID", 6), ("Product Name", 36), ("Qty", 6),
-            ("Unit Price", 12), ("Line Total", 12),
-        ]:
-            tbl.add_column(label, width=width)
+        tbl.add_column("ProdID", width=6)
+        tbl.add_column("Product Name", width=36)
+        tbl.add_column("Qty", width=6)
+        if self._show_prices:
+            tbl.add_column("Unit Price", width=12)
+            tbl.add_column("Line Total", width=12)
         self._load()
 
     def _load(self) -> None:
@@ -240,15 +243,26 @@ class WZDetailModal(ModalScreen):
         for it in items:
             lt = it["LineTotal"]
             total += lt
-            tbl.add_row(
-                str(it["ProductID"]),
-                it["ProductName"],
-                str(it["Quantity"]),
-                f"{sym}{it['UnitPrice']:.2f}",
-                f"{sym}{lt:.2f}",
-                key=str(it["ProductID"]),
-            )
-        self.query_one("#wz-total", Static).update(f"[b]Total:[/b] {sym}{total:.2f}")
+            if self._show_prices:
+                row_data = (
+                    str(it["ProductID"]),
+                    it["ProductName"],
+                    str(it["Quantity"]),
+                    f"{sym}{it['UnitPrice']:.2f}",
+                    f"{sym}{lt:.2f}",
+                )
+            else:
+                row_data = (
+                    str(it["ProductID"]),
+                    it["ProductName"],
+                    str(it["Quantity"]),
+                )
+            tbl.add_row(*row_data, key=str(it["ProductID"]))
+        total_widget = self.query_one("#wz-total", Static)
+        if self._show_prices:
+            total_widget.update(f"[b]Total:[/b] {sym}{total:.2f}")
+        else:
+            total_widget.update("")
 
         # Adjust buttons based on status
         status = hdr.get("Status", "draft")
