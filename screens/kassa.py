@@ -150,6 +150,50 @@ class KWFormModal(ModalScreen):
             self.dismiss(False)
 
 
+class TransferModal(ModalScreen):
+    """Generic transfer amount/description modal."""
+
+    def __init__(self, title: str) -> None:
+        super().__init__()
+        self._title = title
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(self._title, classes="modal-title")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Amount *:")
+                    yield Input(id="f-amount", placeholder="0.00")
+                with Vertical(classes="form-field"):
+                    yield Label("Description (optional):")
+                    yield Input(id="f-desc", placeholder="")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Transfer", id="btn-confirm", variant="primary")
+                yield Button("Cancel",   id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
+
+    @on(Button.Pressed, "#btn-confirm")
+    def on_confirm(self) -> None:
+        try:
+            amount = float(self.query_one("#f-amount", Input).value.strip() or "0")
+        except ValueError:
+            self.notify("Amount must be a number.", severity="error")
+            return
+        if amount <= 0:
+            self.notify("Amount must be positive.", severity="error")
+            return
+        desc = self.query_one("#f-desc", Input).value.strip()
+        self.dismiss((amount, desc))
+
+    @on(Button.Pressed, "#btn-cancel")
+    def on_cancel(self) -> None:
+        self.dismiss(None)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+
 class KassaPanel(Widget):
     """Cash register panel with KP and KW tabs and running balance."""
 
@@ -164,6 +208,8 @@ class KassaPanel(Widget):
     def compose(self) -> ComposeResult:
         with Vertical(classes="panel-container"):
             yield Static("", id="kassa-balance")
+            with Horizontal(classes="toolbar"):
+                yield Button("→ Bank", id="btn-transfer-bank", variant="warning")
             with TabbedContent(id="kassa-tabs"):
                 with TabPane("KP — Receipts", id="tab-kp"):
                     with Vertical():
@@ -252,6 +298,19 @@ class KassaPanel(Widget):
     def on_kw_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key:
             self._kw_selected = event.row_key.value
+
+    @on(Button.Pressed, "#btn-transfer-bank")
+    def on_transfer_to_bank(self) -> None:
+        def after(result):
+            if result:
+                amount, desc = result
+                try:
+                    kassadata.transfer_to_bank(amount, desc)
+                    self._refresh_all()
+                    self.notify(f"Transferred to bank: {amount:.2f}", severity="information")
+                except Exception as e:
+                    self.notify(f"Transfer failed: {e}", severity="error")
+        self.app.push_screen(TransferModal("Transfer Cash → Bank"), callback=after)
 
     @on(Button.Pressed, "#btn-new-kp")
     def on_new_kp(self) -> None:

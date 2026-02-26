@@ -121,3 +121,33 @@ def delete_kw(pk) -> None:
     conn.execute("DELETE FROM KW WHERE KW_ID=?", (pk,))
     conn.commit()
     conn.close()
+
+
+# ── Transfers ─────────────────────────────────────────────────────────────────
+
+def transfer_to_bank(amount: float, description: str = "") -> tuple[int, int]:
+    """Create KW (cash out) + BankEntry (in) atomically. Returns (kw_id, entry_id)."""
+    from datetime import date
+    conn = get_connection()
+    today = str(date.today())
+    desc = description or "Deposit to bank"
+
+    kw_number = next_doc_number("KW", conn)
+    cur = conn.execute(
+        "INSERT INTO KW (KW_Number, KW_Date, SupplierID, PZ_ID, Amount, Description) "
+        "VALUES (?,?,?,?,?,?)",
+        (kw_number, today, None, None, amount, desc),
+    )
+    kw_id = cur.lastrowid
+
+    bank_number = next_doc_number("Bank", conn)
+    cur = conn.execute(
+        "INSERT INTO BankEntry (Entry_Number, Entry_Date, Direction, CustomerID, "
+        "SupplierID, FV_ID, PZ_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
+        (bank_number, today, "in", None, None, None, None, amount, desc),
+    )
+    entry_id = cur.lastrowid
+
+    conn.commit()
+    conn.close()
+    return kw_id, entry_id

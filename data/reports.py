@@ -1,7 +1,7 @@
 """data/reports.py — SQL-only aggregation queries."""
 from db import get_connection
 from data.settings import get_currency_symbol
-from datetime import date as _date
+from datetime import date as _date, datetime as _datetime
 
 
 def sales_by_customer(date_from: str = "0001-01-01",
@@ -247,6 +247,137 @@ def overdue_orders() -> tuple[list, list]:
     headers = [("OrderID", 8), ("Customer", 28), ("Order Date", 12), ("Due Date", 12)]
     data = [[r["OrderID"], r["Customer"], r["OrderDate"] or "", r["RequiredDate"]] for r in rows]
     return headers, data
+
+
+def liquidity_snapshot() -> tuple[list, list]:
+    """Current Kasa and Bank balances snapshot (no date filter)."""
+    sym = get_currency_symbol()
+    conn = get_connection()
+    kp_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM KP").fetchone()[0]
+    kw_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM KW").fetchone()[0]
+    bank_in   = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM BankEntry WHERE Direction='in'").fetchone()[0]
+    bank_out  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM BankEntry WHERE Direction='out'").fetchone()[0]
+    conn.close()
+    kassa_bal = kp_total - kw_total
+    bank_bal  = bank_in  - bank_out
+    total     = kassa_bal + bank_bal
+    headers = [("Account", 16), ("Inflows", 14), ("Outflows", 14), ("Balance", 14)]
+    data = [
+        ["Kasa (cash)", f"{sym}{kp_total:.2f}",  f"{sym}{kw_total:.2f}",  f"{sym}{kassa_bal:.2f}"],
+        ["Bank",        f"{sym}{bank_in:.2f}",   f"{sym}{bank_out:.2f}",  f"{sym}{bank_bal:.2f}"],
+        ["Total",       "",                       "",                      f"{sym}{total:.2f}"],
+    ]
+    return headers, data
+
+
+def ar_aging() -> tuple[list, list]:
+    """AR aging: unpaid FV invoices grouped into overdue buckets."""
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT f.FV_Number, c.CompanyName, f.DueDate,
+                  f.TotalNet AS Total, COALESCE(f.PaidAmount, 0) AS Paid,
+                  f.TotalNet - COALESCE(f.PaidAmount, 0) AS Outstanding
+           FROM FV f
+           LEFT JOIN Customers c ON f.CustomerID = c.CustomerID
+           WHERE f.Status != 'paid'
+             AND f.TotalNet > COALESCE(f.PaidAmount, 0)
+           ORDER BY f.DueDate ASC"""
+    ).fetchall()
+    conn.close()
+
+    def _bucket(due_date_str):
+        if not due_date_str:
+            return "—", 0
+        try:
+            due = _datetime.strptime(due_date_str, "%Y-%m-%d").date()
+            days = (_date.today() - due).days
+            if days <= 0:
+                return "Current", 0
+            elif days <= 30:
+                return "1–30", days
+            elif days <= 60:
+                return "31–60", days
+            elif days <= 90:
+                return "61–90", days
+            else:
+                return "90+", days
+        except Exception:
+            return "—", 0
+
+    headers = [("FV#", 14), ("Customer", 22), ("Due Date", 12),
+               ("Total", 10), ("Paid", 10), ("Outstanding", 12), ("Days", 5), ("Bucket", 8)]
+    data = []
+    for r in rows:
+        bkt, days = _bucket(r["DueDate"])
+        data.append([
+            r["FV_Number"], r["CompanyName"] or "", r["DueDate"] or "",
+            f"{sym}{r['Total']:.2f}", f"{sym}{r['Paid']:.2f}",
+            f"{sym}{r['Outstanding']:.2f}", str(days), bkt,
+        ])
+    return headers, data
+
+
+def payment_forecast(days: int = 30) -> tuple[list, list]:
+    """FV invoices due within the next N days, not yet paid."""
+    sym = get_currency_symbol()
+    from datetime import timedelta
+    cutoff = str(_date.today() + timedelta(days=days))
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT f.DueDate, f.FV_Number, c.CompanyName,
+                  f.TotalNet - COALESCE(f.PaidAmount, 0) AS Outstanding
+           FROM FV f
+           LEFT JOIN Customers c ON f.CustomerID = c.CustomerID
+           WHERE f.Status != 'paid'
+             AND f.TotalNet > COALESCE(f.PaidAmount, 0)
+             AND f.DueDate IS NOT NULL
+             AND f.DueDate <= ?
+           ORDER BY f.DueDate ASC""",
+        (cutoff,),
+    ).fetchall()
+    conn.close()
+    headers = [("Due Date", 12), ("FV#", 14), ("Customer", 28), ("Outstanding", 12)]
+    data = [[r["DueDate"], r["FV_Number"], r["CompanyName"] or "",
+             f"{sym}{r['Outstanding']:.2f}"] for r in rows]
+    return headers, data
+
+
+def cash_bank_trend(date_from=None, date_to=None) -> dict:
+    """Running balances over time for Kassa and Bank.
+    Returns {"kassa": [(date, balance), ...], "bank": [(date, balance), ...]}"""
+    from collections import defaultdict
+    conn = get_connection()
+    kp_rows   = conn.execute("SELECT KP_Date AS dt, Amount FROM KP ORDER BY KP_Date, KP_ID").fetchall()
+    kw_rows   = conn.execute("SELECT KW_Date AS dt, Amount FROM KW ORDER BY KW_Date, KW_ID").fetchall()
+    bank_rows = conn.execute(
+        "SELECT Entry_Date AS dt, "
+        "CASE WHEN Direction='in' THEN Amount ELSE -Amount END AS Amount "
+        "FROM BankEntry ORDER BY Entry_Date, Entry_ID"
+    ).fetchall()
+    conn.close()
+
+    kassa_by_date: dict = defaultdict(float)
+    for r in kp_rows:
+        kassa_by_date[r["dt"]] += r["Amount"]
+    for r in kw_rows:
+        kassa_by_date[r["dt"]] -= r["Amount"]
+
+    bank_by_date: dict = defaultdict(float)
+    for r in bank_rows:
+        bank_by_date[r["dt"]] += r["Amount"]
+
+    def _to_running(by_date):
+        result, bal = [], 0.0
+        for d in sorted(by_date):
+            bal += by_date[d]
+            result.append((d, round(bal, 2)))
+        return result
+
+    return {
+        "kassa": _to_running(kassa_by_date),
+        "bank":  _to_running(bank_by_date),
+    }
 
 
 def orders_by_date_range(date_from: str = "0001-01-01",

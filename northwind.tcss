@@ -486,6 +486,14 @@ LoginScreen {
     height: 1fr;
 }
 
+/* ── Sidebar group headers ──────────────────────────────────────────────────*/
+.nav-group-header {
+    color: $text-muted;
+    text-style: bold;
+    padding: 0 1;
+    background: $panel;
+}
+
 /* ── Modal ESC hint ─────────────────────────────────────────────────────────*/
 .modal-hint {
     color: $text-muted;

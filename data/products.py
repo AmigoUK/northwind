@@ -4,13 +4,17 @@ from db import get_connection
 
 
 def fetch_all() -> list:
+    from data.settings import get_setting
+    hide = get_setting("show_discontinued", "false").lower() != "true"
+    where = "WHERE p.Discontinued = 0" if hide else ""
     conn = get_connection()
     rows = conn.execute(
-        """SELECT p.ProductID, p.ProductName, c.CategoryName, s.CompanyName AS Supplier,
+        f"""SELECT p.ProductID, p.ProductName, c.CategoryName, s.CompanyName AS Supplier,
                   p.UnitPrice, p.UnitsInStock, p.Discontinued
            FROM Products p
            LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
            LEFT JOIN Suppliers  s ON p.SupplierID = s.SupplierID
+           {where}
            ORDER BY p.ProductID"""
     ).fetchall()
     conn.close()
@@ -45,15 +49,19 @@ def get_by_pk(pk) -> dict | None:
 
 
 def search(term: str) -> list:
+    from data.settings import get_setting
+    hide = get_setting("show_discontinued", "false").lower() != "true"
+    disc_clause = "AND p.Discontinued = 0" if hide else ""
     like = f"%{term}%"
     conn = get_connection()
     rows = conn.execute(
-        """SELECT p.ProductID, p.ProductName, c.CategoryName, s.CompanyName,
+        f"""SELECT p.ProductID, p.ProductName, c.CategoryName, s.CompanyName,
                   p.UnitPrice, p.UnitsInStock, p.Discontinued
            FROM Products p
            LEFT JOIN Categories c ON p.CategoryID=c.CategoryID
            LEFT JOIN Suppliers  s ON p.SupplierID=s.SupplierID
-           WHERE p.ProductName LIKE ? OR c.CategoryName LIKE ? OR s.CompanyName LIKE ?
+           WHERE (p.ProductName LIKE ? OR c.CategoryName LIKE ? OR s.CompanyName LIKE ?)
+             {disc_clause}
            ORDER BY p.ProductName""",
         (like, like, like),
     ).fetchall()

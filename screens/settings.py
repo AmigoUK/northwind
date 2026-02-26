@@ -6,7 +6,7 @@ Educational patterns:
 - notify() for lightweight user feedback without a modal
 """
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label, Select, Switch
 from textual import on
@@ -20,10 +20,13 @@ class SettingsPanel(Widget):
             yield Label("Settings", classes="panel-title")
             with Vertical(classes="settings-section"):
                 yield Label("Currency", classes="settings-label")
-                yield Label("Symbol (e.g. $, £, €, zł)")
-                yield Input(placeholder="$", id="f-currency-symbol")
-                yield Label("Name (e.g. USD, GBP, PLN)")
-                yield Input(placeholder="USD", id="f-currency-name")
+                with Horizontal(classes="form-row"):
+                    with Vertical(classes="form-field"):
+                        yield Label("Symbol (e.g. $, £, €, zł)")
+                        yield Input(placeholder="$", id="f-currency-symbol")
+                    with Vertical(classes="form-field"):
+                        yield Label("Name (e.g. USD, GBP, PLN)")
+                        yield Input(placeholder="USD", id="f-currency-name")
             with Vertical(classes="settings-section"):
                 yield Label("Appearance", classes="settings-label")
                 yield Label("Theme (also changeable via Ctrl+P)")
@@ -32,6 +35,8 @@ class SettingsPanel(Widget):
                 yield Label("Stock Control", classes="settings-label")
                 yield Label("Allow Backorders")
                 yield Switch(id="f-backorder", value=False)
+                yield Label("Show Discontinued Products")
+                yield Switch(id="f-show-disc", value=False)
             yield Button("Save Settings", id="btn-save", variant="primary")
 
     def on_mount(self) -> None:
@@ -50,6 +55,9 @@ class SettingsPanel(Widget):
         theme_select.set_options(available)
         theme_select.value = app_settings.get_theme_name()
         self.query_one("#f-backorder", Switch).value = app_settings.get_backorder_allowed()
+        self.query_one("#f-show-disc", Switch).value = (
+            app_settings.get_setting("show_discontinued", "false").lower() == "true"
+        )
 
     @on(Button.Pressed, "#btn-save")
     def do_save(self) -> None:
@@ -64,4 +72,6 @@ class SettingsPanel(Widget):
             self.app.theme = theme  # watch_theme() in app.py auto-saves to DB
         backorder = self.query_one("#f-backorder", Switch).value
         app_settings.set_setting("backorder_allowed", "true" if backorder else "false")
+        show_disc = self.query_one("#f-show-disc", Switch).value
+        app_settings.set_setting("show_discontinued", "true" if show_disc else "false")
         self.notify("Settings saved.", severity="information")

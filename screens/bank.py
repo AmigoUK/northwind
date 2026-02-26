@@ -115,6 +115,50 @@ class BankEntryFormModal(ModalScreen):
             self.dismiss(False)
 
 
+class TransferModal(ModalScreen):
+    """Generic transfer amount/description modal."""
+
+    def __init__(self, title: str) -> None:
+        super().__init__()
+        self._title = title
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(self._title, classes="modal-title")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Amount *:")
+                    yield Input(id="f-amount", placeholder="0.00")
+                with Vertical(classes="form-field"):
+                    yield Label("Description (optional):")
+                    yield Input(id="f-desc", placeholder="")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Transfer", id="btn-confirm", variant="primary")
+                yield Button("Cancel",   id="btn-cancel")
+            yield Label("ESC to close", classes="modal-hint")
+
+    @on(Button.Pressed, "#btn-confirm")
+    def on_confirm(self) -> None:
+        try:
+            amount = float(self.query_one("#f-amount", Input).value.strip() or "0")
+        except ValueError:
+            self.notify("Amount must be a number.", severity="error")
+            return
+        if amount <= 0:
+            self.notify("Amount must be positive.", severity="error")
+            return
+        desc = self.query_one("#f-desc", Input).value.strip()
+        self.dismiss((amount, desc))
+
+    @on(Button.Pressed, "#btn-cancel")
+    def on_cancel(self) -> None:
+        self.dismiss(None)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+
 class BankPanel(Widget):
     BINDINGS = [
         ("n", "new_record",   "New Entry"),
@@ -130,6 +174,7 @@ class BankPanel(Widget):
             yield DataTable(id="tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="toolbar"):
                 yield Button("+ New Entry", id="btn-new",    variant="success")
+                yield Button("→ Kasa",      id="btn-transfer-kassa", variant="warning")
                 yield Button("Delete",      id="btn-delete", variant="error")
                 yield Label("", id="count-label", classes="count-label")
 
@@ -177,6 +222,19 @@ class BankPanel(Widget):
     @on(Button.Pressed, "#btn-new")
     def on_btn_new(self) -> None:
         self.action_new_record()
+
+    @on(Button.Pressed, "#btn-transfer-kassa")
+    def on_transfer_to_kassa(self) -> None:
+        def after(result):
+            if result:
+                amount, desc = result
+                try:
+                    bankdata.withdraw_to_kassa(amount, desc)
+                    self.refresh_data(self.query_one("#search-box", Input).value)
+                    self.notify(f"Withdrawn to Kasa: {amount:.2f}", severity="information")
+                except Exception as e:
+                    self.notify(f"Transfer failed: {e}", severity="error")
+        self.app.push_screen(TransferModal("Withdraw Bank → Kasa"), callback=after)
 
     @on(Button.Pressed, "#btn-delete")
     def on_btn_delete(self) -> None:
