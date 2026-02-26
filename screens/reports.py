@@ -22,7 +22,7 @@ _REPORT_OPTIONS = [
     ("Category Revenue",            "category_rev"),
     ("Repeat Customers",            "repeat_cust"),
     ("Overdue Orders",              "overdue"),
-    ("Cash & Bank Status",          "liquidity"),
+    ("Cash & Bank Account Status",   "liquidity"),
     ("AR Aging",                    "ar_aging"),
     ("Incoming Payments (30 days)", "payment_forecast"),
 ]

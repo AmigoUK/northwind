@@ -180,7 +180,7 @@ class ChartsPanel(Widget):
                 with TabPane("Top Employees", id="tab-top-employees"):
                     yield Static("", id="chart-top-employees",
                                  classes="chart-static")
-                with TabPane("Cash & Bank", id="tab-cash-bank"):
+                with TabPane("Cash & Bank Account", id="tab-cash-bank"):
                     yield Static("Loading…", id="chart-cash-bank",
                                  classes="chart-static")
 
@@ -404,7 +404,7 @@ class ChartsPanel(Widget):
             if bank_data:
                 vals = [v for _, v in bank_data]
                 spark = _sparkline(vals) if len(vals) > 1 else "█"
-                lines.append("Bank Running Balance")
+                lines.append("Bank Account Running Balance")
                 lines.append(f"Trend  {spark}")
                 lines.append(f"Latest: {sym}{vals[-1]:,.2f}")
                 lines.append("")
@@ -413,7 +413,7 @@ class ChartsPanel(Widget):
                 for d, v in bank_data[-10:]:
                     lines.append(f" {d:<12}  {sym}{v:>10,.2f}")
             else:
-                lines.append("Bank: No transactions recorded.")
+                lines.append("Bank Account: No transactions recorded.")
 
             widget.update("\n".join(lines))
         except Exception as e:

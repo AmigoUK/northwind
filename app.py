@@ -64,7 +64,7 @@ _NAV_GROUPS = [
     ]),
     ("── Finance ──", "nav-group-finance", [
         ("kassa",      "Cash Register"),
-        ("bank",       "Bank"),
+        ("bank",       "Bank Account"),
     ]),
     ("── Analytics ──", "nav-group-analytics", [
         ("reports",    "Reports"),

@@ -10,7 +10,7 @@ A terminal-based warehouse/distribution management application built on the clas
 | Version | Theme | Key additions |
 |---------|-------|---------------|
 | **v1.4** | Foundation | 9 CRUD panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
-| **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
+| **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank Account, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
 | v2.1 | PDF Export | PDF delivery notes & invoices, company branding *(planned)* |
 | ... | ... | ... |
 
@@ -39,17 +39,17 @@ A terminal-based warehouse/distribution management application built on the clas
 
 #### Finance
 - **Cash Register** — KP income entries, KW expense entries with running balance
-- **Bank** — bank statement entries with cross-referenced Cash Register transfers
+- **Bank Account** — bank statement entries with cross-referenced Cash Register transfers
 
 #### Analytics
 - **Charts panel** — 4 tab views rendered as ANSI ASCII art via `plotext`:
   - *Sales Trend* — line chart of monthly revenue (rolling 12 months)
   - *Category Mix* — horizontal bar chart of revenue % by product category
   - *Top Employees* — bar chart of orders per employee
-  - *Cash & Bank* — combined cash-flow view
+  - *Cash & Bank Account* — combined cash-flow view
   - Press `R` to refresh charts
 - **10 KPI dashboard cards** — Orders Today, Revenue MTD, Low Stock, Pending Orders,
-  Avg Fulfil Days, This Month trend arrow (↑/↓) and delta %, Cash Register Balance, Bank Balance,
+  Avg Fulfil Days, This Month trend arrow (↑/↓) and delta %, Cash Register Balance, Bank Account Balance,
   Open Invoices, Open WZ
 - **11 report types** in the Reports dropdown with date-range filter and CSV export
 
@@ -126,7 +126,7 @@ A terminal-based warehouse/distribution management application built on the clas
     </td>
     <td align="center">
       <a href="screenshots/bank-lv.png"><img src="screenshots/bank-lv.png" width="260" alt="Bank"/></a><br/>
-      <sub><b>Bank entries</b></sub>
+      <sub><b>Bank Account entries</b></sub>
     </td>
   </tr>
   <tr>
@@ -199,12 +199,12 @@ northwind/
 │   ├── fv.py           # FV invoice CRUD
 │   ├── pz.py           # PZ goods receipt CRUD
 │   ├── kassa.py        # Cash Register entries
-│   ├── bank.py         # Bank entries
+│   ├── bank.py         # Bank Account entries
 │   └── ...             # customers, orders, products, employees, …
 └── screens/            # Textual Widget subclasses (one per section)
     ├── login.py        # LoginScreen modal (PIN gate)
     ├── dashboard.py    # Dashboard KPI cards + recent orders
-    ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank
+    ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
     ├── reports.py      # Reports panel with 11 report types + CSV export
     ├── sql.py          # SQL Query panel
     ├── settings.py     # Settings panel (currency, theme, stock control)
@@ -214,7 +214,7 @@ northwind/
     ├── fv.py           # FV Invoices panel + modals
     ├── pz.py           # PZ Goods Receipts panel + modals
     ├── kassa.py        # Cash Register panel
-    ├── bank.py         # Bank entries panel
+    ├── bank.py         # Bank Account entries panel
     └── ...             # customers, orders, products, employees, …
 ```
 

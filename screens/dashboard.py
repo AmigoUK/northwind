@@ -43,7 +43,7 @@ class DashboardPanel(Widget):
                     yield Label("Cash Register Balance", classes="kpi-title")
                 with Vertical(classes="kpi-card"):
                     yield Static("", id="kpi-bank-val", classes="kpi-value")
-                    yield Label("Bank Balance", classes="kpi-title")
+                    yield Label("Bank Account Balance", classes="kpi-title")
                 with Vertical(classes="kpi-card"):
                     yield Static("", id="kpi-ar-due-val", classes="kpi-value")
                     yield Label("AR Due 30d", classes="kpi-title")

@@ -24,7 +24,7 @@ class BankEntryFormModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("New Bank Entry", classes="modal-title")
+            yield Label("New Bank Account Entry", classes="modal-title")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Direction *:")
@@ -101,7 +101,7 @@ class BankEntryFormModal(ModalScreen):
                 direction=direction, amount=amount, description=desc,
                 customer_id=self._customer_id, supplier_id=self._supplier_id,
             )
-            self.notify("Bank entry created.", severity="information")
+            self.notify("Bank Account entry created.", severity="information")
             self.dismiss(True)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
@@ -205,7 +205,7 @@ class BankPanel(Widget):
         try:
             balance = bankdata.bank_balance()
             self.query_one("#bank-balance", Static).update(
-                f"[b]Bank Balance:[/b] {sym}{balance:.2f}"
+                f"[b]Bank Account Balance:[/b] {sym}{balance:.2f}"
             )
         except Exception:
             pass
@@ -234,12 +234,12 @@ class BankPanel(Widget):
                     self.notify(f"Withdrawn to Cash Register: {amount:.2f}", severity="information")
                 except Exception as e:
                     self.notify(f"Transfer failed: {e}", severity="error")
-        self.app.push_screen(TransferModal("Withdraw Bank → Cash Register"), callback=after)
+        self.app.push_screen(TransferModal("Withdraw Bank Account → Cash Register"), callback=after)
 
     @on(Button.Pressed, "#btn-delete")
     def on_btn_delete(self) -> None:
         if not self._selected_pk:
-            self.notify("Select a bank entry first.", severity="warning")
+            self.notify("Select a Bank Account entry first.", severity="warning")
             return
         def after(confirmed):
             if confirmed:
@@ -247,10 +247,10 @@ class BankPanel(Widget):
                     bankdata.delete(int(self._selected_pk))
                     self._selected_pk = None
                     self.refresh_data(self.query_one("#search-box", Input).value)
-                    self.notify("Bank entry deleted.", severity="information")
+                    self.notify("Bank Account entry deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"Bank Entry #{self._selected_pk}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"Bank Account Entry #{self._selected_pk}"), callback=after)
 
     def action_new_record(self) -> None:
         def after(saved):

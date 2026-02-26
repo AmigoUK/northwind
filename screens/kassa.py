@@ -209,7 +209,7 @@ class KassaPanel(Widget):
         with Vertical(classes="panel-container"):
             yield Static("", id="kassa-balance")
             with Horizontal(classes="toolbar"):
-                yield Button("→ Bank", id="btn-transfer-bank", variant="warning")
+                yield Button("→ Bank Acct", id="btn-transfer-bank", variant="warning")
             with TabbedContent(id="kassa-tabs"):
                 with TabPane("KP — Receipts", id="tab-kp"):
                     with Vertical():
@@ -310,7 +310,7 @@ class KassaPanel(Widget):
                     self.notify(f"Transferred to bank: {amount:.2f}", severity="information")
                 except Exception as e:
                     self.notify(f"Transfer failed: {e}", severity="error")
-        self.app.push_screen(TransferModal("Transfer Cash → Bank"), callback=after)
+        self.app.push_screen(TransferModal("Transfer Cash → Bank Account"), callback=after)
 
     @on(Button.Pressed, "#btn-new-kp")
     def on_new_kp(self) -> None:
