@@ -11,8 +11,27 @@ A terminal-based warehouse/distribution management application built on the clas
 |---------|-------|---------------|
 | **v1.4** | Foundation | 9 CRUD panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
 | **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank Account, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
-| v2.1 | PDF Export | PDF delivery notes & invoices, company branding *(planned)* |
+| **v2.1** | PDF Export | Branded A4 PDF delivery notes (WZ) & invoices (FV) — company logo, theme colours, totals, linked WZ references |
 | ... | ... | ... |
+
+---
+
+## Features (v2.1)
+
+### New in v2.1 — PDF Export
+
+- **PDF button on WZ Delivery Notes** — generates a branded A4 PDF saved to `~/Downloads/`
+- **PDF button on FV Invoices** — generates a branded A4 PDF saved to `~/Downloads/`
+- Both documents include:
+  - Company logo (if set in Business Details), name, address, contact info
+  - Document title, number and date in the configured theme colour (blue / green / monochrome)
+  - Ship To / Bill To address box
+  - Line items table with alternating row shading and themed header row
+  - VAT number and Tax ID band (when configured)
+  - Configurable footer text and page N / M numbering
+- **FV invoice extras**: Payment Details box (due date, terms, bank account), colour-coded Outstanding amount (red if unpaid, green if settled), linked WZ reference list
+- **WZ price toggle**: `doc_wz_show_prices = false` in Business Details hides Unit Price and Line Total columns
+- All branding (logo, colours, titles, footer) controlled via the **Business Details** panel — no code changes needed
 
 ---
 
@@ -171,9 +190,9 @@ Default login: **username** `admin` / **PIN** `1234`
 |---------|---------|---------|
 | `textual` | ≥ 0.80.0 | TUI framework |
 | `plotext` | ≥ 5.2 | ASCII charts in terminal (v2.0) |
-| `fpdf2` | ≥ 2.7 | PDF generation — delivery notes & invoices *(v2.1)* |
-| `python-barcode` | ≥ 0.15 | GS1-128 / EAN-13 barcodes in PDFs *(v2.2)* |
-| `Pillow` | ≥ 10.0 | PNG barcode image rendering *(v2.2)* |
+| `fpdf2` | ≥ 2.7 | PDF generation — branded delivery notes & invoices (v2.1) |
+| `python-barcode` | ≥ 0.15 | GS1-128 / EAN-13 barcodes in PDFs *(planned)* |
+| `Pillow` | ≥ 10.0 | Company logo embedding in PDFs (v2.1) |
 
 Install all at once:
 ```bash
@@ -188,6 +207,7 @@ pip install -r requirements.txt
 northwind/
 ├── app.py              # Textual App entry point, login flow, sidebar nav
 ├── db.py               # SQLite schema DDL + seed data
+├── pdf_export.py       # PDF generation for WZ delivery notes and FV invoices (v2.1)
 ├── northwind.tcss      # Textual CSS (layout, modals, panels, charts)
 ├── requirements.txt    # Python dependencies
 ├── data/               # Data-access layer (pure SQL, no UI)
@@ -254,3 +274,5 @@ northwind/
 | SQL window functions: `strftime`, `julianday`, `AVG` | `data/reports.py`, `data/dashboard.py` |
 | Document workflow state machine (draft → issued) | `data/wz.py`, `data/fv.py`, `data/pz.py` |
 | Key-value settings store for business/document config | `data/settings.py`, `screens/business.py` |
+| `fpdf2` subclassing for custom footers and multi-column layouts | `pdf_export.py` |
+| Embedding images and drawing shapes/lines with FPDF primitives | `pdf_export.py` |

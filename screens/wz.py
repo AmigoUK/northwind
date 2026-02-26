@@ -203,6 +203,7 @@ class WZDetailModal(ModalScreen):
                 yield Button("+ Item",     id="btn-add",    variant="success")
                 yield Button("- Item",     id="btn-remove", variant="warning")
                 yield Button("Delete",     id="btn-delete", variant="error")
+                yield Button("PDF",        id="btn-pdf",    variant="default")
                 yield Button("Close",      id="btn-close")
             yield Label("ESC to close", classes="modal-hint")
 
@@ -334,6 +335,15 @@ class WZDetailModal(ModalScreen):
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
         self.app.push_screen(ConfirmDeleteModal(f"WZ #{self.wz_id}"), callback=after)
+
+    @on(Button.Pressed, "#btn-pdf")
+    def on_pdf(self) -> None:
+        try:
+            import pdf_export
+            path = pdf_export.export_wz(self.wz_id)
+            self.notify(f"PDF saved → {path}", severity="information")
+        except Exception as e:
+            self.notify(f"PDF error: {e}", severity="error")
 
     @on(Button.Pressed, "#btn-close")
     def on_close(self) -> None:

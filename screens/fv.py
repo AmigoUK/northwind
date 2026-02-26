@@ -263,6 +263,7 @@ class FVDetailModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Record Payment", id="btn-record-payment", variant="primary")
                 yield Button("Delete",         id="btn-delete",         variant="error")
+                yield Button("PDF",            id="btn-pdf",            variant="default")
                 yield Button("Close",          id="btn-close")
             yield Label("ESC to close", classes="modal-hint")
 
@@ -358,6 +359,15 @@ class FVDetailModal(ModalScreen):
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
         self.app.push_screen(ConfirmDeleteModal(f"FV #{self.fv_id}"), callback=after)
+
+    @on(Button.Pressed, "#btn-pdf")
+    def on_pdf(self) -> None:
+        try:
+            import pdf_export
+            path = pdf_export.export_fv(self.fv_id)
+            self.notify(f"PDF saved → {path}", severity="information")
+        except Exception as e:
+            self.notify(f"PDF error: {e}", severity="error")
 
     @on(Button.Pressed, "#btn-close")
     def on_close(self) -> None:
