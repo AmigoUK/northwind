@@ -13,6 +13,7 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank Account, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
 | **v2.1** | PDF Export | Branded A4 PDF delivery notes (WZ) & invoices (FV) — company logo, theme colours, totals, linked WZ references |
 | **v2.2** | PDF All Docs + UX | PDF export for PZ, KP, KW & Bank entries; Business Details tabbed layout with docked Save button |
+| **v2.3** | UI Polish | Business Details compact one-screen tabs; form layout optimisation across Company / Tax / Documents |
 | ... | ... | ... |
 
 ---
