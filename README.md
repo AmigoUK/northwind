@@ -133,6 +133,12 @@ A terminal-based warehouse/distribution management application built on the clas
       <sub><b>Order detail view</b></sub>
     </td>
   </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/invoice_pdf.png"><img src="screenshots/invoice_pdf.png" width="260" alt="FV Invoice PDF"/></a><br/>
+      <sub><b>FV Invoice — exported PDF (v2.1)</b></sub>
+    </td>
+  </tr>
 </table>
 
 ### Finance & Admin
