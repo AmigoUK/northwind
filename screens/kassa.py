@@ -216,6 +216,7 @@ class KassaPanel(Widget):
                         yield DataTable(id="kp-tbl", cursor_type="row", zebra_stripes=True)
                         with Horizontal(classes="toolbar"):
                             yield Button("+ New KP", id="btn-new-kp", variant="success")
+                            yield Button("PDF",      id="btn-pdf-kp")
                             yield Button("Delete",   id="btn-del-kp", variant="error")
                             yield Label("", id="kp-count", classes="count-label")
                 with TabPane("KW — Payments", id="tab-kw"):
@@ -223,6 +224,7 @@ class KassaPanel(Widget):
                         yield DataTable(id="kw-tbl", cursor_type="row", zebra_stripes=True)
                         with Horizontal(classes="toolbar"):
                             yield Button("+ New KW", id="btn-new-kw", variant="success")
+                            yield Button("PDF",      id="btn-pdf-kw")
                             yield Button("Delete",   id="btn-del-kw", variant="error")
                             yield Label("", id="kw-count", classes="count-label")
 
@@ -311,6 +313,30 @@ class KassaPanel(Widget):
                 except Exception as e:
                     self.notify(f"Transfer failed: {e}", severity="error")
         self.app.push_screen(TransferModal("Transfer Cash → Bank Account"), callback=after)
+
+    @on(Button.Pressed, "#btn-pdf-kp")
+    def on_pdf_kp(self) -> None:
+        if not self._kp_selected:
+            self.notify("Select a KP entry first.", severity="warning")
+            return
+        try:
+            import pdf_export
+            path = pdf_export.export_kp(int(self._kp_selected))
+            self.notify(f"PDF saved → {path}", severity="information")
+        except Exception as e:
+            self.notify(f"PDF error: {e}", severity="error")
+
+    @on(Button.Pressed, "#btn-pdf-kw")
+    def on_pdf_kw(self) -> None:
+        if not self._kw_selected:
+            self.notify("Select a KW entry first.", severity="warning")
+            return
+        try:
+            import pdf_export
+            path = pdf_export.export_kw(int(self._kw_selected))
+            self.notify(f"PDF saved → {path}", severity="information")
+        except Exception as e:
+            self.notify(f"PDF error: {e}", severity="error")
 
     @on(Button.Pressed, "#btn-new-kp")
     def on_new_kp(self) -> None:

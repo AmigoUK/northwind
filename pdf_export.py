@@ -1,4 +1,4 @@
-"""pdf_export.py — PDF generation for WZ (delivery notes) and FV (invoices)."""
+"""pdf_export.py — PDF generation for all Northwind documents."""
 from __future__ import annotations
 
 import os
@@ -484,3 +484,353 @@ def export_fv(fv_id: int) -> str:
     path = os.path.join(downloads, f"northwind_fv_{safe_number}_{ts}.pdf")
     pdf.output(path)
     return path
+
+
+# ── Shared helpers for voucher-style single-entry documents ───────────────────
+
+def _draw_field_row(pdf: _NorthwindPDF, margin: float, page_w: float,
+                    label: str, value: str, label_w: float = 45) -> None:
+    """Draw one labelled field row (label bold-grey, value black)."""
+    if not value or not value.strip():
+        return
+    pdf.set_x(margin)
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(label_w, 6, label)
+    pdf.set_font("Helvetica", size=9)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(page_w - label_w, 6, value, new_x="LMARGIN", new_y="NEXT")
+
+
+def _draw_amount_box(pdf: _NorthwindPDF, margin: float, page_w: float,
+                     sym: str, amount: float, theme: tuple) -> None:
+    """Draw a prominent centred amount box."""
+    box_y = pdf.get_y()
+    box_h = 18
+    pdf.set_fill_color(*theme)
+    pdf.rect(margin, box_y, page_w, box_h, style="F")
+    pdf.set_font("Helvetica", style="B", size=18)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(margin, box_y + 3)
+    pdf.cell(page_w, 12, f"{sym}{amount:,.2f}", align="C")
+    pdf.set_y(box_y + box_h + 4)
+    pdf.set_text_color(0, 0, 0)
+
+
+def _draw_signature_line(pdf: _NorthwindPDF, margin: float, page_w: float,
+                          theme: tuple) -> None:
+    """Draw a signature line near the bottom."""
+    pdf.ln(10)
+    sig_x = margin + page_w * 0.55
+    sig_w = page_w * 0.45
+    pdf.set_draw_color(*theme)
+    pdf.set_line_width(0.4)
+    pdf.line(sig_x, pdf.get_y(), sig_x + sig_w, pdf.get_y())
+    pdf.set_line_width(0.2)
+    pdf.set_draw_color(0, 0, 0)
+    pdf.set_font("Helvetica", size=8)
+    pdf.set_text_color(120, 120, 120)
+    pdf.set_x(sig_x)
+    pdf.cell(sig_w, 5, "Authorised signature", align="C")
+
+
+def _save_pdf(pdf: _NorthwindPDF, prefix: str, doc_number: str) -> str:
+    """Output PDF to ~/Downloads and return the path."""
+    downloads = os.path.expanduser("~/Downloads")
+    os.makedirs(downloads, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe = doc_number.replace("/", "-").replace("\\", "-")
+    path = os.path.join(downloads, f"northwind_{prefix}_{safe}_{ts}.pdf")
+    pdf.output(path)
+    return path
+
+
+# ── PZ — Goods Receipt ────────────────────────────────────────────────────────
+
+def export_pz(pz_id: int) -> str:
+    """Generate a branded PDF for a PZ goods receipt. Returns the saved file path."""
+    import data.pz as pzdata
+    import data.suppliers as sdata
+
+    hdr = pzdata.get_by_pk(pz_id)
+    if not hdr:
+        raise ValueError(f"PZ #{pz_id} not found.")
+    items = pzdata.fetch_items(pz_id)
+    supplier = sdata.get_by_pk(hdr["SupplierID"]) if hdr.get("SupplierID") else {}
+    b = _branding()
+    sym = get_currency_symbol()
+    theme = _theme_colour(b.get("doc_theme", ""))
+
+    pdf = _NorthwindPDF(footer_text=b.get("doc_footer", ""), theme_rgb=theme)
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(15, 15, 15)
+    pdf.add_page()
+
+    doc_number = hdr.get("PZ_Number", f"PZ-{pz_id}")
+    doc_date = hdr.get("PZ_Date", "")
+    _draw_header(pdf, b, "Goods Receipt", doc_number, doc_date)
+
+    margin = pdf.l_margin
+    page_w = pdf.w - pdf.l_margin - pdf.r_margin
+    sup = supplier or {}
+
+    # --- Receive From box ---
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_text_color(80, 80, 80)
+    pdf.set_x(margin)
+    pdf.cell(0, 5, "RECEIVE FROM:", new_x="LMARGIN", new_y="NEXT")
+
+    box_y = pdf.get_y()
+    box_h = 28
+    pdf.set_fill_color(245, 245, 245)
+    pdf.rect(margin, box_y, page_w, box_h, style="F")
+
+    inner_y = box_y + 3
+    pdf.set_font("Helvetica", style="B", size=10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(margin + 3, inner_y)
+    pdf.cell(page_w - 6, 5, sup.get("CompanyName", hdr.get("CompanyName", "")))
+    inner_y += 5
+
+    pdf.set_font("Helvetica", size=9)
+    pdf.set_text_color(50, 50, 50)
+    city_line = " ".join(filter(None, [
+        sup.get("PostalCode", ""), sup.get("City", ""), sup.get("Country", ""),
+    ]))
+    for line_text in [sup.get("ContactName", ""), sup.get("Address", ""), city_line]:
+        if line_text.strip():
+            pdf.set_xy(margin + 3, inner_y)
+            pdf.cell(page_w - 6, 5, line_text)
+            inner_y += 5
+
+    pdf.set_y(box_y + box_h + 4)
+
+    # --- Meta fields ---
+    if hdr.get("SupplierDocRef"):
+        _draw_field_row(pdf, margin, page_w, "Supplier Ref:", hdr["SupplierDocRef"])
+    if hdr.get("PaymentMethod"):
+        _draw_field_row(pdf, margin, page_w, "Payment Method:", hdr["PaymentMethod"])
+    if hdr.get("Notes"):
+        _draw_field_row(pdf, margin, page_w, "Notes:", hdr["Notes"])
+
+    pdf.ln(3)
+
+    # --- Line items table ---
+    col_widths = [8, page_w - 8 - 14 - 24 - 24, 14, 24, 24]
+    headers = ["#", "Product Name", "Qty", "Unit Cost", "Line Total"]
+    row_h = 7
+
+    pdf.set_fill_color(*theme)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_x(margin)
+    for i, (h, w) in enumerate(zip(headers, col_widths)):
+        pdf.cell(w, row_h, h, border=0, align="R" if i >= 2 else "L", fill=True)
+    pdf.ln()
+
+    total = 0.0
+    pdf.set_font("Helvetica", size=9)
+    for idx, it in enumerate(items):
+        fill = (idx % 2 == 1)
+        if fill:
+            pdf.set_fill_color(245, 248, 252)
+        pdf.set_text_color(0, 0, 0)
+        lt = it.get("LineTotal") or 0.0
+        total += lt
+        row_data = [
+            str(idx + 1), it["ProductName"], str(it["Quantity"]),
+            f"{sym}{it['UnitCost']:.2f}", f"{sym}{lt:.2f}",
+        ]
+        pdf.set_x(margin)
+        for i, (val, w) in enumerate(zip(row_data, col_widths)):
+            pdf.cell(w, row_h, val, border=0, align="R" if i >= 2 else "L", fill=fill)
+        pdf.ln()
+
+    # Total row
+    pdf.set_fill_color(225, 225, 225)
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_x(margin)
+    for i in range(len(col_widths) - 2):
+        pdf.cell(col_widths[i], row_h, "", border=0, fill=True)
+    pdf.cell(col_widths[-2], row_h, "TOTAL COST", align="R", border=0, fill=True)
+    pdf.cell(col_widths[-1], row_h, f"{sym}{total:.2f}", align="R", border=0, fill=True)
+    pdf.ln()
+
+    # --- VAT / Tax band ---
+    pdf.ln(4)
+    if b.get("co_vat") or b.get("co_tax_id"):
+        vat_parts = []
+        if b.get("co_vat"):
+            vat_parts.append(f"VAT No: {b['co_vat']}")
+        if b.get("co_tax_id"):
+            vat_parts.append(f"Tax ID: {b['co_tax_id']}")
+        vat_y = pdf.get_y()
+        pdf.set_fill_color(245, 245, 245)
+        pdf.rect(margin, vat_y, page_w, 8, style="F")
+        pdf.set_font("Helvetica", size=8)
+        pdf.set_text_color(100, 100, 100)
+        pdf.set_xy(margin + 3, vat_y + 1.5)
+        pdf.cell(page_w - 6, 5, "   |   ".join(vat_parts))
+
+    return _save_pdf(pdf, "pz", doc_number)
+
+
+# ── KP — Cash Receipt ─────────────────────────────────────────────────────────
+
+def export_kp(kp_id: int) -> str:
+    """Generate a branded PDF for a KP cash receipt. Returns the saved file path."""
+    import data.kassa as kassadata
+    import data.customers as cdata
+
+    hdr = kassadata.get_kp_by_pk(kp_id)
+    if not hdr:
+        raise ValueError(f"KP #{kp_id} not found.")
+    customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
+    b = _branding()
+    sym = get_currency_symbol()
+    theme = _theme_colour(b.get("doc_theme", ""))
+
+    pdf = _NorthwindPDF(footer_text=b.get("doc_footer", ""), theme_rgb=theme)
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(15, 15, 15)
+    pdf.add_page()
+
+    doc_number = hdr.get("KP_Number", f"KP-{kp_id}")
+    doc_date = hdr.get("KP_Date", "")
+    _draw_header(pdf, b, "Cash Receipt", doc_number, doc_date)
+
+    margin = pdf.l_margin
+    page_w = pdf.w - pdf.l_margin - pdf.r_margin
+    cust = customer or {}
+
+    # --- Party / reference fields ---
+    cust_name = cust.get("CompanyName") or hdr.get("CompanyName", "")
+    if cust_name:
+        _draw_field_row(pdf, margin, page_w, "Received From:", cust_name)
+    if hdr.get("FV_ID"):
+        _draw_field_row(pdf, margin, page_w, "FV Reference:", f"FV #{hdr['FV_ID']}")
+    if hdr.get("Description"):
+        _draw_field_row(pdf, margin, page_w, "Description:", hdr["Description"])
+
+    pdf.ln(5)
+
+    # --- Amount box ---
+    _draw_amount_box(pdf, margin, page_w, sym, hdr.get("Amount") or 0.0, theme)
+
+    _draw_signature_line(pdf, margin, page_w, theme)
+
+    return _save_pdf(pdf, "kp", doc_number)
+
+
+# ── KW — Cash Payment ─────────────────────────────────────────────────────────
+
+def export_kw(kw_id: int) -> str:
+    """Generate a branded PDF for a KW cash payment. Returns the saved file path."""
+    import data.kassa as kassadata
+    import data.suppliers as sdata
+
+    hdr = kassadata.get_kw_by_pk(kw_id)
+    if not hdr:
+        raise ValueError(f"KW #{kw_id} not found.")
+    supplier = sdata.get_by_pk(hdr["SupplierID"]) if hdr.get("SupplierID") else {}
+    b = _branding()
+    sym = get_currency_symbol()
+    theme = _theme_colour(b.get("doc_theme", ""))
+
+    pdf = _NorthwindPDF(footer_text=b.get("doc_footer", ""), theme_rgb=theme)
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(15, 15, 15)
+    pdf.add_page()
+
+    doc_number = hdr.get("KW_Number", f"KW-{kw_id}")
+    doc_date = hdr.get("KW_Date", "")
+    _draw_header(pdf, b, "Cash Payment", doc_number, doc_date)
+
+    margin = pdf.l_margin
+    page_w = pdf.w - pdf.l_margin - pdf.r_margin
+    sup = supplier or {}
+
+    sup_name = sup.get("CompanyName") or hdr.get("CompanyName", "")
+    if sup_name:
+        _draw_field_row(pdf, margin, page_w, "Paid To:", sup_name)
+    if hdr.get("PZ_ID"):
+        _draw_field_row(pdf, margin, page_w, "PZ Reference:", f"PZ #{hdr['PZ_ID']}")
+    if hdr.get("Description"):
+        _draw_field_row(pdf, margin, page_w, "Description:", hdr["Description"])
+
+    pdf.ln(5)
+
+    _draw_amount_box(pdf, margin, page_w, sym, hdr.get("Amount") or 0.0, theme)
+
+    _draw_signature_line(pdf, margin, page_w, theme)
+
+    return _save_pdf(pdf, "kw", doc_number)
+
+
+# ── Bank Entry ────────────────────────────────────────────────────────────────
+
+def export_bank_entry(entry_id: int) -> str:
+    """Generate a branded PDF for a Bank Account entry. Returns the saved file path."""
+    import data.bank as bankdata
+
+    hdr = bankdata.get_by_pk(entry_id)
+    if not hdr:
+        raise ValueError(f"Bank Entry #{entry_id} not found.")
+    b = _branding()
+    sym = get_currency_symbol()
+    theme = _theme_colour(b.get("doc_theme", ""))
+
+    direction = hdr.get("Direction", "in")
+    title = "Bank Receipt" if direction == "in" else "Bank Payment"
+
+    pdf = _NorthwindPDF(footer_text=b.get("doc_footer", ""), theme_rgb=theme)
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(15, 15, 15)
+    pdf.add_page()
+
+    doc_number = hdr.get("Entry_Number", f"BANK-{entry_id}")
+    doc_date = hdr.get("Entry_Date", "")
+    _draw_header(pdf, b, title, doc_number, doc_date)
+
+    margin = pdf.l_margin
+    page_w = pdf.w - pdf.l_margin - pdf.r_margin
+
+    # Direction badge
+    badge_label = "MONEY IN" if direction == "in" else "MONEY OUT"
+    badge_colour = (34, 139, 34) if direction == "in" else (200, 30, 30)
+    badge_y = pdf.get_y()
+    pdf.set_fill_color(*badge_colour)
+    pdf.rect(margin, badge_y, 40, 8, style="F")
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(margin, badge_y + 1.5)
+    pdf.cell(40, 5, badge_label, align="C")
+    pdf.set_y(badge_y + 12)
+    pdf.set_text_color(0, 0, 0)
+
+    # Counterparty and reference fields
+    counterparty = hdr.get("CustomerName") or hdr.get("SupplierName") or ""
+    party_label = "Customer:" if hdr.get("CustomerName") else "Supplier:"
+    if counterparty:
+        _draw_field_row(pdf, margin, page_w, party_label, counterparty)
+    if hdr.get("FV_ID"):
+        _draw_field_row(pdf, margin, page_w, "FV Reference:", f"FV #{hdr['FV_ID']}")
+    if hdr.get("PZ_ID"):
+        _draw_field_row(pdf, margin, page_w, "PZ Reference:", f"PZ #{hdr['PZ_ID']}")
+    if hdr.get("Description"):
+        _draw_field_row(pdf, margin, page_w, "Description:", hdr["Description"])
+    if b.get("co_bank_account"):
+        _draw_field_row(pdf, margin, page_w, "Bank Account:", b["co_bank_account"])
+
+    pdf.ln(5)
+
+    _draw_amount_box(pdf, margin, page_w, sym, hdr.get("Amount") or 0.0, theme)
+
+    _draw_signature_line(pdf, margin, page_w, theme)
+
+    return _save_pdf(pdf, "bank", doc_number)

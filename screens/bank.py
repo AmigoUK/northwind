@@ -175,6 +175,7 @@ class BankPanel(Widget):
             with Horizontal(classes="toolbar"):
                 yield Button("+ New Entry", id="btn-new",    variant="success")
                 yield Button("→ Cash Reg",  id="btn-transfer-kassa", variant="warning")
+                yield Button("PDF",         id="btn-pdf")
                 yield Button("Delete",      id="btn-delete", variant="error")
                 yield Label("", id="count-label", classes="count-label")
 
@@ -235,6 +236,18 @@ class BankPanel(Widget):
                 except Exception as e:
                     self.notify(f"Transfer failed: {e}", severity="error")
         self.app.push_screen(TransferModal("Withdraw Bank Account → Cash Register"), callback=after)
+
+    @on(Button.Pressed, "#btn-pdf")
+    def on_btn_pdf(self) -> None:
+        if not self._selected_pk:
+            self.notify("Select a Bank Account entry first.", severity="warning")
+            return
+        try:
+            import pdf_export
+            path = pdf_export.export_bank_entry(int(self._selected_pk))
+            self.notify(f"PDF saved → {path}", severity="information")
+        except Exception as e:
+            self.notify(f"PDF error: {e}", severity="error")
 
     @on(Button.Pressed, "#btn-delete")
     def on_btn_delete(self) -> None:
