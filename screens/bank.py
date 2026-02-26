@@ -174,7 +174,7 @@ class BankPanel(Widget):
             yield DataTable(id="tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="toolbar"):
                 yield Button("+ New Entry", id="btn-new",    variant="success")
-                yield Button("→ Kasa",      id="btn-transfer-kassa", variant="warning")
+                yield Button("→ Cash Reg",  id="btn-transfer-kassa", variant="warning")
                 yield Button("Delete",      id="btn-delete", variant="error")
                 yield Label("", id="count-label", classes="count-label")
 
@@ -231,10 +231,10 @@ class BankPanel(Widget):
                 try:
                     bankdata.withdraw_to_kassa(amount, desc)
                     self.refresh_data(self.query_one("#search-box", Input).value)
-                    self.notify(f"Withdrawn to Kasa: {amount:.2f}", severity="information")
+                    self.notify(f"Withdrawn to Cash Register: {amount:.2f}", severity="information")
                 except Exception as e:
                     self.notify(f"Transfer failed: {e}", severity="error")
-        self.app.push_screen(TransferModal("Withdraw Bank → Kasa"), callback=after)
+        self.app.push_screen(TransferModal("Withdraw Bank → Cash Register"), callback=after)
 
     @on(Button.Pressed, "#btn-delete")
     def on_btn_delete(self) -> None:

@@ -10,7 +10,7 @@ A terminal-based warehouse/distribution management application built on the clas
 | Version | Theme | Key additions |
 |---------|-------|---------------|
 | **v1.4** | Foundation | 9 CRUD panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
-| **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Kasa & Bank, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
+| **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
 | v2.1 | PDF Export | PDF delivery notes & invoices, company branding *(planned)* |
 | ... | ... | ... |
 
@@ -38,8 +38,8 @@ A terminal-based warehouse/distribution management application built on the clas
 - **PW/RW — Stock Movements** — internal stock adjustments (receipts and issues)
 
 #### Finance
-- **Kasa (Cash Register)** — KP income entries, KW expense entries with running balance
-- **Bank** — bank statement entries with cross-referenced Kasa transfers
+- **Cash Register** — KP income entries, KW expense entries with running balance
+- **Bank** — bank statement entries with cross-referenced Cash Register transfers
 
 #### Analytics
 - **Charts panel** — 4 tab views rendered as ANSI ASCII art via `plotext`:
@@ -49,7 +49,7 @@ A terminal-based warehouse/distribution management application built on the clas
   - *Cash & Bank* — combined cash-flow view
   - Press `R` to refresh charts
 - **10 KPI dashboard cards** — Orders Today, Revenue MTD, Low Stock, Pending Orders,
-  Avg Fulfil Days, This Month trend arrow (↑/↓) and delta %, Kasa Balance, Bank Balance,
+  Avg Fulfil Days, This Month trend arrow (↑/↓) and delta %, Cash Register Balance, Bank Balance,
   Open Invoices, Open WZ
 - **11 report types** in the Reports dropdown with date-range filter and CSV export
 
@@ -122,7 +122,7 @@ A terminal-based warehouse/distribution management application built on the clas
   <tr>
     <td align="center">
       <a href="screenshots/cash-lv.png"><img src="screenshots/cash-lv.png" width="260" alt="Kasa"/></a><br/>
-      <sub><b>Kasa (cash register) with KP/KW tabs</b></sub>
+      <sub><b>Cash Register with KP/KW tabs</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/bank-lv.png"><img src="screenshots/bank-lv.png" width="260" alt="Bank"/></a><br/>
@@ -198,7 +198,7 @@ northwind/
 │   ├── wz.py           # WZ document CRUD + issue workflow
 │   ├── fv.py           # FV invoice CRUD
 │   ├── pz.py           # PZ goods receipt CRUD
-│   ├── kassa.py        # Kasa (cash) entries
+│   ├── kassa.py        # Cash Register entries
 │   ├── bank.py         # Bank entries
 │   └── ...             # customers, orders, products, employees, …
 └── screens/            # Textual Widget subclasses (one per section)
@@ -213,7 +213,7 @@ northwind/
     ├── wz.py           # WZ Delivery Notes panel + modals
     ├── fv.py           # FV Invoices panel + modals
     ├── pz.py           # PZ Goods Receipts panel + modals
-    ├── kassa.py        # Kasa (cash register) panel
+    ├── kassa.py        # Cash Register panel
     ├── bank.py         # Bank entries panel
     └── ...             # customers, orders, products, employees, …
 ```

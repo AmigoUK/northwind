@@ -23,7 +23,7 @@ class KPFormModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("New KP — Kasa Przyjmie", classes="modal-title")
+            yield Label("New KP — Cash Receipt", classes="modal-title")
             yield Label("Customer (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-cust")
@@ -91,7 +91,7 @@ class KWFormModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("New KW — Kasa Wypłaci", classes="modal-title")
+            yield Label("New KW — Cash Payment", classes="modal-title")
             yield Label("Supplier (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-sup")

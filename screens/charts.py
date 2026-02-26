@@ -386,7 +386,7 @@ class ChartsPanel(Widget):
             if kassa_data:
                 vals = [v for _, v in kassa_data]
                 spark = _sparkline(vals) if len(vals) > 1 else "█"
-                lines.append("Kasa (Cash) Running Balance")
+                lines.append("Cash Register Running Balance")
                 lines.append(f"Trend  {spark}")
                 lines.append(f"Latest: {sym}{vals[-1]:,.2f}")
                 lines.append("")
@@ -395,7 +395,7 @@ class ChartsPanel(Widget):
                 for d, v in kassa_data[-10:]:
                     lines.append(f" {d:<12}  {sym}{v:>10,.2f}")
             else:
-                lines.append("Kasa (Cash): No transactions recorded.")
+                lines.append("Cash Register: No transactions recorded.")
 
             lines.append("")
             lines.append("")

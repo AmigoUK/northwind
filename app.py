@@ -63,7 +63,7 @@ _NAV_GROUPS = [
         ("movements",  "PW/RW — Stock"),
     ]),
     ("── Finance ──", "nav-group-finance", [
-        ("kassa",      "Kasa"),
+        ("kassa",      "Cash Register"),
         ("bank",       "Bank"),
     ]),
     ("── Analytics ──", "nav-group-analytics", [

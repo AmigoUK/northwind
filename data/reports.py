@@ -263,7 +263,7 @@ def liquidity_snapshot() -> tuple[list, list]:
     total     = kassa_bal + bank_bal
     headers = [("Account", 16), ("Inflows", 14), ("Outflows", 14), ("Balance", 14)]
     data = [
-        ["Kasa (cash)", f"{sym}{kp_total:.2f}",  f"{sym}{kw_total:.2f}",  f"{sym}{kassa_bal:.2f}"],
+        ["Cash Register", f"{sym}{kp_total:.2f}",  f"{sym}{kw_total:.2f}",  f"{sym}{kassa_bal:.2f}"],
         ["Bank",        f"{sym}{bank_in:.2f}",   f"{sym}{bank_out:.2f}",  f"{sym}{bank_bal:.2f}"],
         ["Total",       "",                       "",                      f"{sym}{total:.2f}"],
     ]
