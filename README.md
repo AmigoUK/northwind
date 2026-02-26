@@ -147,7 +147,7 @@ A terminal-based warehouse/distribution management application built on the clas
 
 ```bash
 # 1. Clone
-git clone <repo-url>
+git clone git@github.com:AmigoUK/northwind.git
 cd northwind
 
 # 2. Install dependencies (Python 3.10+)
