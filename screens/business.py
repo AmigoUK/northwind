@@ -22,11 +22,16 @@ class BusinessDetailsPanel(Widget):
                 # Tab 1 — Company
                 with TabPane("Company", id="tab-company"):
                     with Vertical(classes="settings-section"):
-                        yield Label("Company Identity", classes="settings-label")
+                        yield Label("Company & Contact", classes="settings-label")
                         yield Label("Company Name")
                         yield Input(placeholder="Acme Ltd.", id="f-co-name")
-                        yield Label("Address")
-                        yield Input(placeholder="123 Main St", id="f-co-address")
+                        with Horizontal(classes="form-row"):
+                            with Vertical(classes="form-field"):
+                                yield Label("Address")
+                                yield Input(placeholder="123 Main St", id="f-co-address")
+                            with Vertical(classes="form-field"):
+                                yield Label("Country")
+                                yield Input(placeholder="Poland", id="f-co-country")
                         with Horizontal(classes="form-row"):
                             with Vertical(classes="form-field"):
                                 yield Label("City")
@@ -34,13 +39,6 @@ class BusinessDetailsPanel(Widget):
                             with Vertical(classes="form-field"):
                                 yield Label("Postal Code")
                                 yield Input(placeholder="00-001", id="f-co-postal")
-                        yield Label("Country")
-                        yield Input(placeholder="Poland", id="f-co-country")
-                        yield Label("Logo file path (for PDFs)")
-                        yield Input(placeholder="/path/to/logo.png", id="f-co-logo-path")
-
-                    with Vertical(classes="settings-section"):
-                        yield Label("Contact Details", classes="settings-label")
                         with Horizontal(classes="form-row"):
                             with Vertical(classes="form-field"):
                                 yield Label("Phone")
@@ -48,8 +46,13 @@ class BusinessDetailsPanel(Widget):
                             with Vertical(classes="form-field"):
                                 yield Label("Email")
                                 yield Input(placeholder="info@example.com", id="f-co-email")
-                        yield Label("Website")
-                        yield Input(placeholder="https://example.com", id="f-co-website")
+                        with Horizontal(classes="form-row"):
+                            with Vertical(classes="form-field"):
+                                yield Label("Website")
+                                yield Input(placeholder="https://example.com", id="f-co-website")
+                            with Vertical(classes="form-field"):
+                                yield Label("Logo path (for PDFs)")
+                                yield Input(placeholder="/path/to/logo.png", id="f-co-logo-path")
 
                 # Tab 2 — Tax & Legal
                 with TabPane("Tax & Legal", id="tab-tax"):
@@ -85,13 +88,14 @@ class BusinessDetailsPanel(Widget):
                         )
                         with Horizontal(classes="form-row"):
                             with Vertical(classes="form-field"):
-                                yield Label("WZ document title")
+                                yield Label("WZ title")
                                 yield Input(placeholder="Delivery Note", id="f-doc-title-wz")
                             with Vertical(classes="form-field"):
-                                yield Label("FV document title")
+                                yield Label("FV title")
                                 yield Input(placeholder="Invoice", id="f-doc-title-fv")
-                        yield Label("PZ document title")
-                        yield Input(placeholder="Goods Receipt", id="f-doc-title-pz")
+                            with Vertical(classes="form-field"):
+                                yield Label("PZ title")
+                                yield Input(placeholder="Goods Receipt", id="f-doc-title-pz")
                         with Horizontal(classes="setting-row"):
                             yield Label("Show unit prices on WZ delivery notes")
                             yield Switch(id="sw-wz-prices", value=True)
