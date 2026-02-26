@@ -4,7 +4,8 @@ from data.settings import get_currency_symbol
 from datetime import date as _date
 
 
-def sales_by_customer() -> tuple[list, list]:
+def sales_by_customer(date_from: str = "0001-01-01",
+                       date_to:   str = "9999-12-31") -> tuple[list, list]:
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
@@ -14,9 +15,11 @@ def sales_by_customer() -> tuple[list, list]:
                   COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Revenue
            FROM Customers c
            LEFT JOIN Orders o ON c.CustomerID = o.CustomerID
+                             AND o.OrderDate BETWEEN ? AND ?
            LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
            GROUP BY c.CustomerID, c.CompanyName
-           ORDER BY Revenue DESC"""
+           ORDER BY Revenue DESC""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("ID", 6), ("Company Name", 30), ("Orders", 7), ("Revenue", 12)]
@@ -24,7 +27,8 @@ def sales_by_customer() -> tuple[list, list]:
     return headers, data
 
 
-def sales_by_product() -> tuple[list, list]:
+def sales_by_product(date_from: str = "0001-01-01",
+                      date_to:   str = "9999-12-31") -> tuple[list, list]:
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
@@ -34,8 +38,11 @@ def sales_by_product() -> tuple[list, list]:
            FROM Products p
            LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
            LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+           LEFT JOIN Orders o ON od.OrderID = o.OrderID
+                             AND o.OrderDate BETWEEN ? AND ?
            GROUP BY p.ProductID, p.ProductName, c.CategoryName
-           ORDER BY Revenue DESC"""
+           ORDER BY Revenue DESC""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("ID", 4), ("Product Name", 26), ("Category", 16), ("Units Sold", 10), ("Revenue", 12)]
@@ -43,7 +50,8 @@ def sales_by_product() -> tuple[list, list]:
     return headers, data
 
 
-def sales_by_employee() -> tuple[list, list]:
+def sales_by_employee(date_from: str = "0001-01-01",
+                       date_to:   str = "9999-12-31") -> tuple[list, list]:
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
@@ -54,9 +62,11 @@ def sales_by_employee() -> tuple[list, list]:
                   COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Revenue
            FROM Employees e
            LEFT JOIN Orders o ON e.EmployeeID = o.EmployeeID
+                             AND o.OrderDate BETWEEN ? AND ?
            LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
            GROUP BY e.EmployeeID, e.LastName, e.FirstName, e.Title
-           ORDER BY Revenue DESC"""
+           ORDER BY Revenue DESC""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("ID", 4), ("Employee Name", 22), ("Title", 26), ("Orders", 7), ("Revenue", 12)]
@@ -64,7 +74,8 @@ def sales_by_employee() -> tuple[list, list]:
     return headers, data
 
 
-def top_10() -> tuple[list, list]:
+def top_10(date_from: str = "0001-01-01",
+           date_to:   str = "9999-12-31") -> tuple[list, list]:
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
@@ -74,9 +85,12 @@ def top_10() -> tuple[list, list]:
            FROM Products p
            LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
            LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+           LEFT JOIN Orders o ON od.OrderID = o.OrderID
+                             AND o.OrderDate BETWEEN ? AND ?
            GROUP BY p.ProductID, p.ProductName, c.CategoryName
            ORDER BY Revenue DESC
-           LIMIT 10"""
+           LIMIT 10""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("Rank", 5), ("Product Name", 26), ("Category", 16), ("Units Sold", 10), ("Revenue", 12)]
@@ -100,8 +114,9 @@ def low_stock_alert() -> tuple[list, list]:
     return headers, data
 
 
-def monthly_revenue_trend(months: int = 12) -> tuple[list, list]:
-    """Revenue and order count grouped by month for the last N months."""
+def monthly_revenue_trend(date_from: str = "0001-01-01",
+                           date_to:   str = "9999-12-31") -> tuple[list, list]:
+    """Revenue and order count grouped by month for the given date range, ordered ASC."""
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
@@ -111,19 +126,37 @@ def monthly_revenue_trend(months: int = 12) -> tuple[list, list]:
            FROM Orders o
            LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
            WHERE o.OrderDate IS NOT NULL
+             AND o.OrderDate BETWEEN ? AND ?
            GROUP BY strftime('%Y-%m', o.OrderDate)
-           ORDER BY Month DESC
-           LIMIT ?""",
-        (months,),
+           ORDER BY Month ASC""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
-    rows = list(reversed(rows))
     headers = [("Month", 10), ("Revenue", 14), ("Orders", 7)]
     data = [[r["Month"], f"{sym}{r['Revenue']:.2f}", r["Orders"]] for r in rows]
     return headers, data
 
 
-def order_fulfilment_time() -> tuple[list, list]:
+def chart_employees(date_from: str = "0001-01-01",
+                    date_to:   str = "9999-12-31") -> tuple[list, list]:
+    """Returns (last_names, order_counts) for the Top Employees bar chart."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT e.LastName,
+                  COUNT(DISTINCT o.OrderID) AS Orders
+           FROM Employees e
+           LEFT JOIN Orders o ON e.EmployeeID = o.EmployeeID
+             AND o.OrderDate BETWEEN ? AND ?
+           GROUP BY e.EmployeeID, e.LastName
+           ORDER BY Orders DESC""",
+        (date_from, date_to),
+    ).fetchall()
+    conn.close()
+    return [r["LastName"] for r in rows], [int(r["Orders"]) for r in rows]
+
+
+def order_fulfilment_time(date_from: str = "0001-01-01",
+                           date_to:   str = "9999-12-31") -> tuple[list, list]:
     """Average days from order to ship by employee."""
     conn = get_connection()
     rows = conn.execute(
@@ -133,8 +166,10 @@ def order_fulfilment_time() -> tuple[list, list]:
            FROM Orders o
            JOIN Employees e ON o.EmployeeID = e.EmployeeID
            WHERE o.ShippedDate IS NOT NULL AND o.OrderDate IS NOT NULL
+             AND o.OrderDate BETWEEN ? AND ?
            GROUP BY o.EmployeeID, e.LastName, e.FirstName
-           ORDER BY AvgDays"""
+           ORDER BY AvgDays""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("Employee", 28), ("Shipped Orders", 14), ("Avg Days", 8)]
@@ -142,7 +177,8 @@ def order_fulfilment_time() -> tuple[list, list]:
     return headers, data
 
 
-def category_revenue() -> tuple[list, list]:
+def category_revenue(date_from: str = "0001-01-01",
+                      date_to:   str = "9999-12-31") -> tuple[list, list]:
     """Revenue and units sold per product category."""
     sym = get_currency_symbol()
     conn = get_connection()
@@ -153,8 +189,11 @@ def category_revenue() -> tuple[list, list]:
            FROM Categories c
            LEFT JOIN Products p ON c.CategoryID = p.CategoryID
            LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+           LEFT JOIN Orders o ON od.OrderID = o.OrderID
+                             AND o.OrderDate BETWEEN ? AND ?
            GROUP BY c.CategoryID, c.CategoryName
-           ORDER BY Revenue DESC"""
+           ORDER BY Revenue DESC""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("Category", 22), ("Units Sold", 10), ("Revenue", 14)]
@@ -162,7 +201,8 @@ def category_revenue() -> tuple[list, list]:
     return headers, data
 
 
-def repeat_customers() -> tuple[list, list]:
+def repeat_customers(date_from: str = "0001-01-01",
+                      date_to:   str = "9999-12-31") -> tuple[list, list]:
     """Customers with more than one order and their lifetime value."""
     sym = get_currency_symbol()
     conn = get_connection()
@@ -173,10 +213,12 @@ def repeat_customers() -> tuple[list, list]:
                   COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS LTV
            FROM Customers c
            JOIN Orders o ON c.CustomerID = o.CustomerID
+                        AND o.OrderDate BETWEEN ? AND ?
            LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
            GROUP BY c.CustomerID, c.CompanyName
            HAVING COUNT(DISTINCT o.OrderID) > 1
-           ORDER BY LTV DESC"""
+           ORDER BY LTV DESC""",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
     headers = [("ID", 6), ("Company Name", 30), ("Orders", 7), ("Lifetime Value", 14)]
@@ -207,7 +249,8 @@ def overdue_orders() -> tuple[list, list]:
     return headers, data
 
 
-def orders_by_date_range(date_from: str, date_to: str) -> tuple[list, list]:
+def orders_by_date_range(date_from: str = "0001-01-01",
+                          date_to:   str = "9999-12-31") -> tuple[list, list]:
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(

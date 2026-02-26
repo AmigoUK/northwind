@@ -1,4 +1,6 @@
 """screens/reports.py — Reports panel with Select widget and DataTable results."""
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
@@ -41,10 +43,12 @@ class ReportsPanel(Widget):
                 allow_blank=False,
                 value="customer",
             )
-            with Horizontal(id="date-range-row", classes="date-range-hidden"):
-                yield Input(placeholder="From date (YYYY-MM-DD)", id="date-from")
-                yield Input(placeholder="To date (YYYY-MM-DD)",   id="date-to")
-                yield Button("Run", id="btn-run-date", variant="primary")
+            with Horizontal(id="date-range-row", classes="date-range-visible"):
+                yield Label("From:")
+                yield Input(placeholder="YYYY-MM-DD", id="date-from")
+                yield Label("To:")
+                yield Input(placeholder="YYYY-MM-DD", id="date-to")
+                yield Button("Apply", id="btn-run-date", variant="primary")
             yield DataTable(id="report-tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="toolbar"):
                 yield Label("", id="count-label", classes="count-label")
@@ -55,66 +59,81 @@ class ReportsPanel(Widget):
     @on(Select.Changed, "#report-type")
     def on_report_changed(self, event: Select.Changed) -> None:
         if event.value and event.value is not Select.BLANK:
-            date_row = self.query_one("#date-range-row")
-            if event.value == "daterange":
-                date_row.remove_class("date-range-hidden")
-                date_row.add_class("date-range-visible")
-            else:
-                date_row.remove_class("date-range-visible")
-                date_row.add_class("date-range-hidden")
-                self._run_report(str(event.value))
+            dates = self._get_validated_dates()
+            if dates is not None:
+                self._run_report(str(event.value), *dates)
 
-    @on(Button.Pressed, "#btn-run-date")
-    def on_run_date(self) -> None:
+    def _get_validated_dates(self) -> tuple[str, str] | None:
         from datetime import datetime
         date_from = self.query_one("#date-from", Input).value.strip()
         date_to   = self.query_one("#date-to",   Input).value.strip()
-        if not date_from or not date_to:
-            self.notify("Both From and To dates are required.", severity="error")
-            return
-        for label, val in [("From Date", date_from), ("To Date", date_to)]:
-            try:
-                datetime.strptime(val, "%Y-%m-%d")
-            except ValueError:
-                self.notify(f"{label} must be YYYY-MM-DD.", severity="error")
-                return
-        if date_from > date_to:
+        if not date_from and not date_to:
+            return "0001-01-01", "9999-12-31"
+        for label, val in [("From date", date_from), ("To date", date_to)]:
+            if val:
+                try:
+                    datetime.strptime(val, "%Y-%m-%d")
+                except ValueError:
+                    self.notify(f"{label} must be YYYY-MM-DD.", severity="error")
+                    return None
+        df = date_from or "0001-01-01"
+        dt = date_to   or "9999-12-31"
+        if df > dt:
             self.notify("From date must be before To date.", severity="error")
-            return
-        self._run_report("daterange", date_from=date_from, date_to=date_to)
+            return None
+        return df, dt
 
-    def _run_report(self, report_type: str, **kwargs) -> None:
+    @on(Button.Pressed, "#btn-run-date")
+    def on_apply_dates(self, event: Button.Pressed) -> None:
+        dates = self._get_validated_dates()
+        if dates is None:
+            return
+        report_type = self.query_one("#report-type", Select).value
+        if report_type and report_type is not Select.BLANK:
+            self._run_report(str(report_type), *dates)
+
+    @on(Input.Submitted)
+    def on_date_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id in ("date-from", "date-to"):
+            dates = self._get_validated_dates()
+            if dates is None:
+                return
+            report_type = self.query_one("#report-type", Select).value
+            if report_type and report_type is not Select.BLANK:
+                self._run_report(str(report_type), *dates)
+
+    def _run_report(self, report_type: str,
+                    date_from: str = "0001-01-01",
+                    date_to:   str = "9999-12-31") -> None:
         tbl = self.query_one("#report-tbl", DataTable)
         tbl.clear(columns=True)
         try:
             if report_type == "customer":
-                headers, rows = rdata.sales_by_customer()
+                headers, rows = rdata.sales_by_customer(date_from, date_to)
             elif report_type == "product":
-                headers, rows = rdata.sales_by_product()
+                headers, rows = rdata.sales_by_product(date_from, date_to)
             elif report_type == "employee":
-                headers, rows = rdata.sales_by_employee()
+                headers, rows = rdata.sales_by_employee(date_from, date_to)
             elif report_type == "top10":
-                headers, rows = rdata.top_10()
+                headers, rows = rdata.top_10(date_from, date_to)
             elif report_type == "lowstock":
                 headers, rows = rdata.low_stock_alert()
                 if not rows:
                     self.notify("No low-stock products found.", severity="information")
                     return
             elif report_type == "daterange":
-                headers, rows = rdata.orders_by_date_range(
-                    kwargs.get("date_from", ""), kwargs.get("date_to", "")
-                )
+                headers, rows = rdata.orders_by_date_range(date_from, date_to)
                 if not rows:
                     self.notify("No orders found in that date range.", severity="information")
                     return
             elif report_type == "monthly_trend":
-                headers, rows = rdata.monthly_revenue_trend()
+                headers, rows = rdata.monthly_revenue_trend(date_from, date_to)
             elif report_type == "fulfilment":
-                headers, rows = rdata.order_fulfilment_time()
+                headers, rows = rdata.order_fulfilment_time(date_from, date_to)
             elif report_type == "category_rev":
-                headers, rows = rdata.category_revenue()
+                headers, rows = rdata.category_revenue(date_from, date_to)
             elif report_type == "repeat_cust":
-                headers, rows = rdata.repeat_customers()
+                headers, rows = rdata.repeat_customers(date_from, date_to)
             elif report_type == "overdue":
                 headers, rows = rdata.overdue_orders()
                 if not rows:
@@ -155,9 +174,9 @@ class ReportsPanel(Widget):
         self.notify(f"Exported {len(self._last_rows)} rows → {path}", severity="information")
 
     def action_run_report(self) -> None:
+        dates = self._get_validated_dates()
+        if dates is None:
+            return
         report_type = self.query_one("#report-type", Select).value
         if report_type and report_type is not Select.BLANK:
-            if str(report_type) == "daterange":
-                self.on_run_date()
-            else:
-                self._run_report(str(report_type))
+            self._run_report(str(report_type), *dates)
