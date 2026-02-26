@@ -324,3 +324,6 @@ northwind/
 | `dock: bottom` to pin a widget (Save button) regardless of sibling content height | `northwind.tcss` |
 | `overflow-y: auto` on `TabPane` to make long forms scrollable within a tab | `northwind.tcss` |
 | `TabbedContent` inside a panel to split a long settings page into navigable tabs | `screens/business.py` |
+| Grouping related fields into 2- and 3-column `form-row` layouts to reduce vertical height | `screens/business.py` |
+| Merging redundant sections (Company Identity + Contact Details) into one compact block | `screens/business.py` |
+| Balancing widget height (Select `height: 2`) vs readability to keep forms within one screen | `northwind.tcss` |
