@@ -172,6 +172,16 @@ A terminal-based warehouse/distribution management application built on the clas
   </tr>
   <tr>
     <td align="center">
+      <a href="screenshots/cash-in-receipt.png"><img src="screenshots/cash-in-receipt.png" width="260" alt="KP Cash Receipt PDF"/></a><br/>
+      <sub><b>KP Cash Receipt — exported PDF (v2.2)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/bank-transfer-pdf.png"><img src="screenshots/bank-transfer-pdf.png" width="260" alt="Bank Entry PDF"/></a><br/>
+      <sub><b>Bank Account Entry — exported PDF (v2.2)</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <a href="screenshots/sql-query.png"><img src="screenshots/sql-query.png" width="260" alt="SQL Query"/></a><br/>
       <sub><b>SQL Query editor</b></sub>
     </td>
