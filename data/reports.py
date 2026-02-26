@@ -1,6 +1,7 @@
 """data/reports.py — SQL-only aggregation queries."""
 from db import get_connection
 from data.settings import get_currency_symbol
+from datetime import date as _date
 
 
 def sales_by_customer() -> tuple[list, list]:
@@ -96,6 +97,113 @@ def low_stock_alert() -> tuple[list, list]:
     conn.close()
     headers = [("ID", 4), ("Product Name", 26), ("Category", 16), ("In Stock", 9), ("Reorder Lvl", 11), ("On Order", 8)]
     data = [[r["ProductID"], r["ProductName"], r["CategoryName"], r["UnitsInStock"], r["ReorderLevel"], r["UnitsOnOrder"]] for r in rows]
+    return headers, data
+
+
+def monthly_revenue_trend(months: int = 12) -> tuple[list, list]:
+    """Revenue and order count grouped by month for the last N months."""
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT strftime('%Y-%m', o.OrderDate) AS Month,
+                  COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Revenue,
+                  COUNT(DISTINCT o.OrderID) AS Orders
+           FROM Orders o
+           LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
+           WHERE o.OrderDate IS NOT NULL
+           GROUP BY strftime('%Y-%m', o.OrderDate)
+           ORDER BY Month DESC
+           LIMIT ?""",
+        (months,),
+    ).fetchall()
+    conn.close()
+    rows = list(reversed(rows))
+    headers = [("Month", 10), ("Revenue", 14), ("Orders", 7)]
+    data = [[r["Month"], f"{sym}{r['Revenue']:.2f}", r["Orders"]] for r in rows]
+    return headers, data
+
+
+def order_fulfilment_time() -> tuple[list, list]:
+    """Average days from order to ship by employee."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT e.LastName || ', ' || e.FirstName AS Employee,
+                  COUNT(o.OrderID) AS Shipped,
+                  ROUND(AVG(julianday(o.ShippedDate) - julianday(o.OrderDate)), 1) AS AvgDays
+           FROM Orders o
+           JOIN Employees e ON o.EmployeeID = e.EmployeeID
+           WHERE o.ShippedDate IS NOT NULL AND o.OrderDate IS NOT NULL
+           GROUP BY o.EmployeeID, e.LastName, e.FirstName
+           ORDER BY AvgDays"""
+    ).fetchall()
+    conn.close()
+    headers = [("Employee", 28), ("Shipped Orders", 14), ("Avg Days", 8)]
+    data = [[r["Employee"], r["Shipped"], r["AvgDays"]] for r in rows]
+    return headers, data
+
+
+def category_revenue() -> tuple[list, list]:
+    """Revenue and units sold per product category."""
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT c.CategoryName,
+                  COALESCE(SUM(od.Quantity), 0) AS Units,
+                  COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Revenue
+           FROM Categories c
+           LEFT JOIN Products p ON c.CategoryID = p.CategoryID
+           LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+           GROUP BY c.CategoryID, c.CategoryName
+           ORDER BY Revenue DESC"""
+    ).fetchall()
+    conn.close()
+    headers = [("Category", 22), ("Units Sold", 10), ("Revenue", 14)]
+    data = [[r["CategoryName"], r["Units"], f"{sym}{r['Revenue']:.2f}"] for r in rows]
+    return headers, data
+
+
+def repeat_customers() -> tuple[list, list]:
+    """Customers with more than one order and their lifetime value."""
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT c.CustomerID,
+                  c.CompanyName,
+                  COUNT(DISTINCT o.OrderID) AS Orders,
+                  COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS LTV
+           FROM Customers c
+           JOIN Orders o ON c.CustomerID = o.CustomerID
+           LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
+           GROUP BY c.CustomerID, c.CompanyName
+           HAVING COUNT(DISTINCT o.OrderID) > 1
+           ORDER BY LTV DESC"""
+    ).fetchall()
+    conn.close()
+    headers = [("ID", 6), ("Company Name", 30), ("Orders", 7), ("Lifetime Value", 14)]
+    data = [[r["CustomerID"], r["CompanyName"], r["Orders"], f"{sym}{r['LTV']:.2f}"] for r in rows]
+    return headers, data
+
+
+def overdue_orders() -> tuple[list, list]:
+    """Orders where ShippedDate is NULL and RequiredDate is in the past."""
+    today = str(_date.today())
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT o.OrderID,
+                  COALESCE(c.CompanyName, o.CustomerID) AS Customer,
+                  o.OrderDate,
+                  o.RequiredDate
+           FROM Orders o
+           LEFT JOIN Customers c ON o.CustomerID = c.CustomerID
+           WHERE o.ShippedDate IS NULL
+             AND o.RequiredDate IS NOT NULL
+             AND o.RequiredDate < ?
+           ORDER BY o.RequiredDate""",
+        (today,),
+    ).fetchall()
+    conn.close()
+    headers = [("OrderID", 8), ("Customer", 28), ("Order Date", 12), ("Due Date", 12)]
+    data = [[r["OrderID"], r["Customer"], r["OrderDate"] or "", r["RequiredDate"]] for r in rows]
     return headers, data
 
 

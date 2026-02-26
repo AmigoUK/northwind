@@ -1,1 +1,8 @@
 textual>=0.80.0
+plotext>=5.2
+fpdf2>=2.7
+python-barcode>=0.15
+Pillow>=10.0
+fastapi>=0.110
+uvicorn>=0.29
+qrcode>=7.4

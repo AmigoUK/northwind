@@ -373,6 +373,21 @@ LoginScreen {
     width: 1fr;
 }
 
+/* ── Charts panel ───────────────────────────────────────────────────────────*/
+.chart-static {
+    height: 1fr;
+    overflow-y: auto;
+    padding: 0 1;
+}
+
+#charts-tabs {
+    height: 1fr;
+}
+
+#charts-tabs ContentSwitcher {
+    height: 1fr;
+}
+
 /* ── Modal ESC hint ─────────────────────────────────────────────────────────*/
 .modal-hint {
     color: $text-muted;

@@ -15,6 +15,11 @@ _REPORT_OPTIONS = [
     ("Top 10 Products by Revenue", "top10"),
     ("Low Stock Alert",            "lowstock"),
     ("Orders by Date Range",       "daterange"),
+    ("Monthly Revenue Trend",      "monthly_trend"),
+    ("Order Fulfilment Time",      "fulfilment"),
+    ("Category Revenue",           "category_rev"),
+    ("Repeat Customers",           "repeat_cust"),
+    ("Overdue Orders",             "overdue"),
 ]
 
 
@@ -101,6 +106,19 @@ class ReportsPanel(Widget):
                 )
                 if not rows:
                     self.notify("No orders found in that date range.", severity="information")
+                    return
+            elif report_type == "monthly_trend":
+                headers, rows = rdata.monthly_revenue_trend()
+            elif report_type == "fulfilment":
+                headers, rows = rdata.order_fulfilment_time()
+            elif report_type == "category_rev":
+                headers, rows = rdata.category_revenue()
+            elif report_type == "repeat_cust":
+                headers, rows = rdata.repeat_customers()
+            elif report_type == "overdue":
+                headers, rows = rdata.overdue_orders()
+                if not rows:
+                    self.notify("No overdue orders found.", severity="information")
                     return
             else:
                 return

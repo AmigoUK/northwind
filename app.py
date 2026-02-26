@@ -34,6 +34,7 @@ from screens.sql        import SqlPanel
 from screens.users      import UsersPanel
 from screens.settings   import SettingsPanel
 from screens.modals     import QuitConfirmModal
+from screens.charts     import ChartsPanel
 
 
 _SECTIONS = [
@@ -47,6 +48,7 @@ _SECTIONS = [
     ("shippers",   "Shippers"),
     ("regions",    "Regions"),
     ("reports",    "Reports"),
+    ("charts",     "Charts"),
     # Admin-only sections (hidden for non-admin users)
     ("sql",        "SQL Query"),
     ("users",      "Users"),
@@ -102,6 +104,7 @@ class NorthwindApp(App):
                 yield ShippersPanel(id="shippers")
                 yield RegionsPanel(id="regions")
                 yield ReportsPanel(id="reports")
+                yield ChartsPanel(id="charts")
                 yield SqlPanel(id="sql")
                 yield UsersPanel(id="users")
                 yield SettingsPanel(id="settings")

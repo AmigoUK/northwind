@@ -1,6 +1,7 @@
 """data/dashboard.py — KPI queries and recent-orders snapshot for the Dashboard panel."""
 from db import get_connection
 from data.settings import get_currency_symbol
+from datetime import date as _date
 
 
 def kpis() -> dict:
@@ -21,6 +22,64 @@ def kpis() -> dict:
         "orders":    orders,
         "low_stock": low_stock,
         "revenue":   revenue,
+    }
+
+
+def kpis_extended() -> dict:
+    """Extended KPIs including trend arrows and pending orders."""
+    conn = get_connection()
+    today = str(_date.today())
+    # current month prefix e.g. "1996-07"
+    cur_month = today[:7]
+    # previous month: simple string subtraction not reliable, use SQL
+    pending = conn.execute(
+        "SELECT COUNT(*) FROM Orders WHERE ShippedDate IS NULL"
+    ).fetchone()[0]
+
+    avg_fulfil = conn.execute(
+        """SELECT ROUND(AVG(julianday(ShippedDate) - julianday(OrderDate)), 1)
+           FROM Orders
+           WHERE ShippedDate IS NOT NULL AND OrderDate IS NOT NULL
+             AND julianday(ShippedDate) - julianday(OrderDate) BETWEEN 0 AND 365"""
+    ).fetchone()[0] or 0.0
+
+    rev_this = conn.execute(
+        """SELECT COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0)
+           FROM Orders o JOIN OrderDetails od ON o.OrderID = od.OrderID
+           WHERE strftime('%Y-%m', o.OrderDate) = ?""",
+        (cur_month,),
+    ).fetchone()[0] or 0.0
+
+    # last month via date arithmetic in Python
+    from datetime import datetime
+    dt = datetime.strptime(cur_month + "-01", "%Y-%m-%d")
+    if dt.month == 1:
+        last_month = f"{dt.year - 1}-12"
+    else:
+        last_month = f"{dt.year}-{dt.month - 1:02d}"
+
+    rev_last = conn.execute(
+        """SELECT COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0)
+           FROM Orders o JOIN OrderDetails od ON o.OrderID = od.OrderID
+           WHERE strftime('%Y-%m', o.OrderDate) = ?""",
+        (last_month,),
+    ).fetchone()[0] or 0.0
+
+    conn.close()
+
+    if rev_last > 0:
+        delta_pct = ((rev_this - rev_last) / rev_last) * 100
+    else:
+        delta_pct = 0.0
+    trend_arrow = "↑" if rev_this >= rev_last else "↓"
+
+    return {
+        "pending_orders":     pending,
+        "avg_fulfil_days":    avg_fulfil,
+        "revenue_this_month": rev_this,
+        "revenue_last_month": rev_last,
+        "trend_arrow":        trend_arrow,
+        "delta_pct":          delta_pct,
     }
 
 
