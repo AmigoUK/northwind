@@ -100,18 +100,22 @@ def withdraw_to_kassa(amount: float, description: str = "") -> tuple[int, int]:
     desc = description or "Cash withdrawal"
 
     bank_number = next_doc_number("Bank", conn)
+    kp_number   = next_doc_number("KP",   conn)
+
+    bank_desc = f"{desc} → {kp_number}"
+    kp_desc   = f"{desc} ← {bank_number}"
+
     cur = conn.execute(
         "INSERT INTO BankEntry (Entry_Number, Entry_Date, Direction, CustomerID, "
         "SupplierID, FV_ID, PZ_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
-        (bank_number, today, "out", None, None, None, None, amount, desc),
+        (bank_number, today, "out", None, None, None, None, amount, bank_desc),
     )
     entry_id = cur.lastrowid
 
-    kp_number = next_doc_number("KP", conn)
     cur = conn.execute(
         "INSERT INTO KP (KP_Number, KP_Date, CustomerID, FV_ID, Amount, Description) "
         "VALUES (?,?,?,?,?,?)",
-        (kp_number, today, None, None, amount, desc),
+        (kp_number, today, None, None, amount, kp_desc),
     )
     kp_id = cur.lastrowid
 

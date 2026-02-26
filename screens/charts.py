@@ -205,7 +205,13 @@ class ChartsPanel(Widget):
                 opts.append((y, y))
             sel = self.query_one("#period-select", Select)
             sel.set_options(opts)
-            sel.value = "all"
+            if years:
+                most_recent = years[-1][0]
+                sel.value = most_recent
+                self._date_from = f"{most_recent}-01-01"
+                self._date_to   = f"{most_recent}-12-31"
+            else:
+                sel.value = "all"
         except Exception:
             pass
 

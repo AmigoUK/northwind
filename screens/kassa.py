@@ -374,5 +374,8 @@ class KassaPanel(Widget):
                     self._refresh_all()
             self.app.push_screen(KPFormModal(), callback=after)
 
+    def refresh_data(self) -> None:
+        self._refresh_all()
+
     def action_focus_search(self) -> None:
         pass

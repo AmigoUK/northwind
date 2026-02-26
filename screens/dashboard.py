@@ -38,6 +38,15 @@ class DashboardPanel(Widget):
                 with Vertical(classes="kpi-card"):
                     yield Static("", id="kpi-this-month-val", classes="kpi-value")
                     yield Label("This Month", classes="kpi-title")
+                with Vertical(classes="kpi-card"):
+                    yield Static("", id="kpi-kassa-val", classes="kpi-value")
+                    yield Label("Kasa Balance", classes="kpi-title")
+                with Vertical(classes="kpi-card"):
+                    yield Static("", id="kpi-bank-val", classes="kpi-value")
+                    yield Label("Bank Balance", classes="kpi-title")
+                with Vertical(classes="kpi-card"):
+                    yield Static("", id="kpi-ar-due-val", classes="kpi-value")
+                    yield Label("AR Due 30d", classes="kpi-title")
             yield Label("Recent Orders (last 10)", id="dashboard-recent-label")
             yield DataTable(id="recent-tbl", cursor_type="row", zebra_stripes=True)
 
@@ -72,6 +81,15 @@ class DashboardPanel(Widget):
             self.query_one("#kpi-this-month-val", Static).update(
                 f"{symbol}{this_rev:,.0f} {trend}{abs(delta):.0f}%"
             )
+        except Exception:
+            pass
+
+        try:
+            fin = ddata.finance_kpis()
+            symbol = get_currency_symbol()
+            self.query_one("#kpi-kassa-val", Static).update(f"{symbol}{fin['kassa_balance']:,.2f}")
+            self.query_one("#kpi-bank-val",  Static).update(f"{symbol}{fin['bank_balance']:,.2f}")
+            self.query_one("#kpi-ar-due-val", Static).update(f"{symbol}{fin['ar_due_30d']:,.2f}")
         except Exception:
             pass
 

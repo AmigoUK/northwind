@@ -494,6 +494,18 @@ LoginScreen {
     background: $panel;
 }
 
+/* ── Settings inline label+switch rows ──────────────────────────────────────*/
+.setting-row {
+    height: 3;
+    align: left middle;
+    margin-top: 1;
+}
+
+.setting-row Label {
+    width: 1fr;
+    content-align: left middle;
+}
+
 /* ── Modal ESC hint ─────────────────────────────────────────────────────────*/
 .modal-hint {
     color: $text-muted;

@@ -83,6 +83,36 @@ def kpis_extended() -> dict:
     }
 
 
+def finance_kpis() -> dict:
+    """Returns kassa_balance, bank_balance, ar_due_30d."""
+    from datetime import date, timedelta
+    conn = get_connection()
+    kp_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM KP").fetchone()[0]
+    kw_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM KW").fetchone()[0]
+    bank_in   = conn.execute(
+        "SELECT COALESCE(SUM(Amount),0) FROM BankEntry WHERE Direction='in'"
+    ).fetchone()[0]
+    bank_out  = conn.execute(
+        "SELECT COALESCE(SUM(Amount),0) FROM BankEntry WHERE Direction='out'"
+    ).fetchone()[0]
+    cutoff = str(_date.today() + timedelta(days=30))
+    ar_due = conn.execute(
+        """SELECT COALESCE(SUM(f.TotalNet - COALESCE(f.PaidAmount, 0)), 0)
+           FROM FV f
+           WHERE f.Status != 'paid'
+             AND f.TotalNet > COALESCE(f.PaidAmount, 0)
+             AND f.DueDate IS NOT NULL
+             AND f.DueDate <= ?""",
+        (cutoff,),
+    ).fetchone()[0]
+    conn.close()
+    return {
+        "kassa_balance": kp_total - kw_total,
+        "bank_balance":  bank_in - bank_out,
+        "ar_due_30d":    ar_due,
+    }
+
+
 def recent_orders(n: int = 10) -> list:
     """Return the last n orders as list of lists: [ID, Customer, OrderDate, ShippedDate, Total]."""
     sym = get_currency_symbol()
