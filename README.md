@@ -131,7 +131,7 @@ A terminal-based warehouse/distribution management application built on the clas
   </tr>
   <tr>
     <td align="center">
-      <a href="screenshots/SQL-Query.png"><img src="screenshots/SQL-Query.png" width="260" alt="SQL Query"/></a><br/>
+      <a href="screenshots/sql-query.png"><img src="screenshots/sql-query.png" width="260" alt="SQL Query"/></a><br/>
       <sub><b>SQL Query editor</b></sub>
     </td>
     <td align="center">
