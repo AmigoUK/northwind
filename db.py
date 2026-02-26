@@ -562,10 +562,11 @@ def _seed_settings() -> None:
     """Seed AppSettings with defaults for any key not already present."""
     conn = get_connection()
     defaults = [
-        ("currency_symbol",  "$"),
-        ("currency_name",    "USD"),
-        ("theme",            "textual-dark"),
+        ("currency_symbol",   "$"),
+        ("currency_name",     "USD"),
+        ("theme",             "textual-dark"),
         ("backorder_allowed", "false"),
+        ("show_discontinued", "false"),
     ]
     for key, value in defaults:
         conn.execute(

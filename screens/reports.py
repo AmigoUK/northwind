@@ -11,17 +11,20 @@ import data.reports as rdata
 
 
 _REPORT_OPTIONS = [
-    ("Sales by Customer",          "customer"),
-    ("Sales by Product",           "product"),
-    ("Sales by Employee",          "employee"),
-    ("Top 10 Products by Revenue", "top10"),
-    ("Low Stock Alert",            "lowstock"),
-    ("Orders by Date Range",       "daterange"),
-    ("Monthly Revenue Trend",      "monthly_trend"),
-    ("Order Fulfilment Time",      "fulfilment"),
-    ("Category Revenue",           "category_rev"),
-    ("Repeat Customers",           "repeat_cust"),
-    ("Overdue Orders",             "overdue"),
+    ("Sales by Customer",           "customer"),
+    ("Sales by Product",            "product"),
+    ("Sales by Employee",           "employee"),
+    ("Top 10 Products by Revenue",  "top10"),
+    ("Low Stock Alert",             "lowstock"),
+    ("Orders by Date Range",        "daterange"),
+    ("Monthly Revenue Trend",       "monthly_trend"),
+    ("Order Fulfilment Time",       "fulfilment"),
+    ("Category Revenue",            "category_rev"),
+    ("Repeat Customers",            "repeat_cust"),
+    ("Overdue Orders",              "overdue"),
+    ("Cash & Bank Status",          "liquidity"),
+    ("AR Aging",                    "ar_aging"),
+    ("Incoming Payments (30 days)", "payment_forecast"),
 ]
 
 
@@ -138,6 +141,18 @@ class ReportsPanel(Widget):
                 headers, rows = rdata.overdue_orders()
                 if not rows:
                     self.notify("No overdue orders found.", severity="information")
+                    return
+            elif report_type == "liquidity":
+                headers, rows = rdata.liquidity_snapshot()
+            elif report_type == "ar_aging":
+                headers, rows = rdata.ar_aging()
+                if not rows:
+                    self.notify("No unpaid invoices found.", severity="information")
+                    return
+            elif report_type == "payment_forecast":
+                headers, rows = rdata.payment_forecast()
+                if not rows:
+                    self.notify("No payments due in the next 30 days.", severity="information")
                     return
             else:
                 return

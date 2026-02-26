@@ -43,30 +43,41 @@ from screens.kassa           import KassaPanel
 from screens.bank            import BankPanel
 
 
-_SECTIONS = [
-    ("dashboard",  "Dashboard"),
-    ("customers",  "Customers"),
-    ("orders",     "Orders"),
-    ("products",   "Products"),
-    ("employees",  "Employees"),
-    ("suppliers",  "Suppliers"),
-    ("categories", "Categories"),
-    ("shippers",   "Shippers"),
-    ("regions",    "Regions"),
-    ("reports",    "Reports"),
-    ("charts",     "Charts"),
-    # Document workflow sections
-    ("wz",         "WZ — Delivery"),
-    ("fv",         "FV — Invoices"),
-    ("pz",         "PZ — Receipts"),
-    ("movements",  "PW/RW — Stock"),
-    ("kassa",      "Kasa"),
-    ("bank",       "Bank"),
-    # Admin-only sections (hidden for non-admin users)
-    ("sql",        "SQL Query"),
-    ("users",      "Users"),
-    ("settings",   "Settings"),
+_NAV_GROUPS = [
+    ("── Master Data ──", "nav-group-master", [
+        ("dashboard",  "Dashboard"),
+        ("customers",  "Customers"),
+        ("orders",     "Orders"),
+        ("products",   "Products"),
+        ("employees",  "Employees"),
+        ("suppliers",  "Suppliers"),
+        ("categories", "Categories"),
+        ("shippers",   "Shippers"),
+        ("regions",    "Regions"),
+    ]),
+    ("── Documents ──", "nav-group-docs", [
+        ("wz",         "WZ — Delivery"),
+        ("fv",         "FV — Invoices"),
+        ("pz",         "PZ — Receipts"),
+        ("movements",  "PW/RW — Stock"),
+    ]),
+    ("── Finance ──", "nav-group-finance", [
+        ("kassa",      "Kasa"),
+        ("bank",       "Bank"),
+    ]),
+    ("── Analytics ──", "nav-group-analytics", [
+        ("reports",    "Reports"),
+        ("charts",     "Charts"),
+    ]),
+    ("── Admin ──", "nav-group-admin", [
+        ("sql",        "SQL Query"),
+        ("users",      "Users"),
+        ("settings",   "Settings"),
+    ]),
 ]
+
+# Flat list derived from groups for use in switch_section() iteration
+_SECTIONS = [(key, label) for _, _, items in _NAV_GROUPS for key, label in items]
 
 # IDs of sections visible only to admins
 _ADMIN_SECTIONS = {"sql", "users", "settings"}
@@ -78,13 +89,16 @@ class SidebarNav(Widget):
     def compose(self) -> ComposeResult:
         yield Label("Northwind", id="sidebar-title")
         with ListView(id="nav-list"):
-            for key, label in _SECTIONS:
-                yield ListItem(Label(label), id=f"nav-{key}")
+            for group_label, group_id, items in _NAV_GROUPS:
+                yield ListItem(Label(group_label), id=group_id,
+                               classes="nav-group-header")
+                for key, label in items:
+                    yield ListItem(Label(label), id=f"nav-{key}")
 
     @on(ListView.Selected, "#nav-list")
     def on_nav_selected(self, event: ListView.Selected) -> None:
         item_id = event.item.id
-        if item_id and item_id.startswith("nav-"):
+        if item_id and item_id.startswith("nav-") and not item_id.startswith("nav-group-"):
             section = item_id[4:]
             self.app.switch_section(section)
 
@@ -156,10 +170,19 @@ class NorthwindApp(App):
                 item.display = is_admin
             except Exception:
                 pass
+        try:
+            self.query_one("#nav-group-admin", ListItem).display = is_admin
+        except Exception:
+            pass
 
     def switch_section(self, section: str) -> None:
         """Switch the active content panel and update sidebar highlight."""
         self.query_one(ContentSwitcher).current = section
+        if section == "products":
+            try:
+                self.query_one("#products").refresh_data()
+            except Exception:
+                pass
         for key, _ in _SECTIONS:
             try:
                 item = self.query_one(f"#nav-{key}", ListItem)

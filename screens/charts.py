@@ -180,6 +180,9 @@ class ChartsPanel(Widget):
                 with TabPane("Top Employees", id="tab-top-employees"):
                     yield Static("", id="chart-top-employees",
                                  classes="chart-static")
+                with TabPane("Cash & Bank", id="tab-cash-bank"):
+                    yield Static("Loading…", id="chart-cash-bank",
+                                 classes="chart-static")
 
     def on_mount(self) -> None:
         self._populate_period_select()
@@ -312,6 +315,8 @@ class ChartsPanel(Widget):
             self._render_category_mix()
         elif tab == "tab-top-employees":
             self._render_top_employees()
+        elif tab == "tab-cash-bank":
+            self._render_cash_bank()
 
     @on(TabbedContent.TabActivated)
     def on_tab_activated(self, event: TabbedContent.TabActivated) -> None:
@@ -359,6 +364,52 @@ class ChartsPanel(Widget):
                 return
             w, _ = self._chart_size()
             widget.update(_build_top_employees(names, counts, w))
+        except Exception as e:
+            widget.update(f"Error: {e}")
+
+    # ── Chart 4 — Cash & Bank ─────────────────────────────────────────────────
+
+    def _render_cash_bank(self) -> None:
+        widget = self.query_one("#chart-cash-bank", Static)
+        try:
+            trend = rdata.cash_bank_trend()
+            sym = get_currency_symbol()
+            lines: list[str] = []
+
+            kassa_data = trend["kassa"]
+            if kassa_data:
+                vals = [v for _, v in kassa_data]
+                spark = _sparkline(vals) if len(vals) > 1 else "█"
+                lines.append("Kasa (Cash) Running Balance")
+                lines.append(f"Trend  {spark}")
+                lines.append(f"Latest: {sym}{vals[-1]:,.2f}")
+                lines.append("")
+                lines.append(f" {'Date':<12}  {'Balance':>12}")
+                lines.append("─" * 28)
+                for d, v in kassa_data[-10:]:
+                    lines.append(f" {d:<12}  {sym}{v:>10,.2f}")
+            else:
+                lines.append("Kasa (Cash): No transactions recorded.")
+
+            lines.append("")
+            lines.append("")
+
+            bank_data = trend["bank"]
+            if bank_data:
+                vals = [v for _, v in bank_data]
+                spark = _sparkline(vals) if len(vals) > 1 else "█"
+                lines.append("Bank Running Balance")
+                lines.append(f"Trend  {spark}")
+                lines.append(f"Latest: {sym}{vals[-1]:,.2f}")
+                lines.append("")
+                lines.append(f" {'Date':<12}  {'Balance':>12}")
+                lines.append("─" * 28)
+                for d, v in bank_data[-10:]:
+                    lines.append(f" {d:<12}  {sym}{v:>10,.2f}")
+            else:
+                lines.append("Bank: No transactions recorded.")
+
+            widget.update("\n".join(lines))
         except Exception as e:
             widget.update(f"Error: {e}")
 

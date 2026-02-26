@@ -132,3 +132,38 @@ def delete_rw(pk) -> None:
     conn.execute("DELETE FROM RW WHERE RW_ID=?", (pk,))
     conn.commit()
     conn.close()
+
+
+# ── Audit trail (no stock delta) ──────────────────────────────────────────────
+
+def record_stock_audit(doc_type: str, product_id: int, quantity: int,
+                       reason: str = "Stock correction") -> int:
+    """Insert PW or RW header + item for audit trail. Does NOT adjust UnitsInStock."""
+    from datetime import date
+    conn = get_connection()
+    today = str(date.today())
+    if doc_type == "PW":
+        number = next_doc_number("PW", conn)
+        cur = conn.execute(
+            "INSERT INTO PW (PW_Number, PW_Date, Reason) VALUES (?,?,?)",
+            (number, today, reason),
+        )
+        doc_id = cur.lastrowid
+        conn.execute(
+            "INSERT INTO PW_Items (PW_ID, ProductID, Quantity) VALUES (?,?,?)",
+            (doc_id, product_id, quantity),
+        )
+    else:  # RW
+        number = next_doc_number("RW", conn)
+        cur = conn.execute(
+            "INSERT INTO RW (RW_Number, RW_Date, Reason) VALUES (?,?,?)",
+            (number, today, reason),
+        )
+        doc_id = cur.lastrowid
+        conn.execute(
+            "INSERT INTO RW_Items (RW_ID, ProductID, Quantity) VALUES (?,?,?)",
+            (doc_id, product_id, quantity),
+        )
+    conn.commit()
+    conn.close()
+    return doc_id
