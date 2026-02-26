@@ -6,7 +6,7 @@ defaults in the existing AppSettings key-value store.  No new DB table.
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Switch
+from textual.widgets import Button, Input, Label, Select, Switch, TabbedContent, TabPane
 from textual import on
 
 import data.settings as app_settings
@@ -17,80 +17,84 @@ class BusinessDetailsPanel(Widget):
         with Vertical(classes="panel-container"):
             yield Label("Business Details", classes="panel-title")
 
-            # Section 1 — Company Identity
-            with Vertical(classes="settings-section"):
-                yield Label("Company Identity", classes="settings-label")
-                yield Label("Company Name")
-                yield Input(placeholder="Acme Ltd.", id="f-co-name")
-                yield Label("Address")
-                yield Input(placeholder="123 Main St", id="f-co-address")
-                with Horizontal(classes="form-row"):
-                    with Vertical(classes="form-field"):
-                        yield Label("City")
-                        yield Input(placeholder="Warsaw", id="f-co-city")
-                    with Vertical(classes="form-field"):
-                        yield Label("Postal Code")
-                        yield Input(placeholder="00-001", id="f-co-postal")
-                yield Label("Country")
-                yield Input(placeholder="Poland", id="f-co-country")
-                yield Label("Logo file path (for PDFs)")
-                yield Input(placeholder="/path/to/logo.png", id="f-co-logo-path")
+            with TabbedContent():
 
-            # Section 2 — Contact Details
-            with Vertical(classes="settings-section"):
-                yield Label("Contact Details", classes="settings-label")
-                with Horizontal(classes="form-row"):
-                    with Vertical(classes="form-field"):
-                        yield Label("Phone")
-                        yield Input(placeholder="+48 22 000 0000", id="f-co-phone")
-                    with Vertical(classes="form-field"):
-                        yield Label("Email")
-                        yield Input(placeholder="info@example.com", id="f-co-email")
-                yield Label("Website")
-                yield Input(placeholder="https://example.com", id="f-co-website")
+                # Tab 1 — Company
+                with TabPane("Company", id="tab-company"):
+                    with Vertical(classes="settings-section"):
+                        yield Label("Company Identity", classes="settings-label")
+                        yield Label("Company Name")
+                        yield Input(placeholder="Acme Ltd.", id="f-co-name")
+                        yield Label("Address")
+                        yield Input(placeholder="123 Main St", id="f-co-address")
+                        with Horizontal(classes="form-row"):
+                            with Vertical(classes="form-field"):
+                                yield Label("City")
+                                yield Input(placeholder="Warsaw", id="f-co-city")
+                            with Vertical(classes="form-field"):
+                                yield Label("Postal Code")
+                                yield Input(placeholder="00-001", id="f-co-postal")
+                        yield Label("Country")
+                        yield Input(placeholder="Poland", id="f-co-country")
+                        yield Label("Logo file path (for PDFs)")
+                        yield Input(placeholder="/path/to/logo.png", id="f-co-logo-path")
 
-            # Section 3 — Tax & Legal
-            with Vertical(classes="settings-section"):
-                yield Label("Tax & Legal", classes="settings-label")
-                with Horizontal(classes="form-row"):
-                    with Vertical(classes="form-field"):
-                        yield Label("VAT Number")
-                        yield Input(placeholder="PL1234567890", id="f-co-vat")
-                    with Vertical(classes="form-field"):
-                        yield Label("Tax ID / NIP")
-                        yield Input(placeholder="1234567890", id="f-co-tax-id")
-                yield Label("Bank Account")
-                yield Input(placeholder="PL61 1090 1014 0000 0712 1981 2874", id="f-co-bank-account")
+                    with Vertical(classes="settings-section"):
+                        yield Label("Contact Details", classes="settings-label")
+                        with Horizontal(classes="form-row"):
+                            with Vertical(classes="form-field"):
+                                yield Label("Phone")
+                                yield Input(placeholder="+48 22 000 0000", id="f-co-phone")
+                            with Vertical(classes="form-field"):
+                                yield Label("Email")
+                                yield Input(placeholder="info@example.com", id="f-co-email")
+                        yield Label("Website")
+                        yield Input(placeholder="https://example.com", id="f-co-website")
 
-            # Section 4 — Document Defaults
-            with Vertical(classes="settings-section"):
-                yield Label("Document Defaults", classes="settings-label")
-                yield Label("Footer note (appears on all documents)")
-                yield Input(placeholder="Thank you for your business.", id="f-doc-footer")
-                yield Label("Document colour theme")
-                yield Select(
-                    [
-                        ("Default", "default"),
-                        ("Blue", "blue"),
-                        ("Green", "green"),
-                        ("Monochrome", "monochrome"),
-                    ],
-                    id="f-doc-theme",
-                    allow_blank=False,
-                    value="default",
-                )
-                with Horizontal(classes="form-row"):
-                    with Vertical(classes="form-field"):
-                        yield Label("WZ document title")
-                        yield Input(placeholder="Delivery Note", id="f-doc-title-wz")
-                    with Vertical(classes="form-field"):
-                        yield Label("FV document title")
-                        yield Input(placeholder="Invoice", id="f-doc-title-fv")
-                yield Label("PZ document title")
-                yield Input(placeholder="Goods Receipt", id="f-doc-title-pz")
-                with Horizontal(classes="setting-row"):
-                    yield Label("Show unit prices on WZ delivery notes")
-                    yield Switch(id="sw-wz-prices", value=True)
+                # Tab 2 — Tax & Legal
+                with TabPane("Tax & Legal", id="tab-tax"):
+                    with Vertical(classes="settings-section"):
+                        yield Label("Tax & Legal", classes="settings-label")
+                        with Horizontal(classes="form-row"):
+                            with Vertical(classes="form-field"):
+                                yield Label("VAT Number")
+                                yield Input(placeholder="PL1234567890", id="f-co-vat")
+                            with Vertical(classes="form-field"):
+                                yield Label("Tax ID / NIP")
+                                yield Input(placeholder="1234567890", id="f-co-tax-id")
+                        yield Label("Bank Account")
+                        yield Input(placeholder="PL61 1090 1014 0000 0712 1981 2874", id="f-co-bank-account")
+
+                # Tab 3 — Document Defaults
+                with TabPane("Documents", id="tab-docs"):
+                    with Vertical(classes="settings-section"):
+                        yield Label("Document Defaults", classes="settings-label")
+                        yield Label("Footer note (appears on all documents)")
+                        yield Input(placeholder="Thank you for your business.", id="f-doc-footer")
+                        yield Label("Document colour theme")
+                        yield Select(
+                            [
+                                ("Default", "default"),
+                                ("Blue", "blue"),
+                                ("Green", "green"),
+                                ("Monochrome", "monochrome"),
+                            ],
+                            id="f-doc-theme",
+                            allow_blank=False,
+                            value="default",
+                        )
+                        with Horizontal(classes="form-row"):
+                            with Vertical(classes="form-field"):
+                                yield Label("WZ document title")
+                                yield Input(placeholder="Delivery Note", id="f-doc-title-wz")
+                            with Vertical(classes="form-field"):
+                                yield Label("FV document title")
+                                yield Input(placeholder="Invoice", id="f-doc-title-fv")
+                        yield Label("PZ document title")
+                        yield Input(placeholder="Goods Receipt", id="f-doc-title-pz")
+                        with Horizontal(classes="setting-row"):
+                            yield Label("Show unit prices on WZ delivery notes")
+                            yield Switch(id="sw-wz-prices", value=True)
 
             yield Button("Save", id="btn-save", variant="primary")
 
