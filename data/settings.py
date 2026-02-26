@@ -30,3 +30,7 @@ def get_currency_symbol() -> str:
 
 def get_theme_name() -> str:
     return get_setting("theme", "textual-dark")
+
+
+def get_backorder_allowed() -> bool:
+    return get_setting("backorder_allowed", "false").lower() == "true"

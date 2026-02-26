@@ -217,7 +217,7 @@ class PZDetailModal(ModalScreen):
     def on_mount(self) -> None:
         tbl = self.query_one("#items-tbl", DataTable)
         for label, width in [
-            ("ProdID", 6), ("Product Name", 28), ("Qty", 6),
+            ("ProdID", 6), ("Product Name", 36), ("Qty", 6),
             ("Unit Cost", 12), ("Line Total", 12),
         ]:
             tbl.add_column(label, width=width)

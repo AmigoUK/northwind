@@ -298,6 +298,16 @@ def create_tables():
     );
     """)
 
+    # Migrate FV table: add PaymentTermDays and PaidAmount if not already present
+    for ddl in [
+        "ALTER TABLE FV ADD COLUMN PaymentTermDays INTEGER DEFAULT 0",
+        "ALTER TABLE FV ADD COLUMN PaidAmount REAL DEFAULT 0",
+    ]:
+        try:
+            conn.execute(ddl)
+        except Exception:
+            pass  # column already exists — safe on re-run
+
     conn.commit()
     conn.close()
 
@@ -549,16 +559,19 @@ def seed_data():
 
 
 def _seed_settings() -> None:
-    """Seed AppSettings with defaults if the table is empty."""
+    """Seed AppSettings with defaults for any key not already present."""
     conn = get_connection()
-    count = conn.execute("SELECT COUNT(*) FROM AppSettings").fetchone()[0]
-    conn.close()
-    if count > 0:
-        return
-    conn = get_connection()
-    conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("currency_symbol", "$"))
-    conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("currency_name",   "USD"))
-    conn.execute("INSERT INTO AppSettings (key, value) VALUES (?,?)", ("theme",            "textual-dark"))
+    defaults = [
+        ("currency_symbol",  "$"),
+        ("currency_name",    "USD"),
+        ("theme",            "textual-dark"),
+        ("backorder_allowed", "false"),
+    ]
+    for key, value in defaults:
+        conn.execute(
+            "INSERT OR IGNORE INTO AppSettings (key, value) VALUES (?,?)",
+            (key, value),
+        )
     conn.commit()
     conn.close()
 

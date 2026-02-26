@@ -8,7 +8,7 @@ Educational patterns:
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select
+from textual.widgets import Button, Input, Label, Select, Switch
 from textual import on
 
 import data.settings as app_settings
@@ -28,6 +28,10 @@ class SettingsPanel(Widget):
                 yield Label("Appearance", classes="settings-label")
                 yield Label("Theme (also changeable via Ctrl+P)")
                 yield Select([], id="f-theme", allow_blank=True)
+            with Vertical(classes="settings-section"):
+                yield Label("Stock Control", classes="settings-label")
+                yield Label("Allow Backorders")
+                yield Switch(id="f-backorder", value=False)
             yield Button("Save Settings", id="btn-save", variant="primary")
 
     def on_mount(self) -> None:
@@ -45,6 +49,7 @@ class SettingsPanel(Widget):
         ]
         theme_select.set_options(available)
         theme_select.value = app_settings.get_theme_name()
+        self.query_one("#f-backorder", Switch).value = app_settings.get_backorder_allowed()
 
     @on(Button.Pressed, "#btn-save")
     def do_save(self) -> None:
@@ -57,4 +62,6 @@ class SettingsPanel(Widget):
             app_settings.set_setting("currency_name", name)
         if theme and theme != Select.BLANK:
             self.app.theme = theme  # watch_theme() in app.py auto-saves to DB
+        backorder = self.query_one("#f-backorder", Switch).value
+        app_settings.set_setting("backorder_allowed", "true" if backorder else "false")
         self.notify("Settings saved.", severity="information")

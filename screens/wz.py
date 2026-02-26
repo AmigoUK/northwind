@@ -10,7 +10,7 @@ from textual import on
 import data.wz as wzdata
 import data.customers as cdata
 import data.products as pdata
-from data.settings import get_currency_symbol
+from data.settings import get_currency_symbol, get_backorder_allowed
 from screens.modals import ConfirmActionModal, ConfirmDeleteModal, PickerModal
 
 
@@ -76,6 +76,22 @@ class WZItemFormModal(ModalScreen):
         if qty < 1:
             self.notify("Quantity must be at least 1.", severity="error")
             return
+        available = pdata.get_stock(self._product_id)
+        if qty > available:
+            if get_backorder_allowed():
+                self.notify(
+                    f"Stock: {available} available. Backorder active — saving {qty}.",
+                    severity="warning",
+                )
+            elif available == 0:
+                self.notify("No stock available. Cannot add item.", severity="error")
+                return
+            else:
+                self.notify(
+                    f"Only {available} in stock. Quantity clamped to {available}.",
+                    severity="warning",
+                )
+                qty = available
         try:
             wzdata.add_item(self.wz_id, self._product_id, qty, price)
             self.notify(f"'{self._product_name}' added.", severity="information")
@@ -193,7 +209,7 @@ class WZDetailModal(ModalScreen):
     def on_mount(self) -> None:
         tbl = self.query_one("#items-tbl", DataTable)
         for label, width in [
-            ("ProdID", 6), ("Product Name", 28), ("Qty", 6),
+            ("ProdID", 6), ("Product Name", 36), ("Qty", 6),
             ("Unit Price", 12), ("Line Total", 12),
         ]:
             tbl.add_column(label, width=width)

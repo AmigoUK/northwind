@@ -121,6 +121,19 @@ def update(pk, data: dict) -> None:
     conn.close()
 
 
+def get_stock(product_id: int, conn=None) -> int:
+    """Return current UnitsInStock for a product. Opens its own connection if conn is None."""
+    close = conn is None
+    if conn is None:
+        conn = get_connection()
+    row = conn.execute(
+        "SELECT UnitsInStock FROM Products WHERE ProductID=?", (product_id,)
+    ).fetchone()
+    if close:
+        conn.close()
+    return row[0] if row else 0
+
+
 def apply_stock_delta(product_id: int, delta: int, conn) -> None:
     """Atomically adjust UnitsInStock by delta within caller's transaction. No commit."""
     conn.execute(

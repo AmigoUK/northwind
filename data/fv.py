@@ -42,7 +42,13 @@ def get_by_pk(pk) -> dict | None:
         (pk,),
     ).fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    d = dict(row)
+    total = d.get("TotalNet") or 0.0
+    paid  = d.get("PaidAmount") or 0.0
+    d["Outstanding"] = total - paid
+    return d
 
 
 def fetch_linked_wz(fv_id) -> list:
@@ -82,10 +88,10 @@ def fetch_line_items(fv_id) -> list:
 
 
 def create(customer_id: str, wz_ids: list[int], fv_date: str,
-           due_date: str, payment_method: str, notes: str = "") -> int:
-    """Create FV from list of WZ IDs. Auto-generates KP or BankEntry. Returns FV_ID."""
-    from data.kassa import create_kp
-    from data.bank import create_bank_entry
+           payment_term_days: int = 30, payment_method: str = "",
+           notes: str = "") -> int:
+    """Create FV from list of WZ IDs. No payment doc is auto-created. Returns FV_ID."""
+    from datetime import date, timedelta
     conn = get_connection()
     # Compute total from WZ items
     placeholders = ",".join("?" * len(wz_ids))
@@ -93,12 +99,15 @@ def create(customer_id: str, wz_ids: list[int], fv_date: str,
         f"SELECT COALESCE(SUM(UnitPrice * Quantity), 0) FROM WZ_Items WHERE WZ_ID IN ({placeholders})",
         wz_ids,
     ).fetchone()[0]
+    fv_date_obj = date.fromisoformat(fv_date)
+    due_date = str(fv_date_obj + timedelta(days=payment_term_days))
     number = next_doc_number("FV", conn)
     cur = conn.execute(
-        "INSERT INTO FV (FV_Number, CustomerID, FV_Date, DueDate, PaymentMethod, Status, TotalNet, Notes) "
-        "VALUES (?,?,?,?,?,'issued',?,?)",
-        (number, customer_id, fv_date, due_date or None,
-         payment_method or None, total, notes or None),
+        "INSERT INTO FV (FV_Number, CustomerID, FV_Date, DueDate, PaymentMethod, "
+        "Status, TotalNet, Notes, PaymentTermDays, PaidAmount) "
+        "VALUES (?,?,?,?,?,'issued',?,?,?,0)",
+        (number, customer_id, fv_date, due_date,
+         payment_method or None, total, notes or None, payment_term_days),
     )
     fv_id = cur.lastrowid
     for wz_id in wz_ids:
@@ -106,16 +115,46 @@ def create(customer_id: str, wz_ids: list[int], fv_date: str,
         conn.execute("UPDATE WZ SET Status='invoiced' WHERE WZ_ID=?", (wz_id,))
     conn.commit()
     conn.close()
-    # Auto-generate payment document
-    desc = f"Payment for {number}"
-    if payment_method == "cash":
-        create_kp(customer_id=customer_id, fv_id=fv_id, amount=total, description=desc)
-    elif payment_method == "bank":
-        create_bank_entry(
-            direction="in", customer_id=customer_id, fv_id=fv_id,
-            amount=total, description=desc,
-        )
     return fv_id
+
+
+def record_payment(fv_id: int, amount: float, method: str,
+                   description: str = "") -> int:
+    """Record a payment against an FV. Creates KP or BankEntry. Returns payment doc ID."""
+    from data.kassa import create_kp
+    from data.bank import create_bank_entry
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT CustomerID, FV_Number, TotalNet, COALESCE(PaidAmount, 0) "
+        "FROM FV WHERE FV_ID=?",
+        (fv_id,),
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise ValueError(f"FV #{fv_id} not found.")
+    customer_id, fv_number, total_net, paid_so_far = row
+    new_paid = paid_so_far + amount
+    if new_paid >= total_net:
+        new_status = "paid"
+    elif new_paid > 0:
+        new_status = "partial"
+    else:
+        new_status = "issued"
+    conn.execute(
+        "UPDATE FV SET PaidAmount=?, Status=? WHERE FV_ID=?",
+        (new_paid, new_status, fv_id),
+    )
+    conn.commit()
+    conn.close()
+    desc = description or f"Payment for {fv_number}"
+    if method == "cash":
+        return create_kp(customer_id=customer_id, fv_id=fv_id,
+                         amount=amount, description=desc)
+    else:
+        return create_bank_entry(
+            direction="in", customer_id=customer_id, fv_id=fv_id,
+            amount=amount, description=desc,
+        )
 
 
 def mark_paid(fv_id: int) -> None:

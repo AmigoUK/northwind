@@ -29,7 +29,7 @@ class BankEntryFormModal(ModalScreen):
                 with Vertical(classes="form-field"):
                     yield Label("Direction *:")
                     yield Select(
-                        [("in", "in — money received"), ("out", "out — money sent")],
+                        [("in — money received", "in"), ("out — money sent", "out")],
                         id="f-dir", value="in",
                     )
                 with Vertical(classes="form-field"):

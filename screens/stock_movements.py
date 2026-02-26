@@ -9,6 +9,7 @@ from textual import on
 
 import data.pw_rw as pwrw
 import data.products as pdata
+from data.settings import get_backorder_allowed
 from screens.modals import ConfirmDeleteModal, PickerModal
 
 
@@ -114,6 +115,23 @@ class MovementFormModal(ModalScreen):
 
             def after_qty(qty):
                 if qty:
+                    if self.doc_type == "RW":
+                        available = pdata.get_stock(int(pk))
+                        if qty > available:
+                            if get_backorder_allowed():
+                                self.notify(
+                                    f"Stock: {available} available. Backorder active — saving {qty}.",
+                                    severity="warning",
+                                )
+                            elif available == 0:
+                                self.notify("No stock available. Cannot add item.", severity="error")
+                                return
+                            else:
+                                self.notify(
+                                    f"Only {available} in stock. Quantity clamped to {available}.",
+                                    severity="warning",
+                                )
+                                qty = available
                     self._items.append(MovementItemRow(int(pk), prod["ProductName"], qty))
                     self._refresh_items_table()
 

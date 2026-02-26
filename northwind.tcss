@@ -95,7 +95,7 @@ ModalScreen {
 
 /* ── Standard modal dialog ──────────────────────────────────────────────────*/
 .modal-dialog {
-    width: 72;
+    width: 86;
     max-height: 46;
     background: $surface;
     border: double $primary;
@@ -130,7 +130,7 @@ ModalScreen {
 
 /* ── Confirm dialog (smaller) ───────────────────────────────────────────────*/
 .confirm-dialog {
-    width: 52;
+    width: 56;
     height: auto;
     background: $surface;
     border: double $error;
@@ -145,7 +145,7 @@ ModalScreen {
 
 /* ── Order detail dialog (taller) ───────────────────────────────────────────*/
 .order-detail-dialog {
-    width: 90;
+    width: 110;
     max-height: 50;
     background: $surface;
     border: double $primary;
