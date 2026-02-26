@@ -54,9 +54,9 @@ def _short_month(ym: str) -> str:
 def _build_sales_trend(data_rows: list, w: int) -> str:
     """Return plain-text sparkline + data table for monthly revenue."""
     sym = get_currency_symbol()
-    labels  = [_short_month(r[0]) for r in data_rows]
-    revenues = [_parse_num(r[1]) for r in data_rows]
-    orders   = [int(r[2]) if len(r) > 2 else 0 for r in data_rows]
+    labels   = [_short_month(r[0]) for r in data_rows]
+    revenues = [float(r[1]) for r in data_rows]
+    orders   = [int(r[2]) for r in data_rows]
 
     period_str = (
         f"{labels[0]} – {labels[-1]}" if len(labels) > 1 else labels[0]
@@ -64,7 +64,7 @@ def _build_sales_trend(data_rows: list, w: int) -> str:
     sep_width = min(w - 2, 44)
     sep = "─" * sep_width
 
-    spark = _sparkline(revenues) if len(revenues) > 1 else revenues[0] and "█" or "░"
+    spark = _sparkline(revenues) if len(revenues) > 1 else ("█" if revenues[0] else "░")
 
     lines: list[str] = []
     lines.append(f"Revenue by Month  ({period_str})")
@@ -106,7 +106,7 @@ def _build_category_mix(cat_rows: list, w: int) -> str:
     bar_width = max(20, min(40, w - 36))
 
     raw_labels  = [r[0] for r in cat_rows]
-    raw_values  = [_parse_num(r[2]) for r in cat_rows]
+    raw_values  = [float(r[2]) for r in cat_rows]
     total = sum(raw_values) or 1.0
     pcts  = [v / total * 100 for v in raw_values]
     max_val = max(raw_values) if raw_values else 1.0
@@ -336,7 +336,7 @@ class ChartsPanel(Widget):
     def _render_sales_trend(self) -> None:
         widget = self.query_one("#chart-sales-trend", Static)
         try:
-            _, rows = rdata.monthly_revenue_trend(self._date_from, self._date_to)
+            _, rows = rdata.monthly_revenue_trend(self._date_from, self._date_to, chart=True)
             if not rows:
                 widget.update("No data for the selected period.")
                 return
@@ -350,7 +350,7 @@ class ChartsPanel(Widget):
     def _render_category_mix(self) -> None:
         widget = self.query_one("#chart-category-mix", Static)
         try:
-            _, cat_rows = rdata.category_revenue()
+            _, cat_rows = rdata.category_revenue(self._date_from, self._date_to, chart=True)
             if not cat_rows:
                 widget.update("No data available.")
                 return
@@ -378,7 +378,7 @@ class ChartsPanel(Widget):
     def _render_cash_bank(self) -> None:
         widget = self.query_one("#chart-cash-bank", Static)
         try:
-            trend = rdata.cash_bank_trend()
+            trend = rdata.cash_bank_trend(self._date_from, self._date_to)
             sym = get_currency_symbol()
             lines: list[str] = []
 
@@ -392,7 +392,7 @@ class ChartsPanel(Widget):
                 lines.append("")
                 lines.append(f" {'Date':<12}  {'Balance':>12}")
                 lines.append("─" * 28)
-                for d, v in kassa_data[-10:]:
+                for d, v in kassa_data[-20:]:
                     lines.append(f" {d:<12}  {sym}{v:>10,.2f}")
             else:
                 lines.append("Cash Register: No transactions recorded.")
@@ -410,7 +410,7 @@ class ChartsPanel(Widget):
                 lines.append("")
                 lines.append(f" {'Date':<12}  {'Balance':>12}")
                 lines.append("─" * 28)
-                for d, v in bank_data[-10:]:
+                for d, v in bank_data[-20:]:
                     lines.append(f" {d:<12}  {sym}{v:>10,.2f}")
             else:
                 lines.append("Bank Account: No transactions recorded.")

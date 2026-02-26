@@ -115,7 +115,8 @@ def low_stock_alert() -> tuple[list, list]:
 
 
 def monthly_revenue_trend(date_from: str = "0001-01-01",
-                           date_to:   str = "9999-12-31") -> tuple[list, list]:
+                           date_to:   str = "9999-12-31",
+                           chart: bool = False) -> tuple[list, list]:
     """Revenue and order count grouped by month for the given date range, ordered ASC."""
     sym = get_currency_symbol()
     conn = get_connection()
@@ -133,7 +134,10 @@ def monthly_revenue_trend(date_from: str = "0001-01-01",
     ).fetchall()
     conn.close()
     headers = [("Month", 10), ("Revenue", 14), ("Orders", 7)]
-    data = [[r["Month"], f"{sym}{r['Revenue']:.2f}", r["Orders"]] for r in rows]
+    if chart:
+        data = [[r["Month"], r["Revenue"], r["Orders"]] for r in rows]
+    else:
+        data = [[r["Month"], f"{sym}{r['Revenue']:.2f}", r["Orders"]] for r in rows]
     return headers, data
 
 
@@ -148,6 +152,7 @@ def chart_employees(date_from: str = "0001-01-01",
            LEFT JOIN Orders o ON e.EmployeeID = o.EmployeeID
              AND o.OrderDate BETWEEN ? AND ?
            GROUP BY e.EmployeeID, e.LastName
+           HAVING Orders > 0
            ORDER BY Orders DESC""",
         (date_from, date_to),
     ).fetchall()
@@ -178,7 +183,8 @@ def order_fulfilment_time(date_from: str = "0001-01-01",
 
 
 def category_revenue(date_from: str = "0001-01-01",
-                      date_to:   str = "9999-12-31") -> tuple[list, list]:
+                      date_to:   str = "9999-12-31",
+                      chart: bool = False) -> tuple[list, list]:
     """Revenue and units sold per product category."""
     sym = get_currency_symbol()
     conn = get_connection()
@@ -197,7 +203,10 @@ def category_revenue(date_from: str = "0001-01-01",
     ).fetchall()
     conn.close()
     headers = [("Category", 22), ("Units Sold", 10), ("Revenue", 14)]
-    data = [[r["CategoryName"], r["Units"], f"{sym}{r['Revenue']:.2f}"] for r in rows]
+    if chart:
+        data = [[r["CategoryName"], r["Units"], r["Revenue"]] for r in rows]
+    else:
+        data = [[r["CategoryName"], r["Units"], f"{sym}{r['Revenue']:.2f}"] for r in rows]
     return headers, data
 
 
@@ -343,17 +352,30 @@ def payment_forecast(days: int = 30) -> tuple[list, list]:
     return headers, data
 
 
-def cash_bank_trend(date_from=None, date_to=None) -> dict:
+def cash_bank_trend(
+    date_from: str = "0001-01-01",
+    date_to:   str = "9999-12-31",
+) -> dict:
     """Running balances over time for Kassa and Bank.
     Returns {"kassa": [(date, balance), ...], "bank": [(date, balance), ...]}"""
     from collections import defaultdict
     conn = get_connection()
-    kp_rows   = conn.execute("SELECT KP_Date AS dt, Amount FROM KP ORDER BY KP_Date, KP_ID").fetchall()
-    kw_rows   = conn.execute("SELECT KW_Date AS dt, Amount FROM KW ORDER BY KW_Date, KW_ID").fetchall()
+    kp_rows = conn.execute(
+        "SELECT KP_Date AS dt, Amount FROM KP "
+        "WHERE KP_Date BETWEEN ? AND ? ORDER BY KP_Date, KP_ID",
+        (date_from, date_to),
+    ).fetchall()
+    kw_rows = conn.execute(
+        "SELECT KW_Date AS dt, Amount FROM KW "
+        "WHERE KW_Date BETWEEN ? AND ? ORDER BY KW_Date, KW_ID",
+        (date_from, date_to),
+    ).fetchall()
     bank_rows = conn.execute(
         "SELECT Entry_Date AS dt, "
         "CASE WHEN Direction='in' THEN Amount ELSE -Amount END AS Amount "
-        "FROM BankEntry ORDER BY Entry_Date, Entry_ID"
+        "FROM BankEntry WHERE Entry_Date BETWEEN ? AND ? "
+        "ORDER BY Entry_Date, Entry_ID",
+        (date_from, date_to),
     ).fetchall()
     conn.close()
 
