@@ -426,6 +426,10 @@ LoginScreen {
     margin-right: 2;
 }
 
+#f-doc-theme {
+    height: 3;
+}
+
 /* Charts date range row */
 .charts-date-row {
     height: 3;
