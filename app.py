@@ -33,8 +33,14 @@ from screens.login      import LoginScreen
 from screens.sql        import SqlPanel
 from screens.users      import UsersPanel
 from screens.settings   import SettingsPanel
-from screens.modals     import QuitConfirmModal
-from screens.charts     import ChartsPanel
+from screens.modals          import QuitConfirmModal
+from screens.charts          import ChartsPanel
+from screens.wz              import WZPanel
+from screens.fv              import FVPanel
+from screens.pz              import PZPanel
+from screens.stock_movements import StockMovementsPanel
+from screens.kassa           import KassaPanel
+from screens.bank            import BankPanel
 
 
 _SECTIONS = [
@@ -49,6 +55,13 @@ _SECTIONS = [
     ("regions",    "Regions"),
     ("reports",    "Reports"),
     ("charts",     "Charts"),
+    # Document workflow sections
+    ("wz",         "WZ — Delivery"),
+    ("fv",         "FV — Invoices"),
+    ("pz",         "PZ — Receipts"),
+    ("movements",  "PW/RW — Stock"),
+    ("kassa",      "Kasa"),
+    ("bank",       "Bank"),
     # Admin-only sections (hidden for non-admin users)
     ("sql",        "SQL Query"),
     ("users",      "Users"),
@@ -105,6 +118,12 @@ class NorthwindApp(App):
                 yield RegionsPanel(id="regions")
                 yield ReportsPanel(id="reports")
                 yield ChartsPanel(id="charts")
+                yield WZPanel(id="wz")
+                yield FVPanel(id="fv")
+                yield PZPanel(id="pz")
+                yield StockMovementsPanel(id="movements")
+                yield KassaPanel(id="kassa")
+                yield BankPanel(id="bank")
                 yield SqlPanel(id="sql")
                 yield UsersPanel(id="users")
                 yield SettingsPanel(id="settings")

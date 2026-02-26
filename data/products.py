@@ -121,6 +121,14 @@ def update(pk, data: dict) -> None:
     conn.close()
 
 
+def apply_stock_delta(product_id: int, delta: int, conn) -> None:
+    """Atomically adjust UnitsInStock by delta within caller's transaction. No commit."""
+    conn.execute(
+        "UPDATE Products SET UnitsInStock = UnitsInStock + ? WHERE ProductID = ?",
+        (delta, product_id),
+    )
+
+
 def delete(pk) -> None:
     conn = get_connection()
     conn.execute("DELETE FROM Products WHERE ProductID=?", (pk,))

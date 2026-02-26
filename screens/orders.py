@@ -339,6 +339,7 @@ class OrderDetailModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Edit Header", id="btn-edit",   variant="default")
                 yield Button("Ship",        id="btn-ship",   variant="default")
+                yield Button("Issue WZ",    id="btn-wz",     variant="primary")
                 yield Button("+ Item",      id="btn-add",    variant="success")
                 yield Button("- Item",      id="btn-remove", variant="warning")
                 yield Button("Delete",      id="btn-delete", variant="error")
@@ -374,6 +375,20 @@ class OrderDetailModal(ModalScreen):
             f"{hdr.get('ShipCity') or ''}, {hdr.get('ShipCountry') or ''}",
         ]
         self.query_one("#order-header", Static).update("\n".join(header_lines))
+
+        # Update Issue WZ button state
+        from data.wz import fetch_for_order
+        wz_docs = fetch_for_order(self.order_id)
+        try:
+            btn_wz = self.query_one("#btn-wz", Button)
+            if wz_docs:
+                btn_wz.label = f"WZ: {wz_docs[0]['WZ_Number']}"
+                btn_wz.disabled = True
+            else:
+                btn_wz.label = "Issue WZ"
+                btn_wz.disabled = False
+        except Exception:
+            pass
 
         # Line items
         tbl = self.query_one("#lines-tbl", DataTable)
@@ -427,6 +442,27 @@ class OrderDetailModal(ModalScreen):
                 self._changed = True
                 self._load()
         self.app.push_screen(ShipOrderModal(self.order_id), callback=after)
+
+    @on(Button.Pressed, "#btn-wz")
+    def on_issue_wz(self) -> None:
+        from datetime import date
+        from data.wz import create_from_order
+        from screens.wz import WZDetailModal
+        hdr = odata.get_by_pk(self.order_id)
+        if not hdr:
+            return
+        lines = odata.fetch_lines(self.order_id)
+        if not lines:
+            self.notify("Order has no line items.", severity="warning")
+            return
+        try:
+            wz_id = create_from_order(self.order_id, str(date.today()))
+            self._changed = True
+            self._load()
+            self.notify(f"WZ issued (ID #{wz_id}). Stock updated.", severity="information")
+            self.app.push_screen(WZDetailModal(wz_id), callback=lambda _: None)
+        except Exception as e:
+            self.notify(f"Error issuing WZ: {e}", severity="error")
 
     @on(Button.Pressed, "#btn-add")
     def on_add_item(self) -> None:

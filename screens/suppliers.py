@@ -192,6 +192,7 @@ class SuppliersPanel(Widget):
         ("n", "new_record",     "New Supplier"),
         ("f", "focus_search",   "Search"),
         ("+", "new_product",    "New Product"),
+        ("p", "new_pz",         "New PZ"),
         ("x", "export_csv",     "Export CSV"),
     ]
 
@@ -302,6 +303,14 @@ class SuppliersPanel(Widget):
             for row in rows:
                 writer.writerow([str(c) if c is not None else "" for c in row])
         self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+
+    def action_new_pz(self) -> None:
+        from screens.pz import PZFormModal, PZDetailModal
+        supplier_id = int(self._selected_pk) if self._selected_pk else None
+        def after_form(pz_id):
+            if pz_id:
+                self.app.push_screen(PZDetailModal(pz_id), callback=lambda _: None)
+        self.app.push_screen(PZFormModal(supplier_id=supplier_id), callback=after_form)
 
     def action_new_product(self) -> None:
         if not self._selected_pk:

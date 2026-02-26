@@ -16,11 +16,154 @@ def get_connection():
     return conn
 
 
+def next_doc_number(doc_type: str, conn) -> str:
+    """Return next sequential doc number like WZ/2026/001. Caller must commit."""
+    from datetime import date
+    year = date.today().year
+    row = conn.execute(
+        "SELECT LastNum FROM DocSequence WHERE DocType=? AND Year=?",
+        (doc_type, year),
+    ).fetchone()
+    if row:
+        new_num = row[0] + 1
+        conn.execute(
+            "UPDATE DocSequence SET LastNum=? WHERE DocType=? AND Year=?",
+            (new_num, doc_type, year),
+        )
+    else:
+        new_num = 1
+        conn.execute(
+            "INSERT INTO DocSequence (DocType, Year, LastNum) VALUES (?,?,?)",
+            (doc_type, year, 1),
+        )
+    return f"{doc_type}/{year}/{new_num:03d}"
+
+
 def create_tables():
     conn = get_connection()
     c = conn.cursor()
 
     c.executescript("""
+    CREATE TABLE IF NOT EXISTS WZ (
+        WZ_ID      INTEGER PRIMARY KEY AUTOINCREMENT,
+        WZ_Number  TEXT NOT NULL UNIQUE,
+        OrderID    INTEGER REFERENCES Orders,
+        CustomerID TEXT NOT NULL REFERENCES Customers,
+        WZ_Date    TEXT NOT NULL,
+        Status     TEXT DEFAULT 'draft',
+        Notes      TEXT
+    );
+    CREATE TABLE IF NOT EXISTS WZ_Items (
+        WZ_ID     INTEGER REFERENCES WZ ON DELETE CASCADE,
+        ProductID INTEGER REFERENCES Products,
+        Quantity  INTEGER NOT NULL,
+        UnitPrice REAL NOT NULL,
+        PRIMARY KEY (WZ_ID, ProductID)
+    );
+
+    CREATE TABLE IF NOT EXISTS PZ (
+        PZ_ID         INTEGER PRIMARY KEY AUTOINCREMENT,
+        PZ_Number     TEXT NOT NULL UNIQUE,
+        SupplierID    INTEGER NOT NULL REFERENCES Suppliers,
+        SupplierDocRef TEXT,
+        PZ_Date       TEXT NOT NULL,
+        Status        TEXT DEFAULT 'draft',
+        PaymentMethod TEXT,
+        Notes         TEXT
+    );
+    CREATE TABLE IF NOT EXISTS PZ_Items (
+        PZ_ID     INTEGER REFERENCES PZ ON DELETE CASCADE,
+        ProductID INTEGER REFERENCES Products,
+        Quantity  INTEGER NOT NULL,
+        UnitCost  REAL NOT NULL,
+        PRIMARY KEY (PZ_ID, ProductID)
+    );
+
+    CREATE TABLE IF NOT EXISTS FV (
+        FV_ID         INTEGER PRIMARY KEY AUTOINCREMENT,
+        FV_Number     TEXT NOT NULL UNIQUE,
+        CustomerID    TEXT NOT NULL REFERENCES Customers,
+        FV_Date       TEXT NOT NULL,
+        DueDate       TEXT,
+        PaymentMethod TEXT,
+        Status        TEXT DEFAULT 'issued',
+        TotalNet      REAL DEFAULT 0,
+        Notes         TEXT
+    );
+    CREATE TABLE IF NOT EXISTS FV_WZ (
+        FV_ID INTEGER REFERENCES FV ON DELETE CASCADE,
+        WZ_ID INTEGER REFERENCES WZ,
+        PRIMARY KEY (FV_ID, WZ_ID)
+    );
+
+    CREATE TABLE IF NOT EXISTS PW (
+        PW_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
+        PW_Number TEXT NOT NULL UNIQUE,
+        PW_Date   TEXT NOT NULL,
+        Reason    TEXT,
+        Notes     TEXT
+    );
+    CREATE TABLE IF NOT EXISTS PW_Items (
+        PW_ID     INTEGER REFERENCES PW ON DELETE CASCADE,
+        ProductID INTEGER REFERENCES Products,
+        Quantity  INTEGER NOT NULL,
+        PRIMARY KEY (PW_ID, ProductID)
+    );
+
+    CREATE TABLE IF NOT EXISTS RW (
+        RW_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
+        RW_Number TEXT NOT NULL UNIQUE,
+        RW_Date   TEXT NOT NULL,
+        Reason    TEXT,
+        Notes     TEXT
+    );
+    CREATE TABLE IF NOT EXISTS RW_Items (
+        RW_ID     INTEGER REFERENCES RW ON DELETE CASCADE,
+        ProductID INTEGER REFERENCES Products,
+        Quantity  INTEGER NOT NULL,
+        PRIMARY KEY (RW_ID, ProductID)
+    );
+
+    CREATE TABLE IF NOT EXISTS KP (
+        KP_ID       INTEGER PRIMARY KEY AUTOINCREMENT,
+        KP_Number   TEXT NOT NULL UNIQUE,
+        KP_Date     TEXT NOT NULL,
+        CustomerID  TEXT REFERENCES Customers,
+        FV_ID       INTEGER REFERENCES FV,
+        Amount      REAL NOT NULL,
+        Description TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS KW (
+        KW_ID       INTEGER PRIMARY KEY AUTOINCREMENT,
+        KW_Number   TEXT NOT NULL UNIQUE,
+        KW_Date     TEXT NOT NULL,
+        SupplierID  INTEGER REFERENCES Suppliers,
+        PZ_ID       INTEGER REFERENCES PZ,
+        Amount      REAL NOT NULL,
+        Description TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS BankEntry (
+        Entry_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
+        Entry_Number TEXT NOT NULL UNIQUE,
+        Entry_Date   TEXT NOT NULL,
+        Direction    TEXT NOT NULL,
+        CustomerID   TEXT REFERENCES Customers,
+        SupplierID   INTEGER REFERENCES Suppliers,
+        FV_ID        INTEGER REFERENCES FV,
+        PZ_ID        INTEGER REFERENCES PZ,
+        Amount       REAL NOT NULL,
+        Description  TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS DocSequence (
+        DocType TEXT NOT NULL,
+        Year    INTEGER NOT NULL,
+        LastNum INTEGER DEFAULT 0,
+        PRIMARY KEY (DocType, Year)
+    );
+
     CREATE TABLE IF NOT EXISTS AppSettings (
         key   TEXT PRIMARY KEY,
         value TEXT NOT NULL

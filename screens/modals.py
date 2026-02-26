@@ -6,6 +6,43 @@ from textual.widgets import Button, DataTable, Input, Label
 from textual import on
 
 
+class ConfirmActionModal(ModalScreen[bool]):
+    """Generic confirmation dialog with custom title and button label."""
+
+    def __init__(self, title: str, message: str = "", confirm_label: str = "Confirm") -> None:
+        super().__init__()
+        self._title = title
+        self._message = message
+        self._confirm_label = confirm_label
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="confirm-dialog"):
+            yield Label(self._title, classes="modal-title")
+            if self._message:
+                yield Label(self._message, classes="modal-subtitle")
+            with Horizontal(classes="modal-buttons"):
+                yield Button(self._confirm_label, id="btn-yes", variant="primary")
+                yield Button("Cancel", id="btn-no")
+            yield Label("ESC to close", classes="modal-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#btn-no").focus()
+
+    def on_key(self, event) -> None:
+        if event.key == "y":
+            self.dismiss(True)
+        elif event.key in ("n", "escape"):
+            self.dismiss(False)
+
+    @on(Button.Pressed, "#btn-yes")
+    def on_yes(self) -> None:
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#btn-no")
+    def on_no(self) -> None:
+        self.dismiss(False)
+
+
 class ConfirmDeleteModal(ModalScreen[bool]):
     """Ask the user to confirm deletion. Returns True if confirmed."""
 

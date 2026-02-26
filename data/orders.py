@@ -171,11 +171,28 @@ def remove_line_item(order_id, product_id) -> None:
 
 
 def mark_shipped(order_id, shipped_date: str) -> None:
+    from data.products import apply_stock_delta
     conn = get_connection()
+    row = conn.execute(
+        "SELECT ShippedDate FROM Orders WHERE OrderID=?", (order_id,)
+    ).fetchone()
+    already_shipped = row and row[0]
+    # Check if a WZ has already been issued for this order (stock already reduced)
+    wz_issued = conn.execute(
+        "SELECT 1 FROM WZ WHERE OrderID=? AND Status IN ('issued','invoiced')",
+        (order_id,),
+    ).fetchone()
     conn.execute(
         "UPDATE Orders SET ShippedDate=? WHERE OrderID=?",
         (shipped_date, order_id),
     )
+    if not already_shipped and not wz_issued:
+        # Only reduce stock if neither shipped nor WZ-issued before
+        lines = conn.execute(
+            "SELECT ProductID, Quantity FROM OrderDetails WHERE OrderID=?", (order_id,)
+        ).fetchall()
+        for line in lines:
+            apply_stock_delta(line[0], -line[1], conn)
     conn.commit()
     conn.close()
 

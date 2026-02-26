@@ -448,6 +448,44 @@ LoginScreen {
     min-width: 9;
 }
 
+/* ── Document workflow panels (WZ, FV, PZ, PW/RW, Kasa, Bank) ──────────────*/
+#mov-tabs {
+    height: 1fr;
+}
+
+#mov-tabs ContentSwitcher {
+    height: 1fr;
+}
+
+#kassa-tabs {
+    height: 1fr;
+}
+
+#kassa-tabs ContentSwitcher {
+    height: 1fr;
+}
+
+#kassa-balance {
+    height: 2;
+    padding: 0 1;
+    color: $accent;
+    content-align: left middle;
+}
+
+#bank-balance {
+    height: 2;
+    padding: 0 1;
+    color: $accent;
+    content-align: left middle;
+}
+
+#tab-pw .panel-container,
+#tab-rw .panel-container,
+#tab-kp,
+#tab-kw {
+    height: 1fr;
+}
+
 /* ── Modal ESC hint ─────────────────────────────────────────────────────────*/
 .modal-hint {
     color: $text-muted;
