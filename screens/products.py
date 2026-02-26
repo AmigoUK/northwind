@@ -250,6 +250,7 @@ class ProductsPanel(Widget):
     ]
 
     _selected_pk = None
+    _low_stock_mode: bool = False
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="panel-container"):
@@ -363,13 +364,22 @@ class ProductsPanel(Widget):
         self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
 
     def action_low_stock(self) -> None:
-        tbl = self.query_one(DataTable)
-        tbl.clear()
-        rows = pdata.low_stock()
-        if not rows:
-            self.notify("No low-stock products found.", severity="information")
-            return
-        for row in rows:
-            tbl.add_row(*[str(c) if c is not None else "" for c in row],
-                        key=str(row[0]))
-        self.notify(f"Showing {len(rows)} low-stock product(s).", severity="warning")
+        self._low_stock_mode = not self._low_stock_mode
+        btn = self.query_one("#btn-low", Button)
+        if self._low_stock_mode:
+            tbl = self.query_one(DataTable)
+            tbl.clear()
+            rows = pdata.low_stock()
+            if not rows:
+                self._low_stock_mode = False
+                btn.label = "Low Stock"
+                self.notify("No low-stock products found.", severity="information")
+                return
+            for row in rows:
+                tbl.add_row(*[str(c) if c is not None else "" for c in row],
+                            key=str(row[0]))
+            btn.label = "Show All"
+            self.notify(f"Showing {len(rows)} low-stock product(s).", severity="warning")
+        else:
+            btn.label = "Low Stock"
+            self.refresh_data(self.query_one("#search-box", Input).value)

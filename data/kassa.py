@@ -132,19 +132,23 @@ def transfer_to_bank(amount: float, description: str = "") -> tuple[int, int]:
     today = str(date.today())
     desc = description or "Deposit to bank"
 
-    kw_number = next_doc_number("KW", conn)
+    kw_number   = next_doc_number("KW",   conn)
+    bank_number = next_doc_number("Bank", conn)
+
+    kw_desc   = f"{desc} → {bank_number}"
+    bank_desc = f"{desc} ← {kw_number}"
+
     cur = conn.execute(
         "INSERT INTO KW (KW_Number, KW_Date, SupplierID, PZ_ID, Amount, Description) "
         "VALUES (?,?,?,?,?,?)",
-        (kw_number, today, None, None, amount, desc),
+        (kw_number, today, None, None, amount, kw_desc),
     )
     kw_id = cur.lastrowid
 
-    bank_number = next_doc_number("Bank", conn)
     cur = conn.execute(
         "INSERT INTO BankEntry (Entry_Number, Entry_Date, Direction, CustomerID, "
         "SupplierID, FV_ID, PZ_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
-        (bank_number, today, "in", None, None, None, None, amount, desc),
+        (bank_number, today, "in", None, None, None, None, amount, bank_desc),
     )
     entry_id = cur.lastrowid
 

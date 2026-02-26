@@ -33,10 +33,12 @@ class SettingsPanel(Widget):
                 yield Select([], id="f-theme", allow_blank=True)
             with Vertical(classes="settings-section"):
                 yield Label("Stock Control", classes="settings-label")
-                yield Label("Allow Backorders")
-                yield Switch(id="f-backorder", value=False)
-                yield Label("Show Discontinued Products")
-                yield Switch(id="f-show-disc", value=False)
+                with Horizontal(classes="setting-row"):
+                    yield Label("Allow Backorders")
+                    yield Switch(id="f-backorder", value=False)
+                with Horizontal(classes="setting-row"):
+                    yield Label("Show Discontinued Products")
+                    yield Switch(id="f-show-disc", value=False)
             yield Button("Save Settings", id="btn-save", variant="primary")
 
     def on_mount(self) -> None:
