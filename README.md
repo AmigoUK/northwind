@@ -190,6 +190,16 @@ A terminal-based warehouse/distribution management application built on the clas
       <sub><b>Theme picker</b></sub>
     </td>
   </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/business-details-settings.png"><img src="screenshots/business-details-settings.png" width="260" alt="Business Details"/></a><br/>
+      <sub><b>Business Details — tabbed layout (v2.2)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/general-settings.png"><img src="screenshots/general-settings.png" width="260" alt="General Settings"/></a><br/>
+      <sub><b>General Settings panel</b></sub>
+    </td>
+  </tr>
 </table>
 
 ---
