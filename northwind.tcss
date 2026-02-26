@@ -430,6 +430,29 @@ LoginScreen {
     height: 3;
 }
 
+/* ── Business Details panel ───────────────────────────────────────────────── */
+/* Dock Save so it is always visible regardless of tab content height         */
+BusinessDetailsPanel #btn-save {
+    dock: bottom;
+    height: 3;
+    margin: 1;
+}
+
+/* TabbedContent fills the remaining space above the docked button            */
+BusinessDetailsPanel TabbedContent {
+    height: 1fr;
+}
+
+/* Override the broad `.panel-container Vertical { height: 1fr }` rule so    */
+/* each settings section sizes to its content and the tab can scroll          */
+BusinessDetailsPanel .settings-section {
+    height: auto;
+}
+
+BusinessDetailsPanel TabPane {
+    overflow-y: auto;
+}
+
 /* Charts date range row */
 .charts-date-row {
     height: 3;
