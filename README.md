@@ -308,3 +308,9 @@ northwind/
 | Key-value settings store for business/document config | `data/settings.py`, `screens/business.py` |
 | `fpdf2` subclassing for custom footers and multi-column layouts | `pdf_export.py` |
 | Embedding images and drawing shapes/lines with FPDF primitives | `pdf_export.py` |
+| Reusable PDF helpers (`_draw_header`, `_draw_amount_box`, `_draw_signature_line`) shared across document types | `pdf_export.py` |
+| Generating voucher-style single-entry PDFs (KP, KW, Bank) vs multi-line table PDFs (WZ, FV, PZ) | `pdf_export.py` |
+| CSS selector specificity in Textual — type+class beats class alone; later rules win on equal specificity | `northwind.tcss` |
+| `dock: bottom` to pin a widget (Save button) regardless of sibling content height | `northwind.tcss` |
+| `overflow-y: auto` on `TabPane` to make long forms scrollable within a tab | `northwind.tcss` |
+| `TabbedContent` inside a panel to split a long settings page into navigable tabs | `screens/business.py` |
