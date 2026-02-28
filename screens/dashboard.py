@@ -39,7 +39,7 @@ class DashboardPanel(Widget):
                     yield Static("", id="kpi-this-month-val", classes="kpi-value")
                     yield Label("This Month", classes="kpi-title")
                 with Vertical(classes="kpi-card"):
-                    yield Static("", id="kpi-kassa-val", classes="kpi-value")
+                    yield Static("", id="kpi-cash-val", classes="kpi-value")
                     yield Label("Cash Register Balance", classes="kpi-title")
                 with Vertical(classes="kpi-card"):
                     yield Static("", id="kpi-bank-val", classes="kpi-value")
@@ -87,7 +87,7 @@ class DashboardPanel(Widget):
         try:
             fin = ddata.finance_kpis()
             symbol = get_currency_symbol()
-            self.query_one("#kpi-kassa-val", Static).update(f"{symbol}{fin['kassa_balance']:,.2f}")
+            self.query_one("#kpi-cash-val", Static).update(f"{symbol}{fin['cash_balance']:,.2f}")
             self.query_one("#kpi-bank-val",  Static).update(f"{symbol}{fin['bank_balance']:,.2f}")
             self.query_one("#kpi-ar-due-val", Static).update(f"{symbol}{fin['ar_due_30d']:,.2f}")
         except Exception:

@@ -259,20 +259,20 @@ def overdue_orders() -> tuple[list, list]:
 
 
 def liquidity_snapshot() -> tuple[list, list]:
-    """Current Kasa and Bank balances snapshot (no date filter)."""
+    """Current Cash and Bank balances snapshot (no date filter)."""
     sym = get_currency_symbol()
     conn = get_connection()
-    kp_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM KP").fetchone()[0]
-    kw_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM KW").fetchone()[0]
+    cr_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM CR").fetchone()[0]
+    cp_total  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM CP").fetchone()[0]
     bank_in   = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM BankEntry WHERE Direction='in'").fetchone()[0]
     bank_out  = conn.execute("SELECT COALESCE(SUM(Amount),0) FROM BankEntry WHERE Direction='out'").fetchone()[0]
     conn.close()
-    kassa_bal = kp_total - kw_total
+    cash_bal = cr_total - cp_total
     bank_bal  = bank_in  - bank_out
-    total     = kassa_bal + bank_bal
+    total     = cash_bal + bank_bal
     headers = [("Account", 16), ("Inflows", 14), ("Outflows", 14), ("Balance", 14)]
     data = [
-        ["Cash Register", f"{sym}{kp_total:.2f}",  f"{sym}{kw_total:.2f}",  f"{sym}{kassa_bal:.2f}"],
+        ["Cash Register", f"{sym}{cr_total:.2f}",  f"{sym}{cp_total:.2f}",  f"{sym}{cash_bal:.2f}"],
         ["Bank Account", f"{sym}{bank_in:.2f}",  f"{sym}{bank_out:.2f}",  f"{sym}{bank_bal:.2f}"],
         ["Total",       "",                       "",                      f"{sym}{total:.2f}"],
     ]
@@ -280,14 +280,14 @@ def liquidity_snapshot() -> tuple[list, list]:
 
 
 def ar_aging() -> tuple[list, list]:
-    """AR aging: unpaid FV invoices grouped into overdue buckets."""
+    """AR aging: unpaid INV invoices grouped into overdue buckets."""
     sym = get_currency_symbol()
     conn = get_connection()
     rows = conn.execute(
-        """SELECT f.FV_Number, c.CompanyName, f.DueDate,
+        """SELECT f.INV_Number, c.CompanyName, f.DueDate,
                   f.TotalNet AS Total, COALESCE(f.PaidAmount, 0) AS Paid,
                   f.TotalNet - COALESCE(f.PaidAmount, 0) AS Outstanding
-           FROM FV f
+           FROM INV f
            LEFT JOIN Customers c ON f.CustomerID = c.CustomerID
            WHERE f.Status != 'paid'
              AND f.TotalNet > COALESCE(f.PaidAmount, 0)
@@ -314,13 +314,13 @@ def ar_aging() -> tuple[list, list]:
         except Exception:
             return "—", 0
 
-    headers = [("FV#", 14), ("Customer", 22), ("Due Date", 12),
+    headers = [("INV#", 14), ("Customer", 22), ("Due Date", 12),
                ("Total", 10), ("Paid", 10), ("Outstanding", 12), ("Days", 5), ("Bucket", 8)]
     data = []
     for r in rows:
         bkt, days = _bucket(r["DueDate"])
         data.append([
-            r["FV_Number"], r["CompanyName"] or "", r["DueDate"] or "",
+            r["INV_Number"], r["CompanyName"] or "", r["DueDate"] or "",
             f"{sym}{r['Total']:.2f}", f"{sym}{r['Paid']:.2f}",
             f"{sym}{r['Outstanding']:.2f}", str(days), bkt,
         ])
@@ -328,15 +328,15 @@ def ar_aging() -> tuple[list, list]:
 
 
 def payment_forecast(days: int = 30) -> tuple[list, list]:
-    """FV invoices due within the next N days, not yet paid."""
+    """INV invoices due within the next N days, not yet paid."""
     sym = get_currency_symbol()
     from datetime import timedelta
     cutoff = str(_date.today() + timedelta(days=days))
     conn = get_connection()
     rows = conn.execute(
-        """SELECT f.DueDate, f.FV_Number, c.CompanyName,
+        """SELECT f.DueDate, f.INV_Number, c.CompanyName,
                   f.TotalNet - COALESCE(f.PaidAmount, 0) AS Outstanding
-           FROM FV f
+           FROM INV f
            LEFT JOIN Customers c ON f.CustomerID = c.CustomerID
            WHERE f.Status != 'paid'
              AND f.TotalNet > COALESCE(f.PaidAmount, 0)
@@ -346,8 +346,8 @@ def payment_forecast(days: int = 30) -> tuple[list, list]:
         (cutoff,),
     ).fetchall()
     conn.close()
-    headers = [("Due Date", 12), ("FV#", 14), ("Customer", 28), ("Outstanding", 12)]
-    data = [[r["DueDate"], r["FV_Number"], r["CompanyName"] or "",
+    headers = [("Due Date", 12), ("INV#", 14), ("Customer", 28), ("Outstanding", 12)]
+    data = [[r["DueDate"], r["INV_Number"], r["CompanyName"] or "",
              f"{sym}{r['Outstanding']:.2f}"] for r in rows]
     return headers, data
 
@@ -356,18 +356,18 @@ def cash_bank_trend(
     date_from: str = "0001-01-01",
     date_to:   str = "9999-12-31",
 ) -> dict:
-    """Running balances over time for Kassa and Bank.
-    Returns {"kassa": [(date, balance), ...], "bank": [(date, balance), ...]}"""
+    """Running balances over time for Cash and Bank.
+    Returns {"cash": [(date, balance), ...], "bank": [(date, balance), ...]}"""
     from collections import defaultdict
     conn = get_connection()
-    kp_rows = conn.execute(
-        "SELECT KP_Date AS dt, Amount FROM KP "
-        "WHERE KP_Date BETWEEN ? AND ? ORDER BY KP_Date, KP_ID",
+    cr_rows = conn.execute(
+        "SELECT CR_Date AS dt, Amount FROM CR "
+        "WHERE CR_Date BETWEEN ? AND ? ORDER BY CR_Date, CR_ID",
         (date_from, date_to),
     ).fetchall()
-    kw_rows = conn.execute(
-        "SELECT KW_Date AS dt, Amount FROM KW "
-        "WHERE KW_Date BETWEEN ? AND ? ORDER BY KW_Date, KW_ID",
+    cp_rows = conn.execute(
+        "SELECT CP_Date AS dt, Amount FROM CP "
+        "WHERE CP_Date BETWEEN ? AND ? ORDER BY CP_Date, CP_ID",
         (date_from, date_to),
     ).fetchall()
     bank_rows = conn.execute(
@@ -379,11 +379,11 @@ def cash_bank_trend(
     ).fetchall()
     conn.close()
 
-    kassa_by_date: dict = defaultdict(float)
-    for r in kp_rows:
-        kassa_by_date[r["dt"]] += r["Amount"]
-    for r in kw_rows:
-        kassa_by_date[r["dt"]] -= r["Amount"]
+    cash_by_date: dict = defaultdict(float)
+    for r in cr_rows:
+        cash_by_date[r["dt"]] += r["Amount"]
+    for r in cp_rows:
+        cash_by_date[r["dt"]] -= r["Amount"]
 
     bank_by_date: dict = defaultdict(float)
     for r in bank_rows:
@@ -397,7 +397,7 @@ def cash_bank_trend(
         return result
 
     return {
-        "kassa": _to_running(kassa_by_date),
+        "cash": _to_running(cash_by_date),
         "bank":  _to_running(bank_by_date),
     }
 

@@ -475,7 +475,7 @@ BusinessDetailsPanel TabPane {
     min-width: 9;
 }
 
-/* ── Document workflow panels (WZ, FV, PZ, PW/RW, Kasa, Bank) ──────────────*/
+/* ── Document workflow panels (DN, INV, GR, SI/SO, Cash, Bank) ──────────────*/
 #mov-tabs {
     height: 1fr;
 }
@@ -484,15 +484,15 @@ BusinessDetailsPanel TabPane {
     height: 1fr;
 }
 
-#kassa-tabs {
+#cash-tabs {
     height: 1fr;
 }
 
-#kassa-tabs ContentSwitcher {
+#cash-tabs ContentSwitcher {
     height: 1fr;
 }
 
-#kassa-balance {
+#cash-balance {
     height: 2;
     padding: 0 1;
     color: $accent;
@@ -506,10 +506,10 @@ BusinessDetailsPanel TabPane {
     content-align: left middle;
 }
 
-#tab-pw .panel-container,
-#tab-rw .panel-container,
-#tab-kp,
-#tab-kw {
+#tab-si .panel-container,
+#tab-so .panel-container,
+#tab-cr,
+#tab-cp {
     height: 1fr;
 }
 

@@ -1,5 +1,5 @@
 from __future__ import annotations
-"""data/wz.py — WZ (Wydanie Zewnętrzne) data access."""
+"""data/dn.py — DN (Delivery Note) data access."""
 from db import get_connection, next_doc_number
 from data.products import apply_stock_delta
 
@@ -7,14 +7,14 @@ from data.products import apply_stock_delta
 def fetch_all() -> list:
     conn = get_connection()
     rows = conn.execute(
-        """SELECT w.WZ_ID, w.WZ_Number, w.WZ_Date, c.CompanyName AS Customer,
+        """SELECT w.DN_ID, w.DN_Number, w.DN_Date, c.CompanyName AS Customer,
                   w.Status,
                   COALESCE(SUM(wi.UnitPrice * wi.Quantity), 0.0) AS Total
-           FROM WZ w
+           FROM DN w
            LEFT JOIN Customers c ON w.CustomerID = c.CustomerID
-           LEFT JOIN WZ_Items wi ON w.WZ_ID = wi.WZ_ID
-           GROUP BY w.WZ_ID
-           ORDER BY w.WZ_ID DESC"""
+           LEFT JOIN DN_Items wi ON w.DN_ID = wi.DN_ID
+           GROUP BY w.DN_ID
+           ORDER BY w.DN_ID DESC"""
     ).fetchall()
     conn.close()
     return [list(r) for r in rows]
@@ -24,15 +24,15 @@ def search(term: str) -> list:
     like = f"%{term}%"
     conn = get_connection()
     rows = conn.execute(
-        """SELECT w.WZ_ID, w.WZ_Number, w.WZ_Date, c.CompanyName AS Customer,
+        """SELECT w.DN_ID, w.DN_Number, w.DN_Date, c.CompanyName AS Customer,
                   w.Status,
                   COALESCE(SUM(wi.UnitPrice * wi.Quantity), 0.0) AS Total
-           FROM WZ w
+           FROM DN w
            LEFT JOIN Customers c ON w.CustomerID = c.CustomerID
-           LEFT JOIN WZ_Items wi ON w.WZ_ID = wi.WZ_ID
-           WHERE w.WZ_Number LIKE ? OR c.CompanyName LIKE ?
-           GROUP BY w.WZ_ID
-           ORDER BY w.WZ_ID DESC""",
+           LEFT JOIN DN_Items wi ON w.DN_ID = wi.DN_ID
+           WHERE w.DN_Number LIKE ? OR c.CompanyName LIKE ?
+           GROUP BY w.DN_ID
+           ORDER BY w.DN_ID DESC""",
         (like, like),
     ).fetchall()
     conn.close()
@@ -43,98 +43,98 @@ def get_by_pk(pk) -> dict | None:
     conn = get_connection()
     row = conn.execute(
         """SELECT w.*, c.CompanyName
-           FROM WZ w
+           FROM DN w
            LEFT JOIN Customers c ON w.CustomerID = c.CustomerID
-           WHERE w.WZ_ID = ?""",
+           WHERE w.DN_ID = ?""",
         (pk,),
     ).fetchone()
     conn.close()
     return dict(row) if row else None
 
 
-def fetch_items(wz_id) -> list:
+def fetch_items(dn_id) -> list:
     conn = get_connection()
     rows = conn.execute(
         """SELECT wi.ProductID, p.ProductName, wi.Quantity, wi.UnitPrice,
                   wi.UnitPrice * wi.Quantity AS LineTotal
-           FROM WZ_Items wi
+           FROM DN_Items wi
            JOIN Products p ON wi.ProductID = p.ProductID
-           WHERE wi.WZ_ID = ?
+           WHERE wi.DN_ID = ?
            ORDER BY p.ProductName""",
-        (wz_id,),
+        (dn_id,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
 def fetch_issued_for_customer(customer_id: str) -> list:
-    """Return WZ docs with status 'issued' for a given customer (for FV creation)."""
+    """Return DN docs with status 'issued' for a given customer (for INV creation)."""
     conn = get_connection()
     rows = conn.execute(
-        """SELECT w.WZ_ID, w.WZ_Number, w.WZ_Date,
+        """SELECT w.DN_ID, w.DN_Number, w.DN_Date,
                   COALESCE(SUM(wi.UnitPrice * wi.Quantity), 0.0) AS Total
-           FROM WZ w
-           LEFT JOIN WZ_Items wi ON w.WZ_ID = wi.WZ_ID
+           FROM DN w
+           LEFT JOIN DN_Items wi ON w.DN_ID = wi.DN_ID
            WHERE w.CustomerID = ? AND w.Status = 'issued'
-           GROUP BY w.WZ_ID
-           ORDER BY w.WZ_Date""",
+           GROUP BY w.DN_ID
+           ORDER BY w.DN_Date""",
         (customer_id,),
     ).fetchall()
     conn.close()
     return [list(r) for r in rows]
 
 
-def create_draft(customer_id: str, wz_date: str, order_id=None, notes: str = "") -> int:
-    """Create a WZ document in 'draft' status. Returns WZ_ID."""
+def create_draft(customer_id: str, dn_date: str, order_id=None, notes: str = "") -> int:
+    """Create a DN document in 'draft' status. Returns DN_ID."""
     conn = get_connection()
-    number = next_doc_number("WZ", conn)
+    number = next_doc_number("DN", conn)
     cur = conn.execute(
-        "INSERT INTO WZ (WZ_Number, OrderID, CustomerID, WZ_Date, Status, Notes) "
+        "INSERT INTO DN (DN_Number, OrderID, CustomerID, DN_Date, Status, Notes) "
         "VALUES (?,?,?,?,'draft',?)",
-        (number, order_id or None, customer_id, wz_date, notes or None),
+        (number, order_id or None, customer_id, dn_date, notes or None),
     )
-    wz_id = cur.lastrowid
+    dn_id = cur.lastrowid
     conn.commit()
     conn.close()
-    return wz_id
+    return dn_id
 
 
-def add_item(wz_id: int, product_id: int, quantity: int, unit_price: float) -> None:
+def add_item(dn_id: int, product_id: int, quantity: int, unit_price: float) -> None:
     conn = get_connection()
     conn.execute(
-        "INSERT INTO WZ_Items (WZ_ID, ProductID, Quantity, UnitPrice) VALUES (?,?,?,?)",
-        (wz_id, product_id, quantity, unit_price),
+        "INSERT INTO DN_Items (DN_ID, ProductID, Quantity, UnitPrice) VALUES (?,?,?,?)",
+        (dn_id, product_id, quantity, unit_price),
     )
     conn.commit()
     conn.close()
 
 
-def remove_item(wz_id: int, product_id: int) -> None:
+def remove_item(dn_id: int, product_id: int) -> None:
     conn = get_connection()
     conn.execute(
-        "DELETE FROM WZ_Items WHERE WZ_ID=? AND ProductID=?", (wz_id, product_id)
+        "DELETE FROM DN_Items WHERE DN_ID=? AND ProductID=?", (dn_id, product_id)
     )
     conn.commit()
     conn.close()
 
 
-def issue(wz_id: int) -> None:
-    """Set WZ status to 'issued' and decrement stock for each item."""
+def issue(dn_id: int) -> None:
+    """Set DN status to 'issued' and decrement stock for each item."""
     from data.settings import get_backorder_allowed
     conn = get_connection()
-    wz = conn.execute("SELECT Status FROM WZ WHERE WZ_ID=?", (wz_id,)).fetchone()
-    if not wz:
+    dn = conn.execute("SELECT Status FROM DN WHERE DN_ID=?", (dn_id,)).fetchone()
+    if not dn:
         conn.close()
-        raise ValueError(f"WZ #{wz_id} not found.")
-    if wz[0] != "draft":
+        raise ValueError(f"DN #{dn_id} not found.")
+    if dn[0] != "draft":
         conn.close()
-        raise ValueError(f"WZ #{wz_id} is already {wz[0]}.")
+        raise ValueError(f"DN #{dn_id} is already {dn[0]}.")
     items = conn.execute(
-        "SELECT ProductID, Quantity FROM WZ_Items WHERE WZ_ID=?", (wz_id,)
+        "SELECT ProductID, Quantity FROM DN_Items WHERE DN_ID=?", (dn_id,)
     ).fetchall()
     if not items:
         conn.close()
-        raise ValueError("Cannot issue a WZ with no items.")
+        raise ValueError("Cannot issue a DN with no items.")
     if not get_backorder_allowed():
         for row in items:
             product_id, qty = row[0], row[1]
@@ -153,36 +153,36 @@ def issue(wz_id: int) -> None:
                 )
     for row in items:
         apply_stock_delta(row[0], -row[1], conn)
-    conn.execute("UPDATE WZ SET Status='issued' WHERE WZ_ID=?", (wz_id,))
+    conn.execute("UPDATE DN SET Status='issued' WHERE DN_ID=?", (dn_id,))
     conn.commit()
     conn.close()
 
 
 def fetch_for_order(order_id: int) -> list:
-    """Return all WZ docs linked to a given order."""
+    """Return all DN docs linked to a given order."""
     conn = get_connection()
     rows = conn.execute(
-        "SELECT WZ_ID, WZ_Number, Status FROM WZ WHERE OrderID=?", (order_id,)
+        "SELECT DN_ID, DN_Number, Status FROM DN WHERE OrderID=?", (order_id,)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-def create_from_order(order_id: int, wz_date: str) -> int:
-    """Create and immediately issue a WZ from an existing order's line items.
+def create_from_order(order_id: int, dn_date: str) -> int:
+    """Create and immediately issue a DN from an existing order's line items.
     If backorders are disabled, quantities are clamped to available stock.
     Raises ValueError if all lines would be clamped to zero.
     """
     from data.settings import get_backorder_allowed
     conn = get_connection()
-    # Guard: prevent issuing a second WZ for the same order
+    # Guard: prevent issuing a second DN for the same order
     existing = conn.execute(
-        "SELECT WZ_ID, WZ_Number FROM WZ WHERE OrderID=?", (order_id,)
+        "SELECT DN_ID, DN_Number FROM DN WHERE OrderID=?", (order_id,)
     ).fetchone()
     if existing:
         conn.close()
         raise ValueError(
-            f"WZ {existing[1]} already exists for Order #{order_id}."
+            f"DN {existing[1]} already exists for Order #{order_id}."
         )
     order = conn.execute(
         "SELECT CustomerID FROM Orders WHERE OrderID=?", (order_id,)
@@ -199,13 +199,13 @@ def create_from_order(order_id: int, wz_date: str) -> int:
         conn.close()
         raise ValueError("Order has no line items.")
     backorder = get_backorder_allowed()
-    number = next_doc_number("WZ", conn)
+    number = next_doc_number("DN", conn)
     cur = conn.execute(
-        "INSERT INTO WZ (WZ_Number, OrderID, CustomerID, WZ_Date, Status) "
+        "INSERT INTO DN (DN_Number, OrderID, CustomerID, DN_Date, Status) "
         "VALUES (?,?,?,?,'draft')",
-        (number, order_id, customer_id, wz_date),
+        (number, order_id, customer_id, dn_date),
     )
-    wz_id = cur.lastrowid
+    dn_id = cur.lastrowid
     items_added = 0
     for row in lines:
         product_id, unit_price, qty = row[0], row[1], row[2]
@@ -217,64 +217,64 @@ def create_from_order(order_id: int, wz_date: str) -> int:
             qty = min(qty, available)
         if qty > 0:
             conn.execute(
-                "INSERT INTO WZ_Items (WZ_ID, ProductID, Quantity, UnitPrice) VALUES (?,?,?,?)",
-                (wz_id, product_id, qty, unit_price),
+                "INSERT INTO DN_Items (DN_ID, ProductID, Quantity, UnitPrice) VALUES (?,?,?,?)",
+                (dn_id, product_id, qty, unit_price),
             )
             apply_stock_delta(product_id, -qty, conn)
             items_added += 1
     if items_added == 0:
-        conn.execute("DELETE FROM WZ WHERE WZ_ID=?", (wz_id,))
+        conn.execute("DELETE FROM DN WHERE DN_ID=?", (dn_id,))
         conn.commit()
         conn.close()
-        raise ValueError("All line items have zero stock. Cannot create WZ.")
-    conn.execute("UPDATE WZ SET Status='issued' WHERE WZ_ID=?", (wz_id,))
+        raise ValueError("All line items have zero stock. Cannot create DN.")
+    conn.execute("UPDATE DN SET Status='issued' WHERE DN_ID=?", (dn_id,))
     conn.commit()
     conn.close()
-    return wz_id
+    return dn_id
 
 
-def cancel(wz_id: int, reason: str, user_id: int) -> None:
-    """Cancel an issued WZ: reverse stock, mark as cancelled."""
+def cancel(dn_id: int, reason: str, user_id: int) -> None:
+    """Cancel an issued DN: reverse stock, mark as cancelled."""
     from datetime import datetime
     conn = get_connection()
-    wz = conn.execute("SELECT Status FROM WZ WHERE WZ_ID=?", (wz_id,)).fetchone()
-    if not wz:
+    dn = conn.execute("SELECT Status FROM DN WHERE DN_ID=?", (dn_id,)).fetchone()
+    if not dn:
         conn.close()
-        raise ValueError(f"WZ #{wz_id} not found.")
-    status = wz[0]
+        raise ValueError(f"DN #{dn_id} not found.")
+    status = dn[0]
     if status == "draft":
         conn.close()
         raise ValueError("Delete the draft instead of cancelling.")
     if status == "invoiced":
         conn.close()
-        raise ValueError("Cancel or issue FK on the FV first.")
+        raise ValueError("Cancel or issue CN on the INV first.")
     if status == "cancelled":
         conn.close()
-        raise ValueError("WZ is already cancelled.")
+        raise ValueError("DN is already cancelled.")
     if status != "issued":
         conn.close()
-        raise ValueError(f"Cannot cancel WZ with status '{status}'.")
+        raise ValueError(f"Cannot cancel DN with status '{status}'.")
     # Reverse stock
     items = conn.execute(
-        "SELECT ProductID, Quantity FROM WZ_Items WHERE WZ_ID=?", (wz_id,)
+        "SELECT ProductID, Quantity FROM DN_Items WHERE DN_ID=?", (dn_id,)
     ).fetchall()
     for it in items:
         apply_stock_delta(it["ProductID"], it["Quantity"], conn)
     conn.execute(
-        "UPDATE WZ SET Status='cancelled', CancelledAt=?, CancelledBy=?, CancelReason=? "
-        "WHERE WZ_ID=?",
-        (datetime.now().isoformat(), user_id, reason, wz_id),
+        "UPDATE DN SET Status='cancelled', CancelledAt=?, CancelledBy=?, CancelReason=? "
+        "WHERE DN_ID=?",
+        (datetime.now().isoformat(), user_id, reason, dn_id),
     )
     conn.commit()
     conn.close()
 
 
 def delete(pk) -> None:
-    from data.delete_guards import can_delete_wz
-    ok, reasons = can_delete_wz(pk)
+    from data.delete_guards import can_delete_dn
+    ok, reasons = can_delete_dn(pk)
     if not ok:
         raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
-    conn.execute("DELETE FROM WZ WHERE WZ_ID=?", (pk,))
+    conn.execute("DELETE FROM DN WHERE DN_ID=?", (pk,))
     conn.commit()
     conn.close()

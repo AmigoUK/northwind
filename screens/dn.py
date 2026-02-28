@@ -1,5 +1,5 @@
 from __future__ import annotations
-"""screens/wz.py — WZ (Wydanie Zewnętrzne) panel, detail, and form modals."""
+"""screens/dn.py — DN (Delivery Note) panel, detail, and form modals."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -7,7 +7,7 @@ from textual.widget import Widget
 from textual.widgets import Button, DataTable, Input, Label, Static
 from textual import on
 
-import data.wz as wzdata
+import data.dn as dndata
 import data.customers as cdata
 import data.products as pdata
 from data.settings import get_currency_symbol, get_backorder_allowed
@@ -15,18 +15,18 @@ from data.users import has_permission
 from screens.modals import ConfirmActionModal, ConfirmDeleteModal, CancellationReasonModal, PickerModal
 
 
-class WZItemFormModal(ModalScreen):
-    """Add a line item to a WZ document."""
+class DNItemFormModal(ModalScreen):
+    """Add a line item to a DN document."""
 
-    def __init__(self, wz_id: int) -> None:
+    def __init__(self, dn_id: int) -> None:
         super().__init__()
-        self.wz_id = wz_id
+        self.dn_id = dn_id
         self._product_id = None
         self._product_name = ""
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label(f"Add Item to WZ #{self.wz_id}", classes="modal-title")
+            yield Label(f"Add Item to DN #{self.dn_id}", classes="modal-title")
             yield Label("Product:")
             with Horizontal():
                 yield Label("(none)", id="lbl-product")
@@ -94,7 +94,7 @@ class WZItemFormModal(ModalScreen):
                 )
                 qty = available
         try:
-            wzdata.add_item(self.wz_id, self._product_id, qty, price)
+            dndata.add_item(self.dn_id, self._product_id, qty, price)
             self.notify(f"'{self._product_name}' added.", severity="information")
             self.dismiss(True)
         except Exception as e:
@@ -109,8 +109,8 @@ class WZItemFormModal(ModalScreen):
             self.dismiss(False)
 
 
-class WZFormModal(ModalScreen):
-    """Create a new standalone WZ document (draft)."""
+class DNFormModal(ModalScreen):
+    """Create a new standalone DN document (draft)."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -118,12 +118,12 @@ class WZFormModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("New WZ — Wydanie Zewnętrzne", classes="modal-title")
+            yield Label("New DN — Delivery Note", classes="modal-title")
             yield Label("Customer *:")
             with Horizontal():
                 yield Label("(none)", id="lbl-customer")
                 yield Button("Pick Customer", id="btn-pick-cust")
-            yield Label("WZ Date (YYYY-MM-DD):")
+            yield Label("DN Date (YYYY-MM-DD):")
             yield Input(id="f-date", placeholder="2026-01-01")
             yield Label("Notes:")
             yield Input(id="f-notes", placeholder="Optional notes")
@@ -157,20 +157,20 @@ class WZFormModal(ModalScreen):
         if not self._customer_id:
             self.notify("Customer is required.", severity="error")
             return
-        wz_date = self.query_one("#f-date", Input).value.strip()
-        if not wz_date:
-            self.notify("WZ Date is required.", severity="error")
+        dn_date = self.query_one("#f-date", Input).value.strip()
+        if not dn_date:
+            self.notify("DN Date is required.", severity="error")
             return
         try:
-            datetime.strptime(wz_date, "%Y-%m-%d")
+            datetime.strptime(dn_date, "%Y-%m-%d")
         except ValueError:
             self.notify("Date must be YYYY-MM-DD.", severity="error")
             return
         notes = self.query_one("#f-notes", Input).value.strip()
         try:
-            wz_id = wzdata.create_draft(self._customer_id, wz_date, notes=notes)
-            self.notify(f"WZ draft created (ID #{wz_id}).", severity="information")
-            self.dismiss(wz_id)
+            dn_id = dndata.create_draft(self._customer_id, dn_date, notes=notes)
+            self.notify(f"DN draft created (ID #{dn_id}).", severity="information")
+            self.dismiss(dn_id)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
 
@@ -183,27 +183,27 @@ class WZFormModal(ModalScreen):
             self.dismiss(None)
 
 
-class WZDetailModal(ModalScreen):
-    """Full WZ detail with line items."""
+class DNDetailModal(ModalScreen):
+    """Full DN detail with line items."""
 
-    def __init__(self, wz_id: int) -> None:
+    def __init__(self, dn_id: int) -> None:
         super().__init__()
-        self.wz_id = wz_id
+        self.dn_id = dn_id
         self._changed = False
         self._selected_product_id = None
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="order-detail-dialog"):
-            yield Label("", id="wz-title", classes="modal-title")
-            yield Static("", id="wz-header")
+            yield Label("", id="dn-title", classes="modal-title")
+            yield Static("", id="dn-header")
             yield Label("Line Items:", classes="section-label")
             yield DataTable(id="items-tbl", cursor_type="row", zebra_stripes=True)
-            yield Static("", id="wz-total")
+            yield Static("", id="dn-total")
             with Horizontal(classes="modal-buttons"):
-                yield Button("Issue WZ",   id="btn-issue",  variant="primary")
+                yield Button("Issue DN",   id="btn-issue",  variant="primary")
                 yield Button("+ Item",     id="btn-add",    variant="success")
                 yield Button("- Item",     id="btn-remove", variant="warning")
-                yield Button("Cancel WZ",  id="btn-cancel-doc", variant="warning")
+                yield Button("Cancel DN",  id="btn-cancel-doc", variant="warning")
                 yield Button("Delete",     id="btn-delete", variant="error")
                 yield Button("PDF",        id="btn-pdf",    variant="default")
                 yield Button("Close",      id="btn-close")
@@ -211,7 +211,7 @@ class WZDetailModal(ModalScreen):
 
     def on_mount(self) -> None:
         from data.settings import get_setting
-        self._show_prices = get_setting("doc_wz_show_prices", "true").lower() == "true"
+        self._show_prices = get_setting("doc_dn_show_prices", "true").lower() == "true"
         tbl = self.query_one("#items-tbl", DataTable)
         tbl.add_column("ProdID", width=6)
         tbl.add_column("Product Name", width=36)
@@ -223,25 +223,25 @@ class WZDetailModal(ModalScreen):
 
     def _load(self) -> None:
         sym = get_currency_symbol()
-        hdr = wzdata.get_by_pk(self.wz_id)
+        hdr = dndata.get_by_pk(self.dn_id)
         if not hdr:
             self.dismiss(self._changed)
             return
-        self.query_one("#wz-title", Label).update(f"WZ #{self.wz_id} — {hdr.get('WZ_Number', '')}")
+        self.query_one("#dn-title", Label).update(f"DN #{self.dn_id} — {hdr.get('DN_Number', '')}")
         lines_info = [
-            f"[b]Number:[/b]   {hdr.get('WZ_Number', '')}",
+            f"[b]Number:[/b]   {hdr.get('DN_Number', '')}",
             f"[b]Customer:[/b] {hdr.get('CustomerID', '')} — {hdr.get('CompanyName') or ''}",
-            f"[b]Date:[/b]     {hdr.get('WZ_Date', '')}   [b]Status:[/b] {hdr.get('Status', '')}",
+            f"[b]Date:[/b]     {hdr.get('DN_Date', '')}   [b]Status:[/b] {hdr.get('Status', '')}",
         ]
         if hdr.get("OrderID"):
             lines_info.append(f"[b]Source SO:[/b] Order #{hdr['OrderID']}")
         if hdr.get("Notes"):
             lines_info.append(f"[b]Notes:[/b]    {hdr['Notes']}")
-        self.query_one("#wz-header", Static).update("\n".join(lines_info))
+        self.query_one("#dn-header", Static).update("\n".join(lines_info))
 
         tbl = self.query_one("#items-tbl", DataTable)
         tbl.clear()
-        items = wzdata.fetch_items(self.wz_id)
+        items = dndata.fetch_items(self.dn_id)
         total = 0.0
         for it in items:
             lt = it["LineTotal"]
@@ -261,7 +261,7 @@ class WZDetailModal(ModalScreen):
                     str(it["Quantity"]),
                 )
             tbl.add_row(*row_data, key=str(it["ProductID"]))
-        total_widget = self.query_one("#wz-total", Static)
+        total_widget = self.query_one("#dn-total", Static)
         if self._show_prices:
             total_widget.update(f"[b]Total:[/b] {sym}{total:.2f}")
         else:
@@ -274,7 +274,7 @@ class WZDetailModal(ModalScreen):
                 f"[b]CANCELLED[/b] on {hdr['CancelledAt'][:19]} by user #{by_user}: "
                 f"{hdr.get('CancelReason', '')}"
             )
-            self.query_one("#wz-header", Static).update("\n".join(lines_info))
+            self.query_one("#dn-header", Static).update("\n".join(lines_info))
 
         # Adjust buttons based on status and role
         status = hdr.get("Status", "draft")
@@ -302,15 +302,15 @@ class WZDetailModal(ModalScreen):
         def after(confirmed):
             if confirmed:
                 try:
-                    wzdata.issue(self.wz_id)
+                    dndata.issue(self.dn_id)
                     self._changed = True
                     self._load()
-                    self.notify("WZ issued — stock updated.", severity="information")
+                    self.notify("DN issued — stock updated.", severity="information")
                 except Exception as e:
                     self.notify(f"Error: {e}", severity="error")
         self.app.push_screen(
             ConfirmActionModal(
-                f"Issue WZ #{self.wz_id}?",
+                f"Issue DN #{self.dn_id}?",
                 "Stock will be reduced for each line item.",
                 confirm_label="Issue",
             ),
@@ -323,7 +323,7 @@ class WZDetailModal(ModalScreen):
             if saved:
                 self._changed = True
                 self._load()
-        self.app.push_screen(WZItemFormModal(self.wz_id), callback=after)
+        self.app.push_screen(DNItemFormModal(self.dn_id), callback=after)
 
     @on(Button.Pressed, "#btn-remove")
     def on_remove_item(self) -> None:
@@ -333,7 +333,7 @@ class WZDetailModal(ModalScreen):
         def after(confirmed):
             if confirmed:
                 try:
-                    wzdata.remove_item(self.wz_id, int(self._selected_product_id))
+                    dndata.remove_item(self.dn_id, int(self._selected_product_id))
                     self._selected_product_id = None
                     self._changed = True
                     self._load()
@@ -348,15 +348,15 @@ class WZDetailModal(ModalScreen):
             if reason:
                 try:
                     user_id = getattr(self.app, "_current_user", {}).get("user_id", 0)
-                    wzdata.cancel(self.wz_id, reason, user_id)
+                    dndata.cancel(self.dn_id, reason, user_id)
                     self._changed = True
                     self._load()
-                    self.notify("WZ cancelled — stock restored.", severity="information")
+                    self.notify("DN cancelled — stock restored.", severity="information")
                 except Exception as e:
                     self.notify(f"Error: {e}", severity="error")
         self.app.push_screen(
             CancellationReasonModal(
-                f"Cancel WZ #{self.wz_id}?",
+                f"Cancel DN #{self.dn_id}?",
                 "Stock will be restored for each line item.",
             ),
             callback=after,
@@ -367,17 +367,17 @@ class WZDetailModal(ModalScreen):
         def after(confirmed):
             if confirmed:
                 try:
-                    wzdata.delete(self.wz_id)
+                    dndata.delete(self.dn_id)
                     self.dismiss(True)
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"WZ #{self.wz_id}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"DN #{self.dn_id}"), callback=after)
 
     @on(Button.Pressed, "#btn-pdf")
     def on_pdf(self) -> None:
         try:
             import pdf_export
-            path = pdf_export.export_wz(self.wz_id)
+            path = pdf_export.export_dn(self.dn_id)
             self.notify(f"PDF saved → {path}", severity="information")
         except Exception as e:
             self.notify(f"PDF error: {e}", severity="error")
@@ -391,9 +391,9 @@ class WZDetailModal(ModalScreen):
             self.dismiss(self._changed)
 
 
-class WZPanel(Widget):
+class DNPanel(Widget):
     BINDINGS = [
-        ("n", "new_record",   "New WZ"),
+        ("n", "new_record",   "New DN"),
         ("f", "focus_search", "Search"),
     ]
 
@@ -401,7 +401,7 @@ class WZPanel(Widget):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="panel-container"):
-            yield Input(placeholder="Search WZ documents...", id="search-box")
+            yield Input(placeholder="Search DN documents...", id="search-box")
             yield DataTable(id="tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="toolbar"):
                 yield Button("+ New",  id="btn-new",    variant="success")
@@ -421,7 +421,7 @@ class WZPanel(Widget):
     def refresh_data(self, term: str = "") -> None:
         tbl = self.query_one(DataTable)
         tbl.clear()
-        rows = wzdata.search(term) if term else wzdata.fetch_all()
+        rows = dndata.search(term) if term else dndata.fetch_all()
         sym = get_currency_symbol()
         for row in rows:
             display = list(row)
@@ -448,11 +448,11 @@ class WZPanel(Widget):
         if event.row_key:
             self._open_detail(int(event.row_key.value))
 
-    def _open_detail(self, wz_id: int) -> None:
+    def _open_detail(self, dn_id: int) -> None:
         def after(changed):
             if changed:
                 self.refresh_data(self.query_one("#search-box", Input).value)
-        self.app.push_screen(WZDetailModal(wz_id), callback=after)
+        self.app.push_screen(DNDetailModal(dn_id), callback=after)
 
     @on(Button.Pressed, "#btn-new")
     def on_btn_new(self) -> None:
@@ -463,31 +463,31 @@ class WZPanel(Widget):
         if self._selected_pk:
             self._open_detail(int(self._selected_pk))
         else:
-            self.notify("Select a WZ document first.", severity="warning")
+            self.notify("Select a DN document first.", severity="warning")
 
     @on(Button.Pressed, "#btn-delete")
     def on_btn_delete(self) -> None:
         if not self._selected_pk:
-            self.notify("Select a WZ document first.", severity="warning")
+            self.notify("Select a DN document first.", severity="warning")
             return
         def after(confirmed):
             if confirmed:
                 try:
-                    wzdata.delete(int(self._selected_pk))
+                    dndata.delete(int(self._selected_pk))
                     self._selected_pk = None
                     self.refresh_data(self.query_one("#search-box", Input).value)
-                    self.notify("WZ deleted.", severity="information")
+                    self.notify("DN deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"WZ #{self._selected_pk}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"DN #{self._selected_pk}"), callback=after)
 
     def action_new_record(self) -> None:
-        def after_form(wz_id):
-            if wz_id:
+        def after_form(dn_id):
+            if dn_id:
                 def after_detail(changed):
                     self.refresh_data(self.query_one("#search-box", Input).value)
-                self.app.push_screen(WZDetailModal(wz_id), callback=after_detail)
-        self.app.push_screen(WZFormModal(), callback=after_form)
+                self.app.push_screen(DNDetailModal(dn_id), callback=after_detail)
+        self.app.push_screen(DNFormModal(), callback=after_form)
 
     def action_focus_search(self) -> None:
         self.query_one("#search-box", Input).focus()

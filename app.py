@@ -1,5 +1,5 @@
 """
-app.py — Northwind Traders v2.4
+app.py — Northwind Traders v2.5
 Textual TUI entry point.
 """
 from __future__ import annotations
@@ -46,13 +46,13 @@ from screens.users      import UsersPanel
 from screens.settings   import SettingsPanel
 from screens.modals          import QuitConfirmModal
 from screens.charts          import ChartsPanel
-from screens.wz              import WZPanel
-from screens.fv              import FVPanel
-from screens.pz              import PZPanel
+from screens.dn              import DNPanel
+from screens.inv             import INVPanel
+from screens.gr              import GRPanel
 from screens.stock_movements import StockMovementsPanel
-from screens.kassa           import KassaPanel
+from screens.cash            import CashPanel
 from screens.bank            import BankPanel
-from screens.fk              import FKPanel
+from screens.cn              import CNPanel
 from screens.business        import BusinessDetailsPanel
 
 # ── Terminal cleanup ──────────────────────────────────────────────────────────
@@ -98,14 +98,14 @@ _NAV_GROUPS = [
         ("regions",    "Regions"),
     ]),
     ("── Documents ──", "nav-group-docs", [
-        ("wz",         "WZ — Delivery"),
-        ("fv",         "FV — Invoices"),
-        ("fk",         "FK — Credit Notes"),
-        ("pz",         "PZ — Receipts"),
-        ("movements",  "PW/RW — Stock"),
+        ("dn",         "DN — Delivery Note"),
+        ("inv",        "INV — Invoices"),
+        ("cn",         "CN — Credit Notes"),
+        ("gr",         "GR — Goods Receipt"),
+        ("movements",  "SI/SO — Stock"),
     ]),
     ("── Finance ──", "nav-group-finance", [
-        ("kassa",      "Cash Register"),
+        ("cash",       "Cash Register"),
         ("bank",       "Bank Account"),
     ]),
     ("── Analytics ──", "nav-group-analytics", [
@@ -148,7 +148,7 @@ class SidebarNav(Widget):
 
 
 class NorthwindApp(App):
-    TITLE = "Northwind Traders v2.4"
+    TITLE = "Northwind Traders v2.5"
     CSS_PATH = "northwind.tcss"
 
     BINDINGS = [
@@ -176,12 +176,12 @@ class NorthwindApp(App):
                 yield RegionsPanel(id="regions")
                 yield ReportsPanel(id="reports")
                 yield ChartsPanel(id="charts")
-                yield WZPanel(id="wz")
-                yield FVPanel(id="fv")
-                yield FKPanel(id="fk")
-                yield PZPanel(id="pz")
+                yield DNPanel(id="dn")
+                yield INVPanel(id="inv")
+                yield CNPanel(id="cn")
+                yield GRPanel(id="gr")
                 yield StockMovementsPanel(id="movements")
-                yield KassaPanel(id="kassa")
+                yield CashPanel(id="cash")
                 yield BankPanel(id="bank")
                 yield SqlPanel(id="sql")
                 yield UsersPanel(id="users")
@@ -241,7 +241,7 @@ class NorthwindApp(App):
     def switch_section(self, section: str) -> None:
         """Switch the active content panel and update sidebar highlight."""
         self.query_one(ContentSwitcher).current = section
-        if section in ("products", "bank", "kassa"):
+        if section in ("products", "bank", "cash"):
             try:
                 self.query_one(f"#{section}").refresh_data()
             except Exception:

@@ -1,5 +1,10 @@
 """
 db.py - Database connection, schema DDL, and seed data for Northwind Traders
+
+Abbreviation mapping (v2.5):
+  DN = Delivery Note, INV = Invoice, CN = Credit Note,
+  GR = Goods Receipt, SI = Stock Issue, SO = Stock Out,
+  CR = Cash Receipt, CP = Cash Payment
 """
 import hashlib
 import sqlite3
@@ -20,7 +25,7 @@ def get_connection():
 
 
 def next_doc_number(doc_type: str, conn) -> str:
-    """Return next sequential doc number like WZ/2026/001. Caller must commit."""
+    """Return next sequential doc number like DN/2026/001. Caller must commit."""
     from datetime import date
     year = date.today().year
     row = conn.execute(
@@ -47,102 +52,102 @@ def create_tables():
     c = conn.cursor()
 
     c.executescript("""
-    CREATE TABLE IF NOT EXISTS WZ (
-        WZ_ID      INTEGER PRIMARY KEY AUTOINCREMENT,
-        WZ_Number  TEXT NOT NULL UNIQUE,
+    CREATE TABLE IF NOT EXISTS DN (
+        DN_ID      INTEGER PRIMARY KEY AUTOINCREMENT,
+        DN_Number  TEXT NOT NULL UNIQUE,
         OrderID    INTEGER REFERENCES Orders,
         CustomerID TEXT NOT NULL REFERENCES Customers,
-        WZ_Date    TEXT NOT NULL,
+        DN_Date    TEXT NOT NULL,
         Status     TEXT DEFAULT 'draft',
         Notes      TEXT
     );
-    CREATE TABLE IF NOT EXISTS WZ_Items (
-        WZ_ID     INTEGER REFERENCES WZ ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS DN_Items (
+        DN_ID     INTEGER REFERENCES DN ON DELETE CASCADE,
         ProductID INTEGER REFERENCES Products,
         Quantity  INTEGER NOT NULL,
         UnitPrice REAL NOT NULL,
-        PRIMARY KEY (WZ_ID, ProductID)
+        PRIMARY KEY (DN_ID, ProductID)
     );
 
-    CREATE TABLE IF NOT EXISTS PZ (
-        PZ_ID         INTEGER PRIMARY KEY AUTOINCREMENT,
-        PZ_Number     TEXT NOT NULL UNIQUE,
+    CREATE TABLE IF NOT EXISTS GR (
+        GR_ID         INTEGER PRIMARY KEY AUTOINCREMENT,
+        GR_Number     TEXT NOT NULL UNIQUE,
         SupplierID    INTEGER NOT NULL REFERENCES Suppliers,
         SupplierDocRef TEXT,
-        PZ_Date       TEXT NOT NULL,
+        GR_Date       TEXT NOT NULL,
         Status        TEXT DEFAULT 'draft',
         PaymentMethod TEXT,
         Notes         TEXT
     );
-    CREATE TABLE IF NOT EXISTS PZ_Items (
-        PZ_ID     INTEGER REFERENCES PZ ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS GR_Items (
+        GR_ID     INTEGER REFERENCES GR ON DELETE CASCADE,
         ProductID INTEGER REFERENCES Products,
         Quantity  INTEGER NOT NULL,
         UnitCost  REAL NOT NULL,
-        PRIMARY KEY (PZ_ID, ProductID)
+        PRIMARY KEY (GR_ID, ProductID)
     );
 
-    CREATE TABLE IF NOT EXISTS FV (
-        FV_ID         INTEGER PRIMARY KEY AUTOINCREMENT,
-        FV_Number     TEXT NOT NULL UNIQUE,
+    CREATE TABLE IF NOT EXISTS INV (
+        INV_ID        INTEGER PRIMARY KEY AUTOINCREMENT,
+        INV_Number    TEXT NOT NULL UNIQUE,
         CustomerID    TEXT NOT NULL REFERENCES Customers,
-        FV_Date       TEXT NOT NULL,
+        INV_Date      TEXT NOT NULL,
         DueDate       TEXT,
         PaymentMethod TEXT,
         Status        TEXT DEFAULT 'issued',
         TotalNet      REAL DEFAULT 0,
         Notes         TEXT
     );
-    CREATE TABLE IF NOT EXISTS FV_WZ (
-        FV_ID INTEGER REFERENCES FV ON DELETE CASCADE,
-        WZ_ID INTEGER REFERENCES WZ,
-        PRIMARY KEY (FV_ID, WZ_ID)
+    CREATE TABLE IF NOT EXISTS INV_DN (
+        INV_ID INTEGER REFERENCES INV ON DELETE CASCADE,
+        DN_ID  INTEGER REFERENCES DN,
+        PRIMARY KEY (INV_ID, DN_ID)
     );
 
-    CREATE TABLE IF NOT EXISTS PW (
-        PW_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
-        PW_Number TEXT NOT NULL UNIQUE,
-        PW_Date   TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS SI (
+        SI_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
+        SI_Number TEXT NOT NULL UNIQUE,
+        SI_Date   TEXT NOT NULL,
         Reason    TEXT,
         Notes     TEXT
     );
-    CREATE TABLE IF NOT EXISTS PW_Items (
-        PW_ID     INTEGER REFERENCES PW ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS SI_Items (
+        SI_ID     INTEGER REFERENCES SI ON DELETE CASCADE,
         ProductID INTEGER REFERENCES Products,
         Quantity  INTEGER NOT NULL,
-        PRIMARY KEY (PW_ID, ProductID)
+        PRIMARY KEY (SI_ID, ProductID)
     );
 
-    CREATE TABLE IF NOT EXISTS RW (
-        RW_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
-        RW_Number TEXT NOT NULL UNIQUE,
-        RW_Date   TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS SO (
+        SO_ID     INTEGER PRIMARY KEY AUTOINCREMENT,
+        SO_Number TEXT NOT NULL UNIQUE,
+        SO_Date   TEXT NOT NULL,
         Reason    TEXT,
         Notes     TEXT
     );
-    CREATE TABLE IF NOT EXISTS RW_Items (
-        RW_ID     INTEGER REFERENCES RW ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS SO_Items (
+        SO_ID     INTEGER REFERENCES SO ON DELETE CASCADE,
         ProductID INTEGER REFERENCES Products,
         Quantity  INTEGER NOT NULL,
-        PRIMARY KEY (RW_ID, ProductID)
+        PRIMARY KEY (SO_ID, ProductID)
     );
 
-    CREATE TABLE IF NOT EXISTS KP (
-        KP_ID       INTEGER PRIMARY KEY AUTOINCREMENT,
-        KP_Number   TEXT NOT NULL UNIQUE,
-        KP_Date     TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS CR (
+        CR_ID       INTEGER PRIMARY KEY AUTOINCREMENT,
+        CR_Number   TEXT NOT NULL UNIQUE,
+        CR_Date     TEXT NOT NULL,
         CustomerID  TEXT REFERENCES Customers,
-        FV_ID       INTEGER REFERENCES FV,
+        INV_ID      INTEGER REFERENCES INV,
         Amount      REAL NOT NULL,
         Description TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS KW (
-        KW_ID       INTEGER PRIMARY KEY AUTOINCREMENT,
-        KW_Number   TEXT NOT NULL UNIQUE,
-        KW_Date     TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS CP (
+        CP_ID       INTEGER PRIMARY KEY AUTOINCREMENT,
+        CP_Number   TEXT NOT NULL UNIQUE,
+        CP_Date     TEXT NOT NULL,
         SupplierID  INTEGER REFERENCES Suppliers,
-        PZ_ID       INTEGER REFERENCES PZ,
+        GR_ID       INTEGER REFERENCES GR,
         Amount      REAL NOT NULL,
         Description TEXT
     );
@@ -154,8 +159,8 @@ def create_tables():
         Direction    TEXT NOT NULL,
         CustomerID   TEXT REFERENCES Customers,
         SupplierID   INTEGER REFERENCES Suppliers,
-        FV_ID        INTEGER REFERENCES FV,
-        PZ_ID        INTEGER REFERENCES PZ,
+        INV_ID       INTEGER REFERENCES INV,
+        GR_ID        INTEGER REFERENCES GR,
         Amount       REAL NOT NULL,
         Description  TEXT
     );
@@ -301,18 +306,18 @@ def create_tables():
     );
     """)
 
-    # Migrate FV table: add PaymentTermDays and PaidAmount if not already present
+    # Migrate INV table: add PaymentTermDays and PaidAmount if not already present
     for ddl in [
-        "ALTER TABLE FV ADD COLUMN PaymentTermDays INTEGER DEFAULT 0",
-        "ALTER TABLE FV ADD COLUMN PaidAmount REAL DEFAULT 0",
+        "ALTER TABLE INV ADD COLUMN PaymentTermDays INTEGER DEFAULT 0",
+        "ALTER TABLE INV ADD COLUMN PaidAmount REAL DEFAULT 0",
     ]:
         try:
             conn.execute(ddl)
         except Exception:
             pass  # column already exists — safe on re-run
 
-    # Cancellation columns for WZ, FV, PZ
-    for table in ("WZ", "FV", "PZ"):
+    # Cancellation columns for DN, INV, GR
+    for table in ("DN", "INV", "GR"):
         for col_ddl in [
             f"ALTER TABLE {table} ADD COLUMN CancelledAt TEXT",
             f"ALTER TABLE {table} ADD COLUMN CancelledBy INTEGER",
@@ -323,14 +328,14 @@ def create_tables():
             except Exception:
                 pass
 
-    # FK (Credit Note) tables — use execute() for reliable migration on existing DBs
-    conn.execute("""CREATE TABLE IF NOT EXISTS FK (
-        FK_ID           INTEGER PRIMARY KEY AUTOINCREMENT,
-        FK_Number       TEXT NOT NULL UNIQUE,
-        FV_ID           INTEGER NOT NULL REFERENCES FV,
+    # CN (Credit Note) tables — use execute() for reliable migration on existing DBs
+    conn.execute("""CREATE TABLE IF NOT EXISTS CN (
+        CN_ID           INTEGER PRIMARY KEY AUTOINCREMENT,
+        CN_Number       TEXT NOT NULL UNIQUE,
+        INV_ID          INTEGER NOT NULL REFERENCES INV,
         CustomerID      TEXT NOT NULL REFERENCES Customers,
-        FK_Date         TEXT NOT NULL,
-        FK_Type         TEXT NOT NULL,
+        CN_Date         TEXT NOT NULL,
+        CN_Type         TEXT NOT NULL,
         Reason          TEXT NOT NULL,
         Status          TEXT DEFAULT 'issued',
         TotalCorrection REAL DEFAULT 0,
@@ -338,15 +343,15 @@ def create_tables():
         CreatedBy       INTEGER,
         CreatedAt       TEXT NOT NULL
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS FK_Items (
-        FK_ID           INTEGER REFERENCES FK ON DELETE CASCADE,
+    conn.execute("""CREATE TABLE IF NOT EXISTS CN_Items (
+        CN_ID           INTEGER REFERENCES CN ON DELETE CASCADE,
         ProductID       INTEGER REFERENCES Products,
         OrigQuantity    INTEGER NOT NULL,
         CorrQuantity    INTEGER NOT NULL,
         OrigUnitPrice   REAL NOT NULL,
         CorrUnitPrice   REAL NOT NULL,
         LineCorrection  REAL NOT NULL,
-        PRIMARY KEY (FK_ID, ProductID)
+        PRIMARY KEY (CN_ID, ProductID)
     )""")
 
     conn.commit()
@@ -624,11 +629,11 @@ def _seed_settings() -> None:
         # Document defaults
         ("doc_footer",        ""),
         ("doc_theme",         "default"),
-        ("doc_title_wz",      "Delivery Note"),
-        ("doc_title_fv",      "Invoice"),
-        ("doc_title_pz",      "Goods Receipt"),
-        ("doc_wz_show_prices","true"),
-        ("doc_title_fk",      "Faktura Korygujaca"),
+        ("doc_title_dn",      "Delivery Note"),
+        ("doc_title_inv",     "Invoice"),
+        ("doc_title_gr",      "Goods Receipt"),
+        ("doc_dn_show_prices","true"),
+        ("doc_title_cn",      "Credit Note"),
     ]
     for key, value in defaults:
         conn.execute(
@@ -656,8 +661,110 @@ def _seed_users() -> None:
     conn.close()
 
 
+def _migrate_polish_to_english(conn) -> None:
+    """Rename Polish table/column names to English equivalents (idempotent)."""
+    # Check if migration is needed: if old table WZ exists, migrate
+    old_exists = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='WZ'"
+    ).fetchone()
+    if not old_exists:
+        return  # Already migrated or fresh DB
+
+    # Table renames
+    table_renames = [
+        ("WZ", "DN"), ("WZ_Items", "DN_Items"),
+        ("FV", "INV"), ("FV_WZ", "INV_DN"),
+        ("FK", "CN"), ("FK_Items", "CN_Items"),
+        ("PZ", "GR"), ("PZ_Items", "GR_Items"),
+        ("PW", "SI"), ("PW_Items", "SI_Items"),
+        ("RW", "SO"), ("RW_Items", "SO_Items"),
+        ("KP", "CR"), ("KW", "CP"),
+    ]
+    for old, new in table_renames:
+        try:
+            conn.execute(f"ALTER TABLE [{old}] RENAME TO [{new}]")
+        except Exception:
+            pass  # already renamed
+
+    # Column renames
+    column_renames = [
+        ("DN", [("WZ_ID", "DN_ID"), ("WZ_Number", "DN_Number"), ("WZ_Date", "DN_Date")]),
+        ("DN_Items", [("WZ_ID", "DN_ID")]),
+        ("INV", [("FV_ID", "INV_ID"), ("FV_Number", "INV_Number"), ("FV_Date", "INV_Date")]),
+        ("INV_DN", [("FV_ID", "INV_ID"), ("WZ_ID", "DN_ID")]),
+        ("CN", [("FK_ID", "CN_ID"), ("FK_Number", "CN_Number"), ("FV_ID", "INV_ID"),
+                ("FK_Date", "CN_Date"), ("FK_Type", "CN_Type")]),
+        ("CN_Items", [("FK_ID", "CN_ID")]),
+        ("GR", [("PZ_ID", "GR_ID"), ("PZ_Number", "GR_Number"), ("PZ_Date", "GR_Date")]),
+        ("GR_Items", [("PZ_ID", "GR_ID")]),
+        ("SI", [("PW_ID", "SI_ID"), ("PW_Number", "SI_Number"), ("PW_Date", "SI_Date")]),
+        ("SI_Items", [("PW_ID", "SI_ID")]),
+        ("SO", [("RW_ID", "SO_ID"), ("RW_Number", "SO_Number"), ("RW_Date", "SO_Date")]),
+        ("SO_Items", [("RW_ID", "SO_ID")]),
+        ("CR", [("KP_ID", "CR_ID"), ("KP_Number", "CR_Number"), ("KP_Date", "CR_Date"),
+                ("FV_ID", "INV_ID")]),
+        ("CP", [("KW_ID", "CP_ID"), ("KW_Number", "CP_Number"), ("KW_Date", "CP_Date"),
+                ("PZ_ID", "GR_ID")]),
+        ("BankEntry", [("FV_ID", "INV_ID"), ("PZ_ID", "GR_ID")]),
+    ]
+    for table, cols in column_renames:
+        for old_col, new_col in cols:
+            try:
+                conn.execute(f"ALTER TABLE [{table}] RENAME COLUMN [{old_col}] TO [{new_col}]")
+            except Exception:
+                pass
+
+    # Update DocSequence types
+    doc_type_map = {"WZ": "DN", "FV": "INV", "FK": "CN", "PZ": "GR",
+                    "PW": "SI", "RW": "SO", "KP": "CR", "KW": "CP"}
+    for old_type, new_type in doc_type_map.items():
+        conn.execute("UPDATE DocSequence SET DocType=? WHERE DocType=?", (new_type, old_type))
+
+    # Update document number prefixes in data
+    prefix_updates = [
+        ("DN", "DN_Number", "WZ/", "DN/"),
+        ("INV", "INV_Number", "FV/", "INV/"),
+        ("CN", "CN_Number", "FK/", "CN/"),
+        ("GR", "GR_Number", "PZ/", "GR/"),
+        ("SI", "SI_Number", "PW/", "SI/"),
+        ("SO", "SO_Number", "RW/", "SO/"),
+        ("CR", "CR_Number", "KP/", "CR/"),
+        ("CP", "CP_Number", "KW/", "CP/"),
+    ]
+    for table, col, old_prefix, new_prefix in prefix_updates:
+        conn.execute(
+            f"UPDATE [{table}] SET [{col}] = REPLACE([{col}], ?, ?)",
+            (old_prefix, new_prefix),
+        )
+
+    # Update FK_Type values in CN table
+    conn.execute("UPDATE CN SET CN_Type = CN_Type")  # no change needed, types are English
+
+    # Update settings keys
+    settings_map = {
+        "doc_title_wz": "doc_title_dn",
+        "doc_title_fv": "doc_title_inv",
+        "doc_title_fk": "doc_title_cn",
+        "doc_title_pz": "doc_title_gr",
+        "doc_wz_show_prices": "doc_dn_show_prices",
+    }
+    for old_key, new_key in settings_map.items():
+        conn.execute("UPDATE AppSettings SET key=? WHERE key=?", (new_key, old_key))
+
+    # Update "Faktura Korygujaca" default to "Credit Note"
+    conn.execute(
+        "UPDATE AppSettings SET value='Credit Note' WHERE key='doc_title_cn' AND value='Faktura Korygujaca'"
+    )
+
+    conn.commit()
+
+
 def init_db():
     create_tables()
+    # Migrate existing Polish-named databases to English
+    conn = get_connection()
+    _migrate_polish_to_english(conn)
+    conn.close()
     seed_data()
     _seed_settings()
     _seed_users()

@@ -153,8 +153,8 @@ class ProductFormModal(ModalScreen):
                 pdata.update(self.pk, data)
                 delta = stock - old_stock
                 if delta != 0:
-                    from data.pw_rw import record_stock_audit
-                    record_stock_audit("PW" if delta > 0 else "RW", self.pk, abs(delta))
+                    from data.si_so import record_stock_audit
+                    record_stock_audit("SI" if delta > 0 else "SO", self.pk, abs(delta))
                 self.notify("Product updated.", severity="information")
             self.dismiss(True)
         except Exception as e:

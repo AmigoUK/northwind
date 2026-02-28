@@ -1,5 +1,5 @@
 from __future__ import annotations
-"""screens/fk.py — FK (Faktura Korygujaca / Credit Note) panel, detail, and creation flow."""
+"""screens/cn.py — CN (Credit Note) panel, detail, and creation flow."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -7,39 +7,39 @@ from textual.widget import Widget
 from textual.widgets import Button, Checkbox, DataTable, Input, Label, Select, Static
 from textual import on
 
-import data.fk as fkdata
-import data.fv as fvdata
+import data.cn as cndata
+import data.inv as invdata
 import data.customers as cdata
 from data.settings import get_currency_symbol
 from screens.modals import PickerModal
 
 
-class FKNewModal(ModalScreen):
-    """Creation wizard for a new FK (Credit Note).
-    Can be opened standalone (pick FV) or pre-populated from FVDetailModal.
+class CNNewModal(ModalScreen):
+    """Creation wizard for a new CN (Credit Note).
+    Can be opened standalone (pick INV) or pre-populated from INVDetailModal.
     """
 
-    def __init__(self, fv_id: int | None = None) -> None:
+    def __init__(self, inv_id: int | None = None) -> None:
         super().__init__()
-        self._fv_id = fv_id
-        self._fv_data = None
-        self._fk_type = "full_reversal"
+        self._inv_id = inv_id
+        self._inv_data = None
+        self._cn_type = "full_reversal"
         self._corrections: list[dict] = []
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="order-detail-dialog"):
-            yield Label("New FK — Faktura Korygujaca", classes="modal-title")
+            yield Label("New CN — Credit Note", classes="modal-title")
             yield Label("Original Invoice:")
             with Horizontal():
-                yield Label("(none)", id="lbl-fv")
-                yield Button("Pick FV", id="btn-pick-fv")
-            yield Static("", id="fv-info")
-            yield Label("FK Type:")
+                yield Label("(none)", id="lbl-inv")
+                yield Button("Pick INV", id="btn-pick-inv")
+            yield Static("", id="inv-info")
+            yield Label("CN Type:")
             yield Select(
                 [
                     ("Full Reversal", "full_reversal"),
                     ("Partial Correction", "partial_correction"),
-                    ("Cancellation (FV + FK)", "cancellation"),
+                    ("Cancellation (INV + CN)", "cancellation"),
                 ],
                 id="f-type", value="full_reversal",
             )
@@ -48,7 +48,7 @@ class FKNewModal(ModalScreen):
             yield Static("", id="correction-preview")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
-                    yield Label("FK Date (YYYY-MM-DD) *:")
+                    yield Label("CN Date (YYYY-MM-DD) *:")
                     yield Input(id="f-date", placeholder="2026-01-01")
                 with Vertical(classes="form-field"):
                     yield Label("Reason (required) *:")
@@ -57,7 +57,7 @@ class FKNewModal(ModalScreen):
             yield Input(id="f-notes", placeholder="Optional notes")
             yield Checkbox("Return goods to stock", id="f-reverse-stock", value=False)
             with Horizontal(classes="modal-buttons"):
-                yield Button("Create FK", id="btn-save", variant="primary")
+                yield Button("Create CN", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
             yield Label("ESC to close", classes="modal-hint")
 
@@ -70,33 +70,33 @@ class FKNewModal(ModalScreen):
             ("New Qty", 8), ("Orig Price", 10), ("New Price", 10),
         ]:
             tbl.add_column(label, width=width)
-        if self._fv_id:
-            self._load_fv(self._fv_id)
+        if self._inv_id:
+            self._load_inv(self._inv_id)
 
-    def _load_fv(self, fv_id: int) -> None:
-        self._fv_id = fv_id
-        self._fv_data = fvdata.get_by_pk(fv_id)
-        if not self._fv_data:
-            self.notify("FV not found.", severity="error")
+    def _load_inv(self, inv_id: int) -> None:
+        self._inv_id = inv_id
+        self._inv_data = invdata.get_by_pk(inv_id)
+        if not self._inv_data:
+            self.notify("INV not found.", severity="error")
             return
-        fv = self._fv_data
-        self.query_one("#lbl-fv", Label).update(
-            f"FV #{fv['FV_ID']} — {fv.get('FV_Number', '')}"
+        inv = self._inv_data
+        self.query_one("#lbl-inv", Label).update(
+            f"INV #{inv['INV_ID']} — {inv.get('INV_Number', '')}"
         )
         sym = get_currency_symbol()
-        self.query_one("#fv-info", Static).update(
-            f"Customer: {fv.get('CompanyName', '')} | "
-            f"Total: {sym}{fv.get('TotalNet', 0):.2f} | "
-            f"Paid: {sym}{fv.get('PaidAmount', 0):.2f} | "
-            f"Status: {fv.get('Status', '')}"
+        self.query_one("#inv-info", Static).update(
+            f"Customer: {inv.get('CompanyName', '')} | "
+            f"Total: {sym}{inv.get('TotalNet', 0):.2f} | "
+            f"Paid: {sym}{inv.get('PaidAmount', 0):.2f} | "
+            f"Status: {inv.get('Status', '')}"
         )
         self._load_items()
 
     def _load_items(self) -> None:
-        """Load original FV line items into corrections list and table."""
-        if not self._fv_id:
+        """Load original INV line items into corrections list and table."""
+        if not self._inv_id:
             return
-        items = fvdata.fetch_line_items(self._fv_id)
+        items = invdata.fetch_line_items(self._inv_id)
         self._corrections = []
         for it in items:
             self._corrections.append({
@@ -114,7 +114,7 @@ class FKNewModal(ModalScreen):
         tbl.clear()
         sym = get_currency_symbol()
         total_correction = 0.0
-        is_partial = self._fk_type == "partial_correction"
+        is_partial = self._cn_type == "partial_correction"
         for corr in self._corrections:
             orig_total = corr["orig_quantity"] * corr["orig_unit_price"]
             if is_partial:
@@ -143,13 +143,13 @@ class FKNewModal(ModalScreen):
     @on(Select.Changed, "#f-type")
     def on_type_changed(self, event: Select.Changed) -> None:
         val = event.value
-        self._fk_type = str(val) if val != Select.BLANK else "full_reversal"
+        self._cn_type = str(val) if val != Select.BLANK else "full_reversal"
         self._refresh_items_table()
 
     @on(DataTable.RowSelected, "#items-tbl")
     def on_item_selected(self, event: DataTable.RowSelected) -> None:
         """For partial correction: allow editing quantity/price."""
-        if self._fk_type != "partial_correction":
+        if self._cn_type != "partial_correction":
             return
         if not event.row_key:
             return
@@ -164,21 +164,21 @@ class FKNewModal(ModalScreen):
                 corr["new_unit_price"] = result["new_unit_price"]
                 self._refresh_items_table()
         self.app.push_screen(
-            FKItemEditModal(corr["product_name"], corr["orig_quantity"],
+            CNItemEditModal(corr["product_name"], corr["orig_quantity"],
                            corr["orig_unit_price"], corr["new_quantity"],
                            corr["new_unit_price"]),
             callback=after,
         )
 
-    @on(Button.Pressed, "#btn-pick-fv")
-    def on_pick_fv(self) -> None:
-        rows = fvdata.fetch_all()
+    @on(Button.Pressed, "#btn-pick-inv")
+    def on_pick_inv(self) -> None:
+        rows = invdata.fetch_all()
         def after(pk):
             if pk:
-                self._load_fv(int(pk))
+                self._load_inv(int(pk))
         self.app.push_screen(
             PickerModal(
-                "Select Invoice (FV)",
+                "Select Invoice (INV)",
                 [("ID", 6), ("Number", 16), ("Date", 12), ("Customer", 22),
                  ("Status", 8), ("Payment", 8), ("Total", 12)],
                 rows,
@@ -189,16 +189,16 @@ class FKNewModal(ModalScreen):
     @on(Button.Pressed, "#btn-save")
     def on_save(self) -> None:
         from datetime import datetime
-        if not self._fv_id:
+        if not self._inv_id:
             self.notify("Select an invoice first.", severity="error")
             return
         reason = self.query_one("#f-reason", Input).value.strip()
         if not reason:
             self.notify("Reason is required.", severity="error")
             return
-        fk_date = self.query_one("#f-date", Input).value.strip()
+        cn_date = self.query_one("#f-date", Input).value.strip()
         try:
-            datetime.strptime(fk_date, "%Y-%m-%d")
+            datetime.strptime(cn_date, "%Y-%m-%d")
         except ValueError:
             self.notify("Date must be YYYY-MM-DD.", severity="error")
             return
@@ -207,11 +207,11 @@ class FKNewModal(ModalScreen):
         user_id = getattr(self.app, "_current_user", {}).get("user_id", 0)
 
         try:
-            if self._fk_type == "full_reversal":
-                fk_id = fkdata.create_full_reversal(
-                    self._fv_id, reason, fk_date, user_id, reverse_stock, notes,
+            if self._cn_type == "full_reversal":
+                cn_id = cndata.create_full_reversal(
+                    self._inv_id, reason, cn_date, user_id, reverse_stock, notes,
                 )
-            elif self._fk_type == "partial_correction":
+            elif self._cn_type == "partial_correction":
                 corrections = [
                     {
                         "product_id": c["product_id"],
@@ -225,16 +225,16 @@ class FKNewModal(ModalScreen):
                 if not corrections:
                     self.notify("No corrections made. Adjust quantities or prices.", severity="error")
                     return
-                fk_id = fkdata.create_partial_correction(
-                    self._fv_id, reason, fk_date, user_id, corrections,
+                cn_id = cndata.create_partial_correction(
+                    self._inv_id, reason, cn_date, user_id, corrections,
                     reverse_stock, notes,
                 )
             else:  # cancellation
-                fk_id = fkdata.create_cancellation(
-                    self._fv_id, reason, fk_date, user_id, reverse_stock, notes,
+                cn_id = cndata.create_cancellation(
+                    self._inv_id, reason, cn_date, user_id, reverse_stock, notes,
                 )
-            self.notify(f"FK #{fk_id} created.", severity="information")
-            self.dismiss(fk_id)
+            self.notify(f"CN #{cn_id} created.", severity="information")
+            self.dismiss(cn_id)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
 
@@ -247,8 +247,8 @@ class FKNewModal(ModalScreen):
             self.dismiss(None)
 
 
-class FKItemEditModal(ModalScreen):
-    """Edit quantity and price for a single FK correction line."""
+class CNItemEditModal(ModalScreen):
+    """Edit quantity and price for a single CN correction line."""
 
     def __init__(self, product_name: str, orig_qty: int, orig_price: float,
                  current_qty: int, current_price: float) -> None:
@@ -297,20 +297,20 @@ class FKItemEditModal(ModalScreen):
             self.dismiss(None)
 
 
-class FKDetailModal(ModalScreen):
-    """Read-only FK detail view."""
+class CNDetailModal(ModalScreen):
+    """Read-only CN detail view."""
 
-    def __init__(self, fk_id: int) -> None:
+    def __init__(self, cn_id: int) -> None:
         super().__init__()
-        self.fk_id = fk_id
+        self.cn_id = cn_id
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="order-detail-dialog"):
-            yield Label("", id="fk-title", classes="modal-title")
-            yield Static("", id="fk-header")
+            yield Label("", id="cn-title", classes="modal-title")
+            yield Static("", id="cn-header")
             yield Label("Correction Items:", classes="section-label")
             yield DataTable(id="items-tbl", cursor_type="row", zebra_stripes=True)
-            yield Static("", id="fk-total")
+            yield Static("", id="cn-total")
             with Horizontal(classes="modal-buttons"):
                 yield Button("PDF", id="btn-pdf", variant="default")
                 yield Button("Close", id="btn-close")
@@ -327,28 +327,28 @@ class FKDetailModal(ModalScreen):
 
     def _load(self) -> None:
         sym = get_currency_symbol()
-        hdr = fkdata.get_by_pk(self.fk_id)
+        hdr = cndata.get_by_pk(self.cn_id)
         if not hdr:
             self.dismiss(False)
             return
-        self.query_one("#fk-title", Label).update(
-            f"FK #{self.fk_id} — {hdr.get('FK_Number', '')}"
+        self.query_one("#cn-title", Label).update(
+            f"CN #{self.cn_id} — {hdr.get('CN_Number', '')}"
         )
         info = [
-            f"[b]Number:[/b]    {hdr.get('FK_Number', '')}",
-            f"[b]Orig FV:[/b]   {hdr.get('FV_Number', '')} (FV_ID #{hdr.get('FV_ID', '')})",
+            f"[b]Number:[/b]    {hdr.get('CN_Number', '')}",
+            f"[b]Orig INV:[/b]  {hdr.get('INV_Number', '')} (INV_ID #{hdr.get('INV_ID', '')})",
             f"[b]Customer:[/b]  {hdr.get('CompanyName', '')}",
-            f"[b]Date:[/b]      {hdr.get('FK_Date', '')}   [b]Type:[/b] {hdr.get('FK_Type', '')}",
+            f"[b]Date:[/b]      {hdr.get('CN_Date', '')}   [b]Type:[/b] {hdr.get('CN_Type', '')}",
             f"[b]Status:[/b]    {hdr.get('Status', '')}",
             f"[b]Reason:[/b]    {hdr.get('Reason', '')}",
         ]
         if hdr.get("Notes"):
             info.append(f"[b]Notes:[/b]     {hdr['Notes']}")
-        self.query_one("#fk-header", Static).update("\n".join(info))
+        self.query_one("#cn-header", Static).update("\n".join(info))
 
         tbl = self.query_one("#items-tbl", DataTable)
         tbl.clear()
-        items = fkdata.fetch_items(self.fk_id)
+        items = cndata.fetch_items(self.cn_id)
         total = 0.0
         for it in items:
             lc = it["LineCorrection"]
@@ -359,7 +359,7 @@ class FKDetailModal(ModalScreen):
                 f"{sym}{it['OrigUnitPrice']:.2f}", f"{sym}{it['CorrUnitPrice']:.2f}",
                 f"{sym}{lc:.2f}",
             )
-        self.query_one("#fk-total", Static).update(
+        self.query_one("#cn-total", Static).update(
             f"[b]Total Correction:[/b] {sym}{total:.2f}"
         )
 
@@ -367,7 +367,7 @@ class FKDetailModal(ModalScreen):
     def on_pdf(self) -> None:
         try:
             import pdf_export
-            path = pdf_export.export_fk(self.fk_id)
+            path = pdf_export.export_cn(self.cn_id)
             self.notify(f"PDF saved → {path}", severity="information")
         except Exception as e:
             self.notify(f"PDF error: {e}", severity="error")
@@ -381,10 +381,10 @@ class FKDetailModal(ModalScreen):
             self.dismiss(False)
 
 
-class FKPanel(Widget):
-    """FK (Credit Notes) list panel."""
+class CNPanel(Widget):
+    """CN (Credit Notes) list panel."""
     BINDINGS = [
-        ("n", "new_record",   "New FK"),
+        ("n", "new_record",   "New CN"),
         ("f", "focus_search", "Search"),
     ]
 
@@ -395,7 +395,7 @@ class FKPanel(Widget):
             yield Input(placeholder="Search credit notes...", id="search-box")
             yield DataTable(id="tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="toolbar"):
-                yield Button("+ New FK", id="btn-new", variant="success")
+                yield Button("+ New CN", id="btn-new", variant="success")
                 yield Button("Open",     id="btn-open")
                 yield Label("", id="count-label", classes="count-label")
 
@@ -403,7 +403,7 @@ class FKPanel(Widget):
         tbl = self.query_one(DataTable)
         for label, width in [
             ("ID", 6), ("Number", 16), ("Date", 12), ("Customer", 22),
-            ("Type", 18), ("Orig FV", 16), ("Correction", 12), ("Status", 8),
+            ("Type", 18), ("Orig INV", 16), ("Correction", 12), ("Status", 8),
         ]:
             tbl.add_column(label, width=width)
         self.refresh_data()
@@ -411,7 +411,7 @@ class FKPanel(Widget):
     def refresh_data(self, term: str = "") -> None:
         tbl = self.query_one(DataTable)
         tbl.clear()
-        rows = fkdata.search(term) if term else fkdata.fetch_all()
+        rows = cndata.search(term) if term else cndata.fetch_all()
         sym = get_currency_symbol()
         for row in rows:
             display = list(row)
@@ -438,8 +438,8 @@ class FKPanel(Widget):
         if event.row_key:
             self._open_detail(int(event.row_key.value))
 
-    def _open_detail(self, fk_id: int) -> None:
-        self.app.push_screen(FKDetailModal(fk_id))
+    def _open_detail(self, cn_id: int) -> None:
+        self.app.push_screen(CNDetailModal(cn_id))
 
     @on(Button.Pressed, "#btn-new")
     def on_btn_new(self) -> None:
@@ -453,10 +453,10 @@ class FKPanel(Widget):
             self.notify("Select a credit note first.", severity="warning")
 
     def action_new_record(self) -> None:
-        def after(fk_id):
-            if fk_id:
+        def after(cn_id):
+            if cn_id:
                 self.refresh_data(self.query_one("#search-box", Input).value)
-        self.app.push_screen(FKNewModal(), callback=after)
+        self.app.push_screen(CNNewModal(), callback=after)
 
     def action_focus_search(self) -> None:
         self.query_one("#search-box", Input).focus()

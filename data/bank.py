@@ -54,16 +54,16 @@ def get_by_pk(pk) -> dict | None:
 
 def create_bank_entry(direction: str, amount: float, description: str = "",
                       customer_id: str | None = None, supplier_id: int | None = None,
-                      fv_id: int | None = None, pz_id: int | None = None) -> int:
+                      inv_id: int | None = None, gr_id: int | None = None) -> int:
     """Create a bank entry (in or out). Returns Entry_ID."""
     from datetime import date
     conn = get_connection()
     number = next_doc_number("Bank", conn)
     cur = conn.execute(
         "INSERT INTO BankEntry (Entry_Number, Entry_Date, Direction, CustomerID, "
-        "SupplierID, FV_ID, PZ_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
+        "SupplierID, INV_ID, GR_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
         (number, str(date.today()), direction, customer_id or None,
-         supplier_id or None, fv_id or None, pz_id or None, amount, description or None),
+         supplier_id or None, inv_id or None, gr_id or None, amount, description or None),
     )
     entry_id = cur.lastrowid
     conn.commit()
@@ -85,7 +85,7 @@ def bank_balance() -> float:
 
 def delete(pk) -> None:
     from data.delete_guards import before_delete_bank_entry
-    before_delete_bank_entry(pk)  # decrement FV.PaidAmount if linked
+    before_delete_bank_entry(pk)  # decrement INV.PaidAmount if linked
     conn = get_connection()
     conn.execute("DELETE FROM BankEntry WHERE Entry_ID=?", (pk,))
     conn.commit()
@@ -94,33 +94,33 @@ def delete(pk) -> None:
 
 # ── Transfers ─────────────────────────────────────────────────────────────────
 
-def withdraw_to_kassa(amount: float, description: str = "") -> tuple[int, int]:
-    """Create BankEntry (out) + KP (cash in) atomically. Returns (entry_id, kp_id)."""
+def withdraw_to_cash(amount: float, description: str = "") -> tuple[int, int]:
+    """Create BankEntry (out) + CR (cash in) atomically. Returns (entry_id, cr_id)."""
     from datetime import date
     conn = get_connection()
     today = str(date.today())
     desc = description or "Cash withdrawal"
 
     bank_number = next_doc_number("Bank", conn)
-    kp_number   = next_doc_number("KP",   conn)
+    cr_number   = next_doc_number("CR",   conn)
 
-    bank_desc = f"{desc} → {kp_number}"
-    kp_desc   = f"{desc} ← {bank_number}"
+    bank_desc = f"{desc} → {cr_number}"
+    cr_desc   = f"{desc} ← {bank_number}"
 
     cur = conn.execute(
         "INSERT INTO BankEntry (Entry_Number, Entry_Date, Direction, CustomerID, "
-        "SupplierID, FV_ID, PZ_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
+        "SupplierID, INV_ID, GR_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
         (bank_number, today, "out", None, None, None, None, amount, bank_desc),
     )
     entry_id = cur.lastrowid
 
     cur = conn.execute(
-        "INSERT INTO KP (KP_Number, KP_Date, CustomerID, FV_ID, Amount, Description) "
+        "INSERT INTO CR (CR_Number, CR_Date, CustomerID, INV_ID, Amount, Description) "
         "VALUES (?,?,?,?,?,?)",
-        (kp_number, today, None, None, amount, kp_desc),
+        (cr_number, today, None, None, amount, cr_desc),
     )
-    kp_id = cur.lastrowid
+    cr_id = cur.lastrowid
 
     conn.commit()
     conn.close()
-    return entry_id, kp_id
+    return entry_id, cr_id

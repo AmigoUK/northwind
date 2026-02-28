@@ -8,42 +8,42 @@ from datetime import date
 import pytest
 
 import db
-from data import products, wz, fv, pz, kassa, bank, pw_rw, orders
+from data import products, dn, inv, gr, cash, bank, si_so, orders
 from data.delete_guards import (
     can_delete_order,
-    can_delete_wz,
-    can_delete_fv,
-    can_delete_pz,
-    can_delete_pw,
+    can_delete_dn,
+    can_delete_inv,
+    can_delete_gr,
+    can_delete_si,
     can_delete_product,
     can_delete_customer,
     can_delete_supplier,
     can_delete_category,
     can_delete_employee,
     can_delete_shipper,
-    before_delete_kp,
+    before_delete_cr,
     before_delete_bank_entry,
-    before_delete_pw,
-    before_delete_rw,
+    before_delete_si,
+    before_delete_so,
     _fmt_reasons,
 )
 
 
 # ── Helper ───────────────────────────────────────────────────────────────────
 
-def _make_wz_issued(customer_id="ALFKI", product_id=1, qty=5, price=18.0):
-    """Create and issue a WZ, returning the WZ_ID."""
-    wz_id = wz.create_draft(customer_id, str(date.today()))
-    wz.add_item(wz_id, product_id, qty, price)
-    wz.issue(wz_id)
-    return wz_id
+def _make_dn_issued(customer_id="ALFKI", product_id=1, qty=5, price=18.0):
+    """Create and issue a DN, returning the DN_ID."""
+    dn_id = dn.create_draft(customer_id, str(date.today()))
+    dn.add_item(dn_id, product_id, qty, price)
+    dn.issue(dn_id)
+    return dn_id
 
 
-def _make_fv(customer_id="ALFKI", product_id=1, qty=5, price=18.0):
-    """Create WZ → issue → create FV, returning (fv_id, wz_id)."""
-    wz_id = _make_wz_issued(customer_id, product_id, qty, price)
-    fv_id = fv.create(customer_id, [wz_id], str(date.today()))
-    return fv_id, wz_id
+def _make_inv(customer_id="ALFKI", product_id=1, qty=5, price=18.0):
+    """Create DN → issue → create INV, returning (inv_id, dn_id)."""
+    dn_id = _make_dn_issued(customer_id, product_id, qty, price)
+    inv_id = inv.create(customer_id, [dn_id], str(date.today()))
+    return inv_id, dn_id
 
 
 # ── _fmt_reasons ─────────────────────────────────────────────────────────────
@@ -62,19 +62,19 @@ class TestFmtReasons:
 # ── Document guards ──────────────────────────────────────────────────────────
 
 class TestCanDeleteOrder:
-    def test_order_without_wz_can_be_deleted(self):
-        """Seed order 10248 has no WZ → can_delete_order returns True."""
+    def test_order_without_dn_can_be_deleted(self):
+        """Seed order 10248 has no DN → can_delete_order returns True."""
         ok, reasons = can_delete_order(10248)
         assert ok
         assert reasons == []
 
-    def test_order_with_wz_blocked(self):
-        """Create a WZ referencing an order → deletion blocked."""
+    def test_order_with_dn_blocked(self):
+        """Create a DN referencing an order → deletion blocked."""
         conn = db.get_connection()
-        # Create a draft WZ linked to order 10249
-        num = db.next_doc_number("WZ", conn)
+        # Create a draft DN linked to order 10249
+        num = db.next_doc_number("DN", conn)
         conn.execute(
-            "INSERT INTO WZ (WZ_Number, OrderID, CustomerID, WZ_Date, Status) "
+            "INSERT INTO DN (DN_Number, OrderID, CustomerID, DN_Date, Status) "
             "VALUES (?, ?, 'ALFKI', ?, 'draft')",
             (num, 10249, str(date.today())),
         )
@@ -82,148 +82,148 @@ class TestCanDeleteOrder:
         conn.close()
         ok, reasons = can_delete_order(10249)
         assert not ok
-        assert any("WZ" in r for r in reasons)
+        assert any("DN" in r for r in reasons)
 
 
-class TestCanDeleteWZ:
-    def test_draft_without_fv_can_be_deleted(self):
-        wz_id = wz.create_draft("ALFKI", str(date.today()))
-        ok, reasons = can_delete_wz(wz_id)
+class TestCanDeleteDN:
+    def test_draft_without_inv_can_be_deleted(self):
+        dn_id = dn.create_draft("ALFKI", str(date.today()))
+        ok, reasons = can_delete_dn(dn_id)
         assert ok
 
-    def test_issued_wz_blocked(self):
-        wz_id = _make_wz_issued()
-        ok, reasons = can_delete_wz(wz_id)
+    def test_issued_dn_blocked(self):
+        dn_id = _make_dn_issued()
+        ok, reasons = can_delete_dn(dn_id)
         assert not ok
         assert any("issued" in r for r in reasons)
 
-    def test_invoiced_wz_blocked(self):
-        fv_id, wz_id = _make_fv()
-        ok, reasons = can_delete_wz(wz_id)
+    def test_invoiced_dn_blocked(self):
+        inv_id, dn_id = _make_inv()
+        ok, reasons = can_delete_dn(dn_id)
         assert not ok
-        assert any("invoiced" in r or "FV" in r for r in reasons)
+        assert any("invoiced" in r or "INV" in r for r in reasons)
 
 
-class TestCanDeleteFV:
-    def test_fv_without_payments_can_be_deleted(self):
-        fv_id, _ = _make_fv()
-        ok, reasons = can_delete_fv(fv_id)
+class TestCanDeleteINV:
+    def test_inv_without_payments_can_be_deleted(self):
+        inv_id, _ = _make_inv()
+        ok, reasons = can_delete_inv(inv_id)
         assert ok
 
-    def test_fv_with_kp_blocked(self):
-        fv_id, _ = _make_fv()
-        kassa.create_kp(customer_id="ALFKI", fv_id=fv_id, amount=50.0)
-        ok, reasons = can_delete_fv(fv_id)
+    def test_inv_with_cr_blocked(self):
+        inv_id, _ = _make_inv()
+        cash.create_cr(customer_id="ALFKI", inv_id=inv_id, amount=50.0)
+        ok, reasons = can_delete_inv(inv_id)
         assert not ok
-        assert any("KP" in r for r in reasons)
+        assert any("CR" in r for r in reasons)
 
-    def test_fv_with_bank_entry_blocked(self):
-        fv_id, _ = _make_fv()
+    def test_inv_with_bank_entry_blocked(self):
+        inv_id, _ = _make_inv()
         bank.create_bank_entry(direction="in", customer_id="ALFKI",
-                               fv_id=fv_id, amount=50.0)
-        ok, reasons = can_delete_fv(fv_id)
+                               inv_id=inv_id, amount=50.0)
+        ok, reasons = can_delete_inv(inv_id)
         assert not ok
         assert any("Bank" in r for r in reasons)
 
 
-class TestCanDeletePZ:
-    def test_draft_pz_can_be_deleted(self):
-        pz_id = pz.create_draft(1, str(date.today()))
-        ok, reasons = can_delete_pz(pz_id)
+class TestCanDeleteGR:
+    def test_draft_gr_can_be_deleted(self):
+        gr_id = gr.create_draft(1, str(date.today()))
+        ok, reasons = can_delete_gr(gr_id)
         assert ok
 
-    def test_received_pz_blocked(self):
-        pz_id = pz.create_draft(1, str(date.today()))
-        pz.add_item(pz_id, 1, 10, 15.0)
-        pz.receive(pz_id)
-        ok, reasons = can_delete_pz(pz_id)
+    def test_received_gr_blocked(self):
+        gr_id = gr.create_draft(1, str(date.today()))
+        gr.add_item(gr_id, 1, 10, 15.0)
+        gr.receive(gr_id)
+        ok, reasons = can_delete_gr(gr_id)
         assert not ok
         assert any("received" in r for r in reasons)
 
 
-class TestCanDeletePW:
-    def test_pw_ok_when_stock_sufficient(self):
-        pw_id = pw_rw.create_pw(str(date.today()), reason="test",
+class TestCanDeleteSI:
+    def test_si_ok_when_stock_sufficient(self):
+        si_id = si_so.create_si(str(date.today()), reason="test",
                                 items=[{"product_id": 1, "quantity": 5}])
-        ok, reasons = can_delete_pw(pw_id)
+        ok, reasons = can_delete_si(si_id)
         assert ok
 
-    def test_pw_blocked_when_stock_insufficient(self):
-        """If stock was consumed after PW, reversal would go negative."""
+    def test_si_blocked_when_stock_insufficient(self):
+        """If stock was consumed after SI, reversal would go negative."""
         original_stock = products.get_stock(1)
-        pw_id = pw_rw.create_pw(str(date.today()), reason="test",
+        si_id = si_so.create_si(str(date.today()), reason="test",
                                 items=[{"product_id": 1, "quantity": 10}])
-        # Consume all stock via RW
+        # Consume all stock via SO
         total = original_stock + 10
-        pw_rw.create_rw(str(date.today()), reason="consume",
+        si_so.create_so(str(date.today()), reason="consume",
                         items=[{"product_id": 1, "quantity": total}])
-        ok, reasons = can_delete_pw(pw_id)
+        ok, reasons = can_delete_si(si_id)
         assert not ok
         assert any("negative" in r for r in reasons)
 
 
 # ── Side-effects ─────────────────────────────────────────────────────────────
 
-class TestBeforeDeleteKP:
-    def test_decrement_fv_paid_amount(self):
-        """Deleting a KP linked to an FV decrements PaidAmount and recalcs status."""
-        fv_id, _ = _make_fv()
-        # Record a payment via FV module (creates KP + updates FV)
-        fv.record_payment(fv_id, 50.0, "cash")
-        fv_doc = fv.get_by_pk(fv_id)
-        assert fv_doc["PaidAmount"] == 50.0
+class TestBeforeDeleteCR:
+    def test_decrement_inv_paid_amount(self):
+        """Deleting a CR linked to an INV decrements PaidAmount and recalcs status."""
+        inv_id, _ = _make_inv()
+        # Record a payment via INV module (creates CR + updates INV)
+        inv.record_payment(inv_id, 50.0, "cash")
+        inv_doc = inv.get_by_pk(inv_id)
+        assert inv_doc["PaidAmount"] == 50.0
 
-        # Find the KP that was created
+        # Find the CR that was created
         conn = db.get_connection()
-        kp_row = conn.execute(
-            "SELECT KP_ID FROM KP WHERE FV_ID=?", (fv_id,)
+        cr_row = conn.execute(
+            "SELECT CR_ID FROM CR WHERE INV_ID=?", (inv_id,)
         ).fetchone()
         conn.close()
-        kp_id = kp_row["KP_ID"]
+        cr_id = cr_row["CR_ID"]
 
-        # Delete KP → should decrement PaidAmount
-        kassa.delete_kp(kp_id)
-        fv_doc = fv.get_by_pk(fv_id)
-        assert fv_doc["PaidAmount"] == 0.0
-        assert fv_doc["Status"] == "issued"
+        # Delete CR → should decrement PaidAmount
+        cash.delete_cr(cr_id)
+        inv_doc = inv.get_by_pk(inv_id)
+        assert inv_doc["PaidAmount"] == 0.0
+        assert inv_doc["Status"] == "issued"
 
 
 class TestBeforeDeleteBankEntry:
-    def test_decrement_fv_paid_amount(self):
-        fv_id, _ = _make_fv()
-        fv.record_payment(fv_id, 30.0, "bank")
-        fv_doc = fv.get_by_pk(fv_id)
-        assert fv_doc["PaidAmount"] == 30.0
+    def test_decrement_inv_paid_amount(self):
+        inv_id, _ = _make_inv()
+        inv.record_payment(inv_id, 30.0, "bank")
+        inv_doc = inv.get_by_pk(inv_id)
+        assert inv_doc["PaidAmount"] == 30.0
 
         conn = db.get_connection()
         entry_row = conn.execute(
-            "SELECT Entry_ID FROM BankEntry WHERE FV_ID=?", (fv_id,)
+            "SELECT Entry_ID FROM BankEntry WHERE INV_ID=?", (inv_id,)
         ).fetchone()
         conn.close()
 
         bank.delete(entry_row["Entry_ID"])
-        fv_doc = fv.get_by_pk(fv_id)
-        assert fv_doc["PaidAmount"] == 0.0
-        assert fv_doc["Status"] == "issued"
+        inv_doc = inv.get_by_pk(inv_id)
+        assert inv_doc["PaidAmount"] == 0.0
+        assert inv_doc["Status"] == "issued"
 
 
-class TestBeforeDeletePW:
-    def test_stock_reversed_on_pw_delete(self):
+class TestBeforeDeleteSI:
+    def test_stock_reversed_on_si_delete(self):
         stock_before = products.get_stock(1)
-        pw_id = pw_rw.create_pw(str(date.today()), reason="test",
+        si_id = si_so.create_si(str(date.today()), reason="test",
                                 items=[{"product_id": 1, "quantity": 10}])
         assert products.get_stock(1) == stock_before + 10
-        pw_rw.delete_pw(pw_id)
+        si_so.delete_si(si_id)
         assert products.get_stock(1) == stock_before
 
 
-class TestBeforeDeleteRW:
-    def test_stock_reversed_on_rw_delete(self):
+class TestBeforeDeleteSO:
+    def test_stock_reversed_on_so_delete(self):
         stock_before = products.get_stock(1)
-        rw_id = pw_rw.create_rw(str(date.today()), reason="test",
+        so_id = si_so.create_so(str(date.today()), reason="test",
                                 items=[{"product_id": 1, "quantity": 5}])
         assert products.get_stock(1) == stock_before - 5
-        pw_rw.delete_rw(rw_id)
+        si_so.delete_so(so_id)
         assert products.get_stock(1) == stock_before
 
 

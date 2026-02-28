@@ -1,5 +1,5 @@
 from __future__ import annotations
-"""screens/stock_movements.py — PW/RW (internal stock movements) panel."""
+"""screens/stock_movements.py — SI/SO (internal stock movements) panel."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -7,7 +7,7 @@ from textual.widget import Widget
 from textual.widgets import Button, DataTable, Input, Label, Static, TabbedContent, TabPane
 from textual import on
 
-import data.pw_rw as pwrw
+import data.si_so as siso
 import data.products as pdata
 from data.settings import get_backorder_allowed
 from screens.modals import ConfirmDeleteModal, PickerModal
@@ -24,16 +24,16 @@ class MovementItemRow:
 
 
 class MovementFormModal(ModalScreen):
-    """Create a new PW or RW movement document."""
+    """Create a new SI or SO movement document."""
 
     def __init__(self, doc_type: str) -> None:
         super().__init__()
-        self.doc_type = doc_type  # "PW" or "RW"
+        self.doc_type = doc_type  # "SI" or "SO"
         self._items: list[MovementItemRow] = []
         self._selected_idx: int | None = None
 
     def compose(self) -> ComposeResult:
-        title = "PW — Przyjęcie Wewnętrzne" if self.doc_type == "PW" else "RW — Rozchód Wewnętrzny"
+        title = "SI — Stock Issue" if self.doc_type == "SI" else "SO — Stock Out"
         with Vertical(classes="order-detail-dialog"):
             yield Label(f"New {title}", classes="modal-title")
             with Horizontal(classes="form-row"):
@@ -115,7 +115,7 @@ class MovementFormModal(ModalScreen):
 
             def after_qty(qty):
                 if qty:
-                    if self.doc_type == "RW":
+                    if self.doc_type == "SO":
                         available = pdata.get_stock(int(pk))
                         if qty > available:
                             if get_backorder_allowed():
@@ -171,12 +171,12 @@ class MovementFormModal(ModalScreen):
         items_data = [{"product_id": it.product_id, "quantity": it.quantity}
                       for it in self._items]
         try:
-            if self.doc_type == "PW":
-                doc_id = pwrw.create_pw(doc_date, reason, items=items_data)
-                self.notify(f"PW #{doc_id} created — stock increased.", severity="information")
+            if self.doc_type == "SI":
+                doc_id = siso.create_si(doc_date, reason, items=items_data)
+                self.notify(f"SI #{doc_id} created — stock increased.", severity="information")
             else:
-                doc_id = pwrw.create_rw(doc_date, reason, items=items_data)
-                self.notify(f"RW #{doc_id} created — stock decreased.", severity="information")
+                doc_id = siso.create_so(doc_date, reason, items=items_data)
+                self.notify(f"SO #{doc_id} created — stock decreased.", severity="information")
             self.dismiss(True)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
@@ -191,7 +191,7 @@ class MovementFormModal(ModalScreen):
 
 
 class MovementDetailModal(ModalScreen):
-    """View a PW or RW document's details."""
+    """View a SI or SO document's details."""
 
     def __init__(self, doc_type: str, doc_id: int) -> None:
         super().__init__()
@@ -216,16 +216,16 @@ class MovementDetailModal(ModalScreen):
         self._load()
 
     def _load(self) -> None:
-        if self.doc_type == "PW":
-            hdr = pwrw.get_pw_by_pk(self.doc_id)
-            items = pwrw.fetch_pw_items(self.doc_id)
-            num_field = "PW_Number"
-            date_field = "PW_Date"
+        if self.doc_type == "SI":
+            hdr = siso.get_si_by_pk(self.doc_id)
+            items = siso.fetch_si_items(self.doc_id)
+            num_field = "SI_Number"
+            date_field = "SI_Date"
         else:
-            hdr = pwrw.get_rw_by_pk(self.doc_id)
-            items = pwrw.fetch_rw_items(self.doc_id)
-            num_field = "RW_Number"
-            date_field = "RW_Date"
+            hdr = siso.get_so_by_pk(self.doc_id)
+            items = siso.fetch_so_items(self.doc_id)
+            num_field = "SO_Number"
+            date_field = "SO_Date"
         if not hdr:
             self.dismiss(False)
             return
@@ -248,10 +248,10 @@ class MovementDetailModal(ModalScreen):
         def after(confirmed):
             if confirmed:
                 try:
-                    if self.doc_type == "PW":
-                        pwrw.delete_pw(self.doc_id)
+                    if self.doc_type == "SI":
+                        siso.delete_si(self.doc_id)
                     else:
-                        pwrw.delete_rw(self.doc_id)
+                        siso.delete_so(self.doc_id)
                     self.notify("Document deleted.", severity="information")
                     self.dismiss(True)
                 except Exception as e:
@@ -270,167 +270,167 @@ class MovementDetailModal(ModalScreen):
 
 
 class StockMovementsPanel(Widget):
-    """Panel with two tabs: PW (goods in) and RW (goods out)."""
+    """Panel with two tabs: SI (goods in) and SO (goods out)."""
 
     BINDINGS = [
         ("n", "new_record",   "New"),
         ("f", "focus_search", "Search"),
     ]
 
-    _pw_selected: str | None = None
-    _rw_selected: str | None = None
+    _si_selected: str | None = None
+    _so_selected: str | None = None
 
     def compose(self) -> ComposeResult:
         with TabbedContent(id="mov-tabs"):
-            with TabPane("PW — Goods In", id="tab-pw"):
+            with TabPane("SI — Stock In", id="tab-si"):
                 with Vertical(classes="panel-container"):
-                    yield DataTable(id="pw-tbl", cursor_type="row", zebra_stripes=True)
+                    yield DataTable(id="si-tbl", cursor_type="row", zebra_stripes=True)
                     with Horizontal(classes="toolbar"):
-                        yield Button("+ New PW", id="btn-new-pw", variant="success")
-                        yield Button("Open",     id="btn-open-pw")
-                        yield Button("Delete",   id="btn-del-pw", variant="error")
-                        yield Label("", id="pw-count", classes="count-label")
-            with TabPane("RW — Goods Out", id="tab-rw"):
+                        yield Button("+ New SI", id="btn-new-si", variant="success")
+                        yield Button("Open",     id="btn-open-si")
+                        yield Button("Delete",   id="btn-del-si", variant="error")
+                        yield Label("", id="si-count", classes="count-label")
+            with TabPane("SO — Stock Out", id="tab-so"):
                 with Vertical(classes="panel-container"):
-                    yield DataTable(id="rw-tbl", cursor_type="row", zebra_stripes=True)
+                    yield DataTable(id="so-tbl", cursor_type="row", zebra_stripes=True)
                     with Horizontal(classes="toolbar"):
-                        yield Button("+ New RW", id="btn-new-rw", variant="success")
-                        yield Button("Open",     id="btn-open-rw")
-                        yield Button("Delete",   id="btn-del-rw", variant="error")
-                        yield Label("", id="rw-count", classes="count-label")
+                        yield Button("+ New SO", id="btn-new-so", variant="success")
+                        yield Button("Open",     id="btn-open-so")
+                        yield Button("Delete",   id="btn-del-so", variant="error")
+                        yield Label("", id="so-count", classes="count-label")
 
     def on_mount(self) -> None:
-        pw_tbl = self.query_one("#pw-tbl", DataTable)
+        si_tbl = self.query_one("#si-tbl", DataTable)
         for label, width in [("ID", 6), ("Number", 16), ("Date", 12), ("Reason", 26), ("Qty", 6)]:
-            pw_tbl.add_column(label, width=width)
+            si_tbl.add_column(label, width=width)
 
-        rw_tbl = self.query_one("#rw-tbl", DataTable)
+        so_tbl = self.query_one("#so-tbl", DataTable)
         for label, width in [("ID", 6), ("Number", 16), ("Date", 12), ("Reason", 26), ("Qty", 6)]:
-            rw_tbl.add_column(label, width=width)
+            so_tbl.add_column(label, width=width)
 
-        self._refresh_pw()
-        self._refresh_rw()
+        self._refresh_si()
+        self._refresh_so()
 
-    def _refresh_pw(self) -> None:
-        tbl = self.query_one("#pw-tbl", DataTable)
+    def _refresh_si(self) -> None:
+        tbl = self.query_one("#si-tbl", DataTable)
         tbl.clear()
-        rows = pwrw.fetch_all_pw()
+        rows = siso.fetch_all_si()
         for row in rows:
             tbl.add_row(*[str(c) if c is not None else "" for c in row], key=str(row[0]))
         try:
-            self.query_one("#pw-count", Label).update(f"{len(rows)} records")
+            self.query_one("#si-count", Label).update(f"{len(rows)} records")
         except Exception:
             pass
 
-    def _refresh_rw(self) -> None:
-        tbl = self.query_one("#rw-tbl", DataTable)
+    def _refresh_so(self) -> None:
+        tbl = self.query_one("#so-tbl", DataTable)
         tbl.clear()
-        rows = pwrw.fetch_all_rw()
+        rows = siso.fetch_all_so()
         for row in rows:
             tbl.add_row(*[str(c) if c is not None else "" for c in row], key=str(row[0]))
         try:
-            self.query_one("#rw-count", Label).update(f"{len(rows)} records")
+            self.query_one("#so-count", Label).update(f"{len(rows)} records")
         except Exception:
             pass
 
-    @on(DataTable.RowHighlighted, "#pw-tbl")
-    def on_pw_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    @on(DataTable.RowHighlighted, "#si-tbl")
+    def on_si_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key:
-            self._pw_selected = event.row_key.value
+            self._si_selected = event.row_key.value
 
-    @on(DataTable.RowHighlighted, "#rw-tbl")
-    def on_rw_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    @on(DataTable.RowHighlighted, "#so-tbl")
+    def on_so_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key:
-            self._rw_selected = event.row_key.value
+            self._so_selected = event.row_key.value
 
-    @on(DataTable.RowSelected, "#pw-tbl")
-    def on_pw_selected(self, event: DataTable.RowSelected) -> None:
+    @on(DataTable.RowSelected, "#si-tbl")
+    def on_si_selected(self, event: DataTable.RowSelected) -> None:
         if event.row_key:
-            self._open_detail("PW", int(event.row_key.value))
+            self._open_detail("SI", int(event.row_key.value))
 
-    @on(DataTable.RowSelected, "#rw-tbl")
-    def on_rw_selected(self, event: DataTable.RowSelected) -> None:
+    @on(DataTable.RowSelected, "#so-tbl")
+    def on_so_selected(self, event: DataTable.RowSelected) -> None:
         if event.row_key:
-            self._open_detail("RW", int(event.row_key.value))
+            self._open_detail("SO", int(event.row_key.value))
 
     def _open_detail(self, doc_type: str, doc_id: int) -> None:
         def after(changed):
             if changed:
-                self._refresh_pw()
-                self._refresh_rw()
+                self._refresh_si()
+                self._refresh_so()
         self.app.push_screen(MovementDetailModal(doc_type, doc_id), callback=after)
 
-    @on(Button.Pressed, "#btn-new-pw")
-    def on_new_pw(self) -> None:
+    @on(Button.Pressed, "#btn-new-si")
+    def on_new_si(self) -> None:
         def after(saved):
             if saved:
-                self._refresh_pw()
-        self.app.push_screen(MovementFormModal("PW"), callback=after)
+                self._refresh_si()
+        self.app.push_screen(MovementFormModal("SI"), callback=after)
 
-    @on(Button.Pressed, "#btn-new-rw")
-    def on_new_rw(self) -> None:
+    @on(Button.Pressed, "#btn-new-so")
+    def on_new_so(self) -> None:
         def after(saved):
             if saved:
-                self._refresh_rw()
-        self.app.push_screen(MovementFormModal("RW"), callback=after)
+                self._refresh_so()
+        self.app.push_screen(MovementFormModal("SO"), callback=after)
 
-    @on(Button.Pressed, "#btn-open-pw")
-    def on_open_pw(self) -> None:
-        if self._pw_selected:
-            self._open_detail("PW", int(self._pw_selected))
+    @on(Button.Pressed, "#btn-open-si")
+    def on_open_si(self) -> None:
+        if self._si_selected:
+            self._open_detail("SI", int(self._si_selected))
         else:
-            self.notify("Select a PW document first.", severity="warning")
+            self.notify("Select a SI document first.", severity="warning")
 
-    @on(Button.Pressed, "#btn-open-rw")
-    def on_open_rw(self) -> None:
-        if self._rw_selected:
-            self._open_detail("RW", int(self._rw_selected))
+    @on(Button.Pressed, "#btn-open-so")
+    def on_open_so(self) -> None:
+        if self._so_selected:
+            self._open_detail("SO", int(self._so_selected))
         else:
-            self.notify("Select a RW document first.", severity="warning")
+            self.notify("Select a SO document first.", severity="warning")
 
-    @on(Button.Pressed, "#btn-del-pw")
-    def on_delete_pw(self) -> None:
-        if not self._pw_selected:
-            self.notify("Select a PW document first.", severity="warning")
+    @on(Button.Pressed, "#btn-del-si")
+    def on_delete_si(self) -> None:
+        if not self._si_selected:
+            self.notify("Select a SI document first.", severity="warning")
             return
         def after(confirmed):
             if confirmed:
                 try:
-                    pwrw.delete_pw(int(self._pw_selected))
-                    self._pw_selected = None
-                    self._refresh_pw()
-                    self.notify("PW deleted.", severity="information")
+                    siso.delete_si(int(self._si_selected))
+                    self._si_selected = None
+                    self._refresh_si()
+                    self.notify("SI deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"PW #{self._pw_selected}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"SI #{self._si_selected}"), callback=after)
 
-    @on(Button.Pressed, "#btn-del-rw")
-    def on_delete_rw(self) -> None:
-        if not self._rw_selected:
-            self.notify("Select a RW document first.", severity="warning")
+    @on(Button.Pressed, "#btn-del-so")
+    def on_delete_so(self) -> None:
+        if not self._so_selected:
+            self.notify("Select a SO document first.", severity="warning")
             return
         def after(confirmed):
             if confirmed:
                 try:
-                    pwrw.delete_rw(int(self._rw_selected))
-                    self._rw_selected = None
-                    self._refresh_rw()
-                    self.notify("RW deleted.", severity="information")
+                    siso.delete_so(int(self._so_selected))
+                    self._so_selected = None
+                    self._refresh_so()
+                    self.notify("SO deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"RW #{self._rw_selected}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"SO #{self._so_selected}"), callback=after)
 
     def action_new_record(self) -> None:
         # Determine active tab
         try:
             active = self.query_one(TabbedContent).active
-            doc_type = "RW" if active == "tab-rw" else "PW"
+            doc_type = "SO" if active == "tab-so" else "SI"
         except Exception:
-            doc_type = "PW"
+            doc_type = "SI"
         def after(saved):
             if saved:
-                self._refresh_pw()
-                self._refresh_rw()
+                self._refresh_si()
+                self._refresh_so()
         self.app.push_screen(MovementFormModal(doc_type), callback=after)
 
     def action_focus_search(self) -> None:

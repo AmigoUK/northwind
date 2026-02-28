@@ -10,12 +10,34 @@ A terminal-based warehouse/distribution management application built on the clas
 | Version | Theme | Key additions |
 |---------|-------|---------------|
 | **v1.4** | Foundation | 9 CRUD panels, SQL editor, 6 reports + CSV export, PIN login, role-based UI, multi-column form modals |
-| **v2.0** | Documents & Finance | Document workflow (WZ/FV/PZ/PW/RW), Cash Register & Bank Account, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
-| **v2.1** | PDF Export | Branded A4 PDF delivery notes (WZ) & invoices (FV) — company logo, theme colours, totals, linked WZ references |
-| **v2.2** | PDF All Docs + UX | PDF export for PZ, KP, KW & Bank entries; Business Details tabbed layout with docked Save button |
+| **v2.0** | Documents & Finance | Document workflow (DN/INV/GR/SI/SO), Cash Register & Bank Account, Charts, extended KPIs, 7 UX enhancements, finance dashboard KPIs |
+| **v2.1** | PDF Export | Branded A4 PDF delivery notes (DN) & invoices (INV) — company logo, theme colours, totals, linked DN references |
+| **v2.2** | PDF All Docs + UX | PDF export for GR, CR, CP & Bank entries; Business Details tabbed layout with docked Save button |
 | **v2.3** | UI Polish | Business Details compact one-screen tabs; form layout optimisation across Company / Tax / Documents |
-| **v2.4** | Data Integrity | 3-tier roles (user/manager/admin), delete guards, document cancellation, Credit Notes (FK), 82 automated tests |
+| **v2.4** | Data Integrity | 3-tier roles (user/manager/admin), delete guards, document cancellation, Credit Notes (CN), 82 automated tests |
+| **v2.5** | English International | All Polish abbreviations replaced with English (WZ→DN, FV→INV, FK→CN, PZ→GR, PW→SI, RW→SO, KP→CR, KW→CP) |
 | ... | ... | ... |
+
+---
+
+## Features (v2.5)
+
+### New in v2.5 — English International
+
+All Polish accounting abbreviations replaced with English equivalents across the entire codebase:
+
+| Old (Polish) | New (English) | Full Name |
+|-------------|---------------|-----------|
+| WZ | DN | Delivery Note |
+| FV | INV | Invoice |
+| FK | CN | Credit Note |
+| PZ | GR | Goods Receipt |
+| PW | SI | Stock Issue |
+| RW | SO | Stock Out |
+| KP | CR | Cash Receipt |
+| KW | CP | Cash Payment |
+
+Database migration is automatic — existing databases are migrated on startup.
 
 ---
 
@@ -24,38 +46,38 @@ A terminal-based warehouse/distribution management application built on the clas
 ### New in v2.4 — Data Integrity, Cancellation & Credit Notes
 
 **3-Tier Role System**
-- Hierarchical permissions: **user** (view + create) → **manager** (+ delete) → **admin** (+ cancel, FK, system)
+- Hierarchical permissions: **user** (view + create) → **manager** (+ delete) → **admin** (+ cancel, CN, system)
 - Delete buttons hidden from users without manager+ role
 - Admin sections (SQL, Users, Business Details, Settings) remain admin-only
 
 **Delete Guards**
 - Referential integrity enforcement across all document and master data types
-- Cannot delete an Order if WZ exists, cannot delete FV if payments exist, etc.
-- Side-effects on delete: deleting a KP/BankEntry decrements FV.PaidAmount; deleting PW/RW reverses stock
-- Human-readable error messages: *"Cannot delete: WZ WZ/2026/003 exists for this order"*
+- Cannot delete an Order if DN exists, cannot delete INV if payments exist, etc.
+- Side-effects on delete: deleting a CR/BankEntry decrements INV.PaidAmount; deleting SI/SO reverses stock
+- Human-readable error messages: *"Cannot delete: DN DN/2026/003 exists for this order"*
 
 **Document Cancellation**
-- Admin-only soft cancel for WZ, FV, and PZ — keeps full audit trail (CancelledAt, CancelledBy, CancelReason)
-- **Cancel WZ** — reverses stock, blocks if invoiced (*"Cancel the FV first"*)
-- **Cancel FV** — reverts linked WZ to "issued", blocks if payments exist (*"Issue FK instead"*)
-- **Cancel PZ** — reverses stock, leaves linked payments for manual handling
+- Admin-only soft cancel for DN, INV, and GR — keeps full audit trail (CancelledAt, CancelledBy, CancelReason)
+- **Cancel DN** — reverses stock, blocks if invoiced (*"Cancel the INV first"*)
+- **Cancel INV** — reverts linked DN to "issued", blocks if payments exist (*"Issue CN instead"*)
+- **Cancel GR** — reverses stock, leaves linked payments for manual handling
 - Cancellation reason modal with mandatory input; cancelled documents show reason in detail view
 
-**Credit Notes (FK — Faktura Korygujaca)**
-- Full invoice correction system following Polish accounting model
-- Three FK types: **Full Reversal**, **Partial Correction**, **Cancellation**
-- Adjusts FV.TotalNet in-place; recalculates payment status (paid / partial / issued / cancelled)
+**Credit Notes (CN)**
+- Full invoice correction system
+- Three CN types: **Full Reversal**, **Partial Correction**, **Cancellation**
+- Adjusts INV.TotalNet in-place; recalculates payment status (paid / partial / issued / cancelled)
 - Optional stock reversal via "Return goods to stock" checkbox
-- Creation wizard: pick FV → select type → edit line items (partial) → reason + date → preview → create
+- Creation wizard: pick INV → select type → edit line items (partial) → reason + date → preview → create
 - Read-only detail view with original vs corrected values side-by-side
-- FK PDF export with correction table, original FV reference, and prominent "ANULOWANIE" banner for cancellations
-- FV detail modal shows linked FK documents and "Issue FK" button
-- Navigation: Documents → FK — Credit Notes
+- CN PDF export with correction table, original INV reference, and prominent "CANCELLATION" banner for cancellations
+- INV detail modal shows linked CN documents and "Issue CN" button
+- Navigation: Documents → CN — Credit Notes
 
 **Test Suite (82 tests)**
 - `test_delete_guards.py` — guard functions, side-effects, master data referential integrity
-- `test_cancellation.py` — WZ/FV/PZ cancellation rules, cascade behaviour, error cases
-- `test_fk.py` — FK creation (all 3 types), payment/stock/pricing effects, search, numbering
+- `test_cancellation.py` — DN/INV/GR cancellation rules, cascade behaviour, error cases
+- `test_cn.py` — CN creation (all 3 types), payment/stock/pricing effects, search, numbering
 
 ---
 
@@ -64,10 +86,10 @@ A terminal-based warehouse/distribution management application built on the clas
 ### New in v2.2 — PDF for All Documents + UX Fixes
 
 - **PDF export extended to all document types:**
-  - **PZ Goods Receipts** — "Receive From" supplier box, line items table with unit cost and total cost row
-  - **KP Cash Receipts** — voucher with customer name, FV reference, prominent amount box, signature line
-  - **KW Cash Payments** — voucher with supplier name, PZ reference, prominent amount box, signature line
-  - **Bank Account Entries** — direction badge (green MONEY IN / red MONEY OUT), counterparty, FV/PZ references, amount box
+  - **GR Goods Receipts** — "Receive From" supplier box, line items table with unit cost and total cost row
+  - **CR Cash Receipts** — voucher with customer name, INV reference, prominent amount box, signature line
+  - **CP Cash Payments** — voucher with supplier name, GR reference, prominent amount box, signature line
+  - **Bank Account Entries** — direction badge (green MONEY IN / red MONEY OUT), counterparty, INV/GR references, amount box
 - **Business Details panel reorganised into 3 tabs** — Company, Tax & Legal, Documents — prevents content overflow
 - **Save button always visible** — docked to the bottom of the Business Details panel
 - **Tab content scrollable** — long forms scroll within the tab rather than clipping off-screen
@@ -78,8 +100,8 @@ A terminal-based warehouse/distribution management application built on the clas
 
 ### New in v2.1 — PDF Export
 
-- **PDF button on WZ Delivery Notes** — generates a branded A4 PDF saved to `~/Downloads/`
-- **PDF button on FV Invoices** — generates a branded A4 PDF saved to `~/Downloads/`
+- **PDF button on DN Delivery Notes** — generates a branded A4 PDF saved to `~/Downloads/`
+- **PDF button on INV Invoices** — generates a branded A4 PDF saved to `~/Downloads/`
 - Both documents include:
   - Company logo (if set in Business Details), name, address, contact info
   - Document title, number and date in the configured theme colour (blue / green / monochrome)
@@ -87,8 +109,8 @@ A terminal-based warehouse/distribution management application built on the clas
   - Line items table with alternating row shading and themed header row
   - VAT number and Tax ID band (when configured)
   - Configurable footer text and page N / M numbering
-- **FV invoice extras**: Payment Details box (due date, terms, bank account), colour-coded Outstanding amount (red if unpaid, green if settled), linked WZ reference list
-- **WZ price toggle**: `doc_wz_show_prices = false` in Business Details hides Unit Price and Line Total columns
+- **INV invoice extras**: Payment Details box (due date, terms, bank account), colour-coded Outstanding amount (red if unpaid, green if settled), linked DN reference list
+- **DN price toggle**: `doc_dn_show_prices = false` in Business Details hides Unit Price and Line Total columns
 - All branding (logo, colours, titles, footer) controlled via the **Business Details** panel — no code changes needed
 
 ---
@@ -109,13 +131,13 @@ A terminal-based warehouse/distribution management application built on the clas
 ### New in v2.0 — Documents & Finance
 
 #### Document Workflow
-- **WZ — Delivery Notes** — create draft, add/remove line items, issue WZ (deducts stock)
-- **FV — Invoices** — generate from WZ or standalone; track payment status
-- **PZ — Goods Receipts** — record supplier deliveries, update stock on issue
-- **PW/RW — Stock Movements** — internal stock adjustments (receipts and issues)
+- **DN — Delivery Notes** — create draft, add/remove line items, issue DN (deducts stock)
+- **INV — Invoices** — generate from DN or standalone; track payment status
+- **GR — Goods Receipts** — record supplier deliveries, update stock on issue
+- **SI/SO — Stock Movements** — internal stock adjustments (receipts and issues)
 
 #### Finance
-- **Cash Register** — KP income entries, KW expense entries with running balance
+- **Cash Register** — CR income entries, CP expense entries with running balance
 - **Bank Account** — bank statement entries with cross-referenced Cash Register transfers
 
 #### Analytics
@@ -127,7 +149,7 @@ A terminal-based warehouse/distribution management application built on the clas
   - Press `R` to refresh charts
 - **10 KPI dashboard cards** — Orders Today, Revenue MTD, Low Stock, Pending Orders,
   Avg Fulfil Days, This Month trend arrow (↑/↓) and delta %, Cash Register Balance, Bank Account Balance,
-  Open Invoices, Open WZ
+  Open Invoices, Open DN
 - **11 report types** in the Reports dropdown with date-range filter and CSV export
 
 ---
@@ -179,12 +201,12 @@ A terminal-based warehouse/distribution management application built on the clas
 <table>
   <tr>
     <td align="center">
-      <a href="screenshots/wz-dv.png"><img src="screenshots/wz-dv.png" width="260" alt="WZ Delivery Note"/></a><br/>
-      <sub><b>WZ Delivery Note detail</b></sub>
+      <a href="screenshots/wz-dv.png"><img src="screenshots/wz-dv.png" width="260" alt="DN Delivery Note"/></a><br/>
+      <sub><b>DN Delivery Note detail</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/inv-dv-from-delivery-notes.png"><img src="screenshots/inv-dv-from-delivery-notes.png" width="260" alt="FV Invoice"/></a><br/>
-      <sub><b>FV Invoice (generated from delivery note)</b></sub>
+      <a href="screenshots/inv-dv-from-delivery-notes.png"><img src="screenshots/inv-dv-from-delivery-notes.png" width="260" alt="INV Invoice"/></a><br/>
+      <sub><b>INV Invoice (generated from delivery note)</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/odrers-dv.png"><img src="screenshots/odrers-dv.png" width="260" alt="Order detail"/></a><br/>
@@ -193,8 +215,8 @@ A terminal-based warehouse/distribution management application built on the clas
   </tr>
   <tr>
     <td align="center">
-      <a href="screenshots/invoice_pdf.png"><img src="screenshots/invoice_pdf.png" width="260" alt="FV Invoice PDF"/></a><br/>
-      <sub><b>FV Invoice — exported PDF (v2.1)</b></sub>
+      <a href="screenshots/invoice_pdf.png"><img src="screenshots/invoice_pdf.png" width="260" alt="INV Invoice PDF"/></a><br/>
+      <sub><b>INV Invoice — exported PDF (v2.1)</b></sub>
     </td>
   </tr>
 </table>
@@ -205,7 +227,7 @@ A terminal-based warehouse/distribution management application built on the clas
   <tr>
     <td align="center">
       <a href="screenshots/cash-lv.png"><img src="screenshots/cash-lv.png" width="260" alt="Kasa"/></a><br/>
-      <sub><b>Cash Register with KP/KW tabs</b></sub>
+      <sub><b>Cash Register with CR/CP tabs</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/bank-lv.png"><img src="screenshots/bank-lv.png" width="260" alt="Bank"/></a><br/>
@@ -214,8 +236,8 @@ A terminal-based warehouse/distribution management application built on the clas
   </tr>
   <tr>
     <td align="center">
-      <a href="screenshots/cash-in-receipt.png"><img src="screenshots/cash-in-receipt.png" width="260" alt="KP Cash Receipt PDF"/></a><br/>
-      <sub><b>KP Cash Receipt — exported PDF (v2.2)</b></sub>
+      <a href="screenshots/cash-in-receipt.png"><img src="screenshots/cash-in-receipt.png" width="260" alt="CR Cash Receipt PDF"/></a><br/>
+      <sub><b>CR Cash Receipt — exported PDF (v2.2)</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/bank-transfer-pdf.png"><img src="screenshots/bank-transfer-pdf.png" width="260" alt="Bank Entry PDF"/></a><br/>
@@ -300,11 +322,12 @@ northwind/
 │   ├── dashboard.py    # KPI aggregations + kpis_extended()
 │   ├── reports.py      # 11 report queries (sales, stock, trend, overdue…)
 │   ├── delete_guards.py # Centralized delete guards + side-effect handlers (v2.4)
-│   ├── wz.py           # WZ document CRUD + issue + cancel workflow
-│   ├── fv.py           # FV invoice CRUD + cancel
-│   ├── fk.py           # FK credit note CRUD + business logic (v2.4)
-│   ├── pz.py           # PZ goods receipt CRUD + cancel
-│   ├── kassa.py        # Cash Register entries
+│   ├── dn.py           # DN (Delivery Note) CRUD + issue + cancel workflow
+│   ├── inv.py          # INV (Invoice) CRUD + cancel
+│   ├── cn.py           # CN (Credit Note) CRUD + business logic (v2.4)
+│   ├── gr.py           # GR (Goods Receipt) CRUD + cancel
+│   ├── si_so.py        # SI/SO (Stock Issue / Stock Out) CRUD
+│   ├── cash.py         # Cash Register entries (CR/CP)
 │   ├── bank.py         # Bank Account entries
 │   └── ...             # customers, orders, products, employees, …
 ├── screens/            # Textual Widget subclasses (one per section)
@@ -312,18 +335,18 @@ northwind/
 │   ├── dashboard.py    # Dashboard KPI cards + recent orders
 │   ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
 │   ├── reports.py      # Reports panel with 11 report types + CSV export
-│   ├── fk.py           # FK Credit Notes panel + creation wizard + detail modal (v2.4)
+│   ├── cn.py           # CN Credit Notes panel + creation wizard + detail modal (v2.4)
 │   ├── modals.py       # Shared modals: ConfirmDelete, CancellationReason (v2.4)
-│   ├── wz.py           # WZ Delivery Notes panel + modals + cancel button
-│   ├── fv.py           # FV Invoices panel + modals + FK integration
-│   ├── pz.py           # PZ Goods Receipts panel + modals + cancel button
-│   └── ...             # sql, settings, business, users, kassa, bank, …
+│   ├── dn.py           # DN Delivery Notes panel + modals + cancel button
+│   ├── inv.py          # INV Invoices panel + modals + CN integration
+│   ├── gr.py           # GR Goods Receipts panel + modals + cancel button
+│   └── ...             # sql, settings, business, users, cash, bank, …
 └── tests/              # Automated test suite (v2.4)
     ├── conftest.py     # Fresh temp DB per test
     ├── test_data.py    # Core business logic (19 tests)
     ├── test_delete_guards.py  # Delete guards + side-effects (26 tests)
-    ├── test_cancellation.py   # WZ/FV/PZ cancellation (13 tests)
-    └── test_fk.py             # Credit Notes — all 3 types (24 tests)
+    ├── test_cancellation.py   # DN/INV/GR cancellation (13 tests)
+    └── test_cn.py             # Credit Notes — all 3 types (24 tests)
 ```
 
 ---
@@ -360,12 +383,12 @@ northwind/
 | `plotext` for ANSI ASCII charts inside Textual `Static` widgets | `screens/charts.py` |
 | `TabbedContent` + `TabPane` for multi-view panels | `screens/charts.py`, regions |
 | SQL window functions: `strftime`, `julianday`, `AVG` | `data/reports.py`, `data/dashboard.py` |
-| Document workflow state machine (draft → issued) | `data/wz.py`, `data/fv.py`, `data/pz.py` |
+| Document workflow state machine (draft → issued) | `data/dn.py`, `data/inv.py`, `data/gr.py` |
 | Key-value settings store for business/document config | `data/settings.py`, `screens/business.py` |
 | `fpdf2` subclassing for custom footers and multi-column layouts | `pdf_export.py` |
 | Embedding images and drawing shapes/lines with FPDF primitives | `pdf_export.py` |
 | Reusable PDF helpers (`_draw_header`, `_draw_amount_box`, `_draw_signature_line`) shared across document types | `pdf_export.py` |
-| Generating voucher-style single-entry PDFs (KP, KW, Bank) vs multi-line table PDFs (WZ, FV, PZ) | `pdf_export.py` |
+| Generating voucher-style single-entry PDFs (CR, CP, Bank) vs multi-line table PDFs (DN, INV, GR) | `pdf_export.py` |
 | CSS selector specificity in Textual — type+class beats class alone; later rules win on equal specificity | `northwind.tcss` |
 | `dock: bottom` to pin a widget (Save button) regardless of sibling content height | `northwind.tcss` |
 | `overflow-y: auto` on `TabPane` to make long forms scrollable within a tab | `northwind.tcss` |
@@ -376,10 +399,10 @@ northwind/
 | Hierarchical RBAC — numeric role levels with `has_permission()` comparator | `data/users.py` |
 | Centralized delete guards returning `(bool, list[str])` reason tuples | `data/delete_guards.py` |
 | Side-effect handlers that run before DELETE — payment reversal, stock restoration | `data/delete_guards.py` |
-| Document cancellation as a state-machine transition with audit fields (CancelledAt/By/Reason) | `data/wz.py`, `data/fv.py`, `data/pz.py` |
-| Credit note (FK) pattern — recording original vs corrected values per line item | `data/fk.py` |
-| In-place FV.TotalNet adjustment on FK creation + status recalculation | `data/fk.py` |
-| Multi-step creation wizard in a single ModalScreen (pick FV → type → items → confirm) | `screens/fk.py` |
+| Document cancellation as a state-machine transition with audit fields (CancelledAt/By/Reason) | `data/dn.py`, `data/inv.py`, `data/gr.py` |
+| Credit note (CN) pattern — recording original vs corrected values per line item | `data/cn.py` |
+| In-place INV.TotalNet adjustment on CN creation + status recalculation | `data/cn.py` |
+| Multi-step creation wizard in a single ModalScreen (pick INV → type → items → confirm) | `screens/cn.py` |
 | `conn.execute()` vs `conn.executescript()` for reliable schema migration on existing databases | `db.py` |
 | pytest fixtures with `tmp_path` for isolated per-test SQLite databases | `tests/conftest.py` |
-| Testing cross-document effects: Order → WZ → FV → KP → FK → verify all balances | `tests/test_fk.py` |
+| Testing cross-document effects: Order → DN → INV → CR → CN → verify all balances | `tests/test_cn.py` |

@@ -88,17 +88,17 @@ class BusinessDetailsPanel(Widget):
                         )
                         with Horizontal(classes="form-row"):
                             with Vertical(classes="form-field"):
-                                yield Label("WZ title")
-                                yield Input(placeholder="Delivery Note", id="f-doc-title-wz")
+                                yield Label("DN title")
+                                yield Input(placeholder="Delivery Note", id="f-doc-title-dn")
                             with Vertical(classes="form-field"):
-                                yield Label("FV title")
-                                yield Input(placeholder="Invoice", id="f-doc-title-fv")
+                                yield Label("INV title")
+                                yield Input(placeholder="Invoice", id="f-doc-title-inv")
                             with Vertical(classes="form-field"):
-                                yield Label("PZ title")
-                                yield Input(placeholder="Goods Receipt", id="f-doc-title-pz")
+                                yield Label("GR title")
+                                yield Input(placeholder="Goods Receipt", id="f-doc-title-gr")
                         with Horizontal(classes="setting-row"):
-                            yield Label("Show unit prices on WZ delivery notes")
-                            yield Switch(id="sw-wz-prices", value=True)
+                            yield Label("Show unit prices on DN delivery notes")
+                            yield Switch(id="sw-dn-prices", value=True)
 
             yield Button("Save", id="btn-save", variant="primary")
 
@@ -118,11 +118,11 @@ class BusinessDetailsPanel(Widget):
         self.query_one("#f-co-bank-account", Input).value = gs("co_bank_account", "")
         self.query_one("#f-doc-footer",      Input).value = gs("doc_footer",      "")
         self.query_one("#f-doc-theme",  Select).value     = gs("doc_theme",       "default")
-        self.query_one("#f-doc-title-wz",    Input).value = gs("doc_title_wz",    "Delivery Note")
-        self.query_one("#f-doc-title-fv",    Input).value = gs("doc_title_fv",    "Invoice")
-        self.query_one("#f-doc-title-pz",    Input).value = gs("doc_title_pz",    "Goods Receipt")
-        self.query_one("#sw-wz-prices", Switch).value = (
-            gs("doc_wz_show_prices", "true").lower() == "true"
+        self.query_one("#f-doc-title-dn",    Input).value = gs("doc_title_dn",    "Delivery Note")
+        self.query_one("#f-doc-title-inv",   Input).value = gs("doc_title_inv",   "Invoice")
+        self.query_one("#f-doc-title-gr",    Input).value = gs("doc_title_gr",    "Goods Receipt")
+        self.query_one("#sw-dn-prices", Switch).value = (
+            gs("doc_dn_show_prices", "true").lower() == "true"
         )
 
     @on(Button.Pressed, "#btn-save")
@@ -144,9 +144,9 @@ class BusinessDetailsPanel(Widget):
         theme_val = self.query_one("#f-doc-theme", Select).value
         if theme_val and theme_val != Select.BLANK:
             ss("doc_theme", str(theme_val))
-        ss("doc_title_wz",    self.query_one("#f-doc-title-wz",    Input).value.strip())
-        ss("doc_title_fv",    self.query_one("#f-doc-title-fv",    Input).value.strip())
-        ss("doc_title_pz",    self.query_one("#f-doc-title-pz",    Input).value.strip())
-        wz_prices = self.query_one("#sw-wz-prices", Switch).value
-        ss("doc_wz_show_prices", "true" if wz_prices else "false")
+        ss("doc_title_dn",    self.query_one("#f-doc-title-dn",    Input).value.strip())
+        ss("doc_title_inv",   self.query_one("#f-doc-title-inv",   Input).value.strip())
+        ss("doc_title_gr",    self.query_one("#f-doc-title-gr",    Input).value.strip())
+        dn_prices = self.query_one("#sw-dn-prices", Switch).value
+        ss("doc_dn_show_prices", "true" if dn_prices else "false")
         self.notify("Business details saved.", severity="information")

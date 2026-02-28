@@ -25,47 +25,47 @@ def can_delete_order(pk) -> tuple[bool, list[str]]:
     conn = get_connection()
     reasons = []
     rows = conn.execute(
-        "SELECT WZ_ID, WZ_Number FROM WZ WHERE OrderID=?", (pk,)
+        "SELECT DN_ID, DN_Number FROM DN WHERE OrderID=?", (pk,)
     ).fetchall()
     for r in rows:
-        reasons.append(f"WZ {r['WZ_Number']} exists for this order")
+        reasons.append(f"DN {r['DN_Number']} exists for this order")
     conn.close()
     return (len(reasons) == 0, _fmt_reasons(reasons))
 
 
-def can_delete_wz(pk) -> tuple[bool, list[str]]:
+def can_delete_dn(pk) -> tuple[bool, list[str]]:
     conn = get_connection()
     reasons = []
-    wz = conn.execute("SELECT Status FROM WZ WHERE WZ_ID=?", (pk,)).fetchone()
-    if not wz:
+    dn = conn.execute("SELECT Status FROM DN WHERE DN_ID=?", (pk,)).fetchone()
+    if not dn:
         conn.close()
         return (True, [])
-    status = wz[0]
+    status = dn[0]
     if status in ("issued", "invoiced", "cancelled"):
-        reasons.append(f"Cannot delete a WZ with status '{status}'")
-    # Check FV_WZ junction
-    fv_rows = conn.execute(
-        "SELECT f.FV_Number FROM FV_WZ fw JOIN FV f ON fw.FV_ID=f.FV_ID WHERE fw.WZ_ID=?",
+        reasons.append(f"Cannot delete a DN with status '{status}'")
+    # Check INV_DN junction
+    inv_rows = conn.execute(
+        "SELECT f.INV_Number FROM INV_DN fw JOIN INV f ON fw.INV_ID=f.INV_ID WHERE fw.DN_ID=?",
         (pk,),
     ).fetchall()
-    for r in fv_rows:
-        reasons.append(f"FV {r['FV_Number']} references this WZ")
+    for r in inv_rows:
+        reasons.append(f"INV {r['INV_Number']} references this DN")
     conn.close()
     return (len(reasons) == 0, _fmt_reasons(reasons))
 
 
-def can_delete_fv(pk) -> tuple[bool, list[str]]:
+def can_delete_inv(pk) -> tuple[bool, list[str]]:
     conn = get_connection()
     reasons = []
-    # Check KP references
-    kp_rows = conn.execute(
-        "SELECT KP_Number, Amount FROM KP WHERE FV_ID=?", (pk,)
+    # Check CR references
+    cr_rows = conn.execute(
+        "SELECT CR_Number, Amount FROM CR WHERE INV_ID=?", (pk,)
     ).fetchall()
-    for r in kp_rows:
-        reasons.append(f"KP {r['KP_Number']} (${r['Amount']:.2f}) references this invoice")
+    for r in cr_rows:
+        reasons.append(f"CR {r['CR_Number']} (${r['Amount']:.2f}) references this invoice")
     # Check BankEntry references
     be_rows = conn.execute(
-        "SELECT Entry_Number, Amount FROM BankEntry WHERE FV_ID=?", (pk,)
+        "SELECT Entry_Number, Amount FROM BankEntry WHERE INV_ID=?", (pk,)
     ).fetchall()
     for r in be_rows:
         reasons.append(f"Bank {r['Entry_Number']} (${r['Amount']:.2f}) references this invoice")
@@ -73,39 +73,39 @@ def can_delete_fv(pk) -> tuple[bool, list[str]]:
     return (len(reasons) == 0, _fmt_reasons(reasons))
 
 
-def can_delete_pz(pk) -> tuple[bool, list[str]]:
+def can_delete_gr(pk) -> tuple[bool, list[str]]:
     conn = get_connection()
     reasons = []
-    pz = conn.execute("SELECT Status FROM PZ WHERE PZ_ID=?", (pk,)).fetchone()
-    if not pz:
+    gr = conn.execute("SELECT Status FROM GR WHERE GR_ID=?", (pk,)).fetchone()
+    if not gr:
         conn.close()
         return (True, [])
-    if pz[0] in ("received", "cancelled"):
-        reasons.append(f"Cannot delete a PZ with status '{pz[0]}'")
-    # Check KW references
-    kw_rows = conn.execute(
-        "SELECT KW_Number FROM KW WHERE PZ_ID=?", (pk,)
+    if gr[0] in ("received", "cancelled"):
+        reasons.append(f"Cannot delete a GR with status '{gr[0]}'")
+    # Check CP references
+    cp_rows = conn.execute(
+        "SELECT CP_Number FROM CP WHERE GR_ID=?", (pk,)
     ).fetchall()
-    for r in kw_rows:
-        reasons.append(f"KW {r['KW_Number']} references this PZ")
+    for r in cp_rows:
+        reasons.append(f"CP {r['CP_Number']} references this GR")
     # Check BankEntry references
     be_rows = conn.execute(
-        "SELECT Entry_Number FROM BankEntry WHERE PZ_ID=?", (pk,)
+        "SELECT Entry_Number FROM BankEntry WHERE GR_ID=?", (pk,)
     ).fetchall()
     for r in be_rows:
-        reasons.append(f"Bank {r['Entry_Number']} references this PZ")
+        reasons.append(f"Bank {r['Entry_Number']} references this GR")
     conn.close()
     return (len(reasons) == 0, _fmt_reasons(reasons))
 
 
-def can_delete_pw(pk) -> tuple[bool, list[str]]:
-    """Block PW deletion if reversing stock would make any product negative."""
+def can_delete_si(pk) -> tuple[bool, list[str]]:
+    """Block SI deletion if reversing stock would make any product negative."""
     conn = get_connection()
     reasons = []
     items = conn.execute(
         "SELECT pi.ProductID, pi.Quantity, p.ProductName, p.UnitsInStock "
-        "FROM PW_Items pi JOIN Products p ON pi.ProductID=p.ProductID "
-        "WHERE pi.PW_ID=?",
+        "FROM SI_Items pi JOIN Products p ON pi.ProductID=p.ProductID "
+        "WHERE pi.SI_ID=?",
         (pk,),
     ).fetchall()
     for it in items:
@@ -120,58 +120,58 @@ def can_delete_pw(pk) -> tuple[bool, list[str]]:
 
 # ── Side-effect handlers (call BEFORE the actual DELETE) ─────────────────────
 
-def before_delete_fv(pk) -> None:
-    """Restore linked WZ docs to 'issued' status (existing logic, now centralized)."""
+def before_delete_inv(pk) -> None:
+    """Restore linked DN docs to 'issued' status (existing logic, now centralized)."""
     conn = get_connection()
     conn.execute(
-        "UPDATE WZ SET Status='issued' WHERE WZ_ID IN "
-        "(SELECT WZ_ID FROM FV_WZ WHERE FV_ID=?)",
+        "UPDATE DN SET Status='issued' WHERE DN_ID IN "
+        "(SELECT DN_ID FROM INV_DN WHERE INV_ID=?)",
         (pk,),
     )
     conn.commit()
     conn.close()
 
 
-def before_delete_kp(pk) -> None:
-    """Decrement FV.PaidAmount and recalculate FV.Status when KP is deleted."""
+def before_delete_cr(pk) -> None:
+    """Decrement INV.PaidAmount and recalculate INV.Status when CR is deleted."""
     conn = get_connection()
-    kp = conn.execute("SELECT FV_ID, Amount FROM KP WHERE KP_ID=?", (pk,)).fetchone()
-    if kp and kp["FV_ID"]:
-        fv_id = kp["FV_ID"]
-        amount = kp["Amount"]
+    cr = conn.execute("SELECT INV_ID, Amount FROM CR WHERE CR_ID=?", (pk,)).fetchone()
+    if cr and cr["INV_ID"]:
+        inv_id = cr["INV_ID"]
+        amount = cr["Amount"]
         conn.execute(
-            "UPDATE FV SET PaidAmount = MAX(PaidAmount - ?, 0) WHERE FV_ID=?",
-            (amount, fv_id),
+            "UPDATE INV SET PaidAmount = MAX(PaidAmount - ?, 0) WHERE INV_ID=?",
+            (amount, inv_id),
         )
-        _recalc_fv_status(fv_id, conn)
+        _recalc_inv_status(inv_id, conn)
     conn.commit()
     conn.close()
 
 
 def before_delete_bank_entry(pk) -> None:
-    """Decrement FV.PaidAmount when a BankEntry linked to an FV is deleted."""
+    """Decrement INV.PaidAmount when a BankEntry linked to an INV is deleted."""
     conn = get_connection()
     entry = conn.execute(
-        "SELECT FV_ID, Amount, Direction FROM BankEntry WHERE Entry_ID=?", (pk,)
+        "SELECT INV_ID, Amount, Direction FROM BankEntry WHERE Entry_ID=?", (pk,)
     ).fetchone()
-    if entry and entry["FV_ID"] and entry["Direction"] == "in":
-        fv_id = entry["FV_ID"]
+    if entry and entry["INV_ID"] and entry["Direction"] == "in":
+        inv_id = entry["INV_ID"]
         amount = entry["Amount"]
         conn.execute(
-            "UPDATE FV SET PaidAmount = MAX(PaidAmount - ?, 0) WHERE FV_ID=?",
-            (amount, fv_id),
+            "UPDATE INV SET PaidAmount = MAX(PaidAmount - ?, 0) WHERE INV_ID=?",
+            (amount, inv_id),
         )
-        _recalc_fv_status(fv_id, conn)
+        _recalc_inv_status(inv_id, conn)
     conn.commit()
     conn.close()
 
 
-def before_delete_pw(pk) -> None:
-    """Reverse stock increases when PW is deleted."""
+def before_delete_si(pk) -> None:
+    """Reverse stock increases when SI is deleted."""
     from data.products import apply_stock_delta
     conn = get_connection()
     items = conn.execute(
-        "SELECT ProductID, Quantity FROM PW_Items WHERE PW_ID=?", (pk,)
+        "SELECT ProductID, Quantity FROM SI_Items WHERE SI_ID=?", (pk,)
     ).fetchall()
     for it in items:
         apply_stock_delta(it["ProductID"], -it["Quantity"], conn)
@@ -179,12 +179,12 @@ def before_delete_pw(pk) -> None:
     conn.close()
 
 
-def before_delete_rw(pk) -> None:
-    """Reverse stock decreases when RW is deleted."""
+def before_delete_so(pk) -> None:
+    """Reverse stock decreases when SO is deleted."""
     from data.products import apply_stock_delta
     conn = get_connection()
     items = conn.execute(
-        "SELECT ProductID, Quantity FROM RW_Items WHERE RW_ID=?", (pk,)
+        "SELECT ProductID, Quantity FROM SO_Items WHERE SO_ID=?", (pk,)
     ).fetchall()
     for it in items:
         apply_stock_delta(it["ProductID"], it["Quantity"], conn)
@@ -199,10 +199,10 @@ def can_delete_product(pk) -> tuple[bool, list[str]]:
     reasons = []
     tables = [
         ("OrderDetails", "ProductID", "order detail(s)"),
-        ("WZ_Items", "ProductID", "WZ item(s)"),
-        ("PZ_Items", "ProductID", "PZ item(s)"),
-        ("PW_Items", "ProductID", "PW item(s)"),
-        ("RW_Items", "ProductID", "RW item(s)"),
+        ("DN_Items", "ProductID", "DN item(s)"),
+        ("GR_Items", "ProductID", "GR item(s)"),
+        ("SI_Items", "ProductID", "SI item(s)"),
+        ("SO_Items", "ProductID", "SO item(s)"),
     ]
     for table, col, label in tables:
         cnt = conn.execute(
@@ -219,9 +219,9 @@ def can_delete_customer(pk) -> tuple[bool, list[str]]:
     reasons = []
     tables = [
         ("Orders", "CustomerID", "order(s)"),
-        ("WZ", "CustomerID", "WZ document(s)"),
-        ("FV", "CustomerID", "invoice(s)"),
-        ("KP", "CustomerID", "KP receipt(s)"),
+        ("DN", "CustomerID", "DN document(s)"),
+        ("INV", "CustomerID", "invoice(s)"),
+        ("CR", "CustomerID", "CR receipt(s)"),
         ("BankEntry", "CustomerID", "bank entry(ies)"),
     ]
     for table, col, label in tables:
@@ -239,8 +239,8 @@ def can_delete_supplier(pk) -> tuple[bool, list[str]]:
     reasons = []
     tables = [
         ("Products", "SupplierID", "product(s)"),
-        ("PZ", "SupplierID", "PZ document(s)"),
-        ("KW", "SupplierID", "KW payment(s)"),
+        ("GR", "SupplierID", "GR document(s)"),
+        ("CP", "SupplierID", "CP payment(s)"),
         ("BankEntry", "SupplierID", "bank entry(ies)"),
     ]
     for table, col, label in tables:
@@ -294,11 +294,11 @@ def can_delete_shipper(pk) -> tuple[bool, list[str]]:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _recalc_fv_status(fv_id: int, conn) -> None:
-    """Recalculate FV.Status based on current PaidAmount vs TotalNet."""
+def _recalc_inv_status(inv_id: int, conn) -> None:
+    """Recalculate INV.Status based on current PaidAmount vs TotalNet."""
     row = conn.execute(
-        "SELECT TotalNet, COALESCE(PaidAmount, 0) FROM FV WHERE FV_ID=?",
-        (fv_id,),
+        "SELECT TotalNet, COALESCE(PaidAmount, 0) FROM INV WHERE INV_ID=?",
+        (inv_id,),
     ).fetchone()
     if not row:
         return
@@ -309,4 +309,4 @@ def _recalc_fv_status(fv_id: int, conn) -> None:
         status = "partial"
     else:
         status = "issued"
-    conn.execute("UPDATE FV SET Status=? WHERE FV_ID=?", (status, fv_id))
+    conn.execute("UPDATE INV SET Status=? WHERE INV_ID=?", (status, inv_id))

@@ -6,7 +6,7 @@ Northwind seed data. No TUI is launched.
 from datetime import date
 
 import db
-from data import products, settings, users, wz, pz
+from data import products, settings, users, dn, gr
 
 
 # ── Doc Numbering ─────────────────────────────────────────────────────────────
@@ -14,19 +14,19 @@ from data import products, settings, users, wz, pz
 
 class TestDocNumbering:
     def test_format(self):
-        """next_doc_number returns the expected WZ/YYYY/001 format."""
+        """next_doc_number returns the expected DN/YYYY/001 format."""
         conn = db.get_connection()
-        num = db.next_doc_number("WZ", conn)
+        num = db.next_doc_number("DN", conn)
         conn.commit()
         conn.close()
         year = date.today().year
-        assert num == f"WZ/{year}/001"
+        assert num == f"DN/{year}/001"
 
     def test_sequential_increment(self):
         """Consecutive calls increment the counter: 001 → 002."""
         conn = db.get_connection()
-        n1 = db.next_doc_number("WZ", conn)
-        n2 = db.next_doc_number("WZ", conn)
+        n1 = db.next_doc_number("DN", conn)
+        n2 = db.next_doc_number("DN", conn)
         conn.commit()
         conn.close()
         assert n1.endswith("/001")
@@ -35,14 +35,14 @@ class TestDocNumbering:
     def test_new_year_resets(self):
         """A different year starts at 001 again."""
         conn = db.get_connection()
-        db.next_doc_number("WZ", conn)  # creates 2026/001
+        db.next_doc_number("DN", conn)  # creates 2026/001
         conn.commit()
         conn.close()
         # Verify the sequence exists for current year
         year = date.today().year
         conn = db.get_connection()
         row = conn.execute(
-            "SELECT LastNum FROM DocSequence WHERE DocType='WZ' AND Year=?",
+            "SELECT LastNum FROM DocSequence WHERE DocType='DN' AND Year=?",
             (year,),
         ).fetchone()
         assert row[0] == 1
@@ -50,7 +50,7 @@ class TestDocNumbering:
         # for that year would start at 001
         next_year = year + 1
         row = conn.execute(
-            "SELECT LastNum FROM DocSequence WHERE DocType='WZ' AND Year=?",
+            "SELECT LastNum FROM DocSequence WHERE DocType='DN' AND Year=?",
             (next_year,),
         ).fetchone()
         assert row is None  # no sequence → next_doc_number would create 001
@@ -130,72 +130,72 @@ class TestProducts:
             assert p["UnitsInStock"] <= p["ReorderLevel"]
 
 
-# ── WZ Workflow ──────────────────────────────────────────────────────────────
+# ── DN Workflow ──────────────────────────────────────────────────────────────
 
 
-class TestWZWorkflow:
+class TestDNWorkflow:
     def test_create_draft_with_items(self):
-        """Create a draft WZ and add items to it."""
-        wz_id = wz.create_draft("ALFKI", str(date.today()))
-        wz.add_item(wz_id, 1, 5, 18.00)
-        wz.add_item(wz_id, 2, 3, 19.00)
-        items = wz.fetch_items(wz_id)
+        """Create a draft DN and add items to it."""
+        dn_id = dn.create_draft("ALFKI", str(date.today()))
+        dn.add_item(dn_id, 1, 5, 18.00)
+        dn.add_item(dn_id, 2, 3, 19.00)
+        items = dn.fetch_items(dn_id)
         assert len(items) == 2
-        doc = wz.get_by_pk(wz_id)
+        doc = dn.get_by_pk(dn_id)
         assert doc["Status"] == "draft"
 
     def test_issue_reduces_stock(self):
-        """Issuing a WZ decrements UnitsInStock for each item."""
+        """Issuing a DN decrements UnitsInStock for each item."""
         stock_before = products.get_stock(1)
-        wz_id = wz.create_draft("ALFKI", str(date.today()))
-        wz.add_item(wz_id, 1, 3, 18.00)
-        wz.issue(wz_id)
+        dn_id = dn.create_draft("ALFKI", str(date.today()))
+        dn.add_item(dn_id, 1, 3, 18.00)
+        dn.issue(dn_id)
         assert products.get_stock(1) == stock_before - 3
-        doc = wz.get_by_pk(wz_id)
+        doc = dn.get_by_pk(dn_id)
         assert doc["Status"] == "issued"
 
-    def test_issued_wz_cannot_be_reissued(self):
-        """An already-issued WZ raises ValueError on second issue."""
-        wz_id = wz.create_draft("ALFKI", str(date.today()))
-        wz.add_item(wz_id, 1, 1, 18.00)
-        wz.issue(wz_id)
+    def test_issued_dn_cannot_be_reissued(self):
+        """An already-issued DN raises ValueError on second issue."""
+        dn_id = dn.create_draft("ALFKI", str(date.today()))
+        dn.add_item(dn_id, 1, 1, 18.00)
+        dn.issue(dn_id)
         import pytest
         with pytest.raises(ValueError, match="already issued"):
-            wz.issue(wz_id)
+            dn.issue(dn_id)
 
 
-# ── PZ Workflow ──────────────────────────────────────────────────────────────
+# ── GR Workflow ──────────────────────────────────────────────────────────────
 
 
-class TestPZWorkflow:
+class TestGRWorkflow:
     def test_create_pz_with_items(self):
-        """Create a draft PZ and add items."""
-        pz_id = pz.create_draft(1, str(date.today()))
-        pz.add_item(pz_id, 1, 10, 15.00)
-        items = pz.fetch_items(pz_id)
+        """Create a draft GR and add items."""
+        gr_id = gr.create_draft(1, str(date.today()))
+        gr.add_item(gr_id, 1, 10, 15.00)
+        items = gr.fetch_items(gr_id)
         assert len(items) == 1
-        doc = pz.get_by_pk(pz_id)
+        doc = gr.get_by_pk(gr_id)
         assert doc["Status"] == "draft"
 
     def test_receive_increases_stock(self):
-        """Receiving a PZ increments UnitsInStock for each item."""
+        """Receiving a GR increments UnitsInStock for each item."""
         stock_before = products.get_stock(1)
-        pz_id = pz.create_draft(1, str(date.today()))
-        pz.add_item(pz_id, 1, 20, 15.00)
-        pz.receive(pz_id)
+        gr_id = gr.create_draft(1, str(date.today()))
+        gr.add_item(gr_id, 1, 20, 15.00)
+        gr.receive(gr_id)
         assert products.get_stock(1) == stock_before + 20
-        doc = pz.get_by_pk(pz_id)
+        doc = gr.get_by_pk(gr_id)
         assert doc["Status"] == "received"
 
     def test_cash_payment_doc_on_receive(self):
-        """Receiving a PZ with payment_method='cash' auto-creates a KW."""
-        from data.kassa import fetch_all_kw
-        kw_before = len(fetch_all_kw())
-        pz_id = pz.create_draft(1, str(date.today()), payment_method="cash")
-        pz.add_item(pz_id, 1, 5, 10.00)
-        pz.receive(pz_id)
-        kw_after = len(fetch_all_kw())
-        assert kw_after == kw_before + 1
+        """Receiving a GR with payment_method='cash' auto-creates a CP."""
+        from data.cash import fetch_all_cp
+        cp_before = len(fetch_all_cp())
+        gr_id = gr.create_draft(1, str(date.today()), payment_method="cash")
+        gr.add_item(gr_id, 1, 5, 10.00)
+        gr.receive(gr_id)
+        cp_after = len(fetch_all_cp())
+        assert cp_after == cp_before + 1
 
 
 # ── Settings ─────────────────────────────────────────────────────────────────

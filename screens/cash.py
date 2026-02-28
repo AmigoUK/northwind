@@ -1,5 +1,5 @@
 from __future__ import annotations
-"""screens/kassa.py — Cash register panel (KP receipts + KW payments)."""
+"""screens/cash.py — Cash register panel (CR receipts + CP payments)."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -7,15 +7,15 @@ from textual.widget import Widget
 from textual.widgets import Button, DataTable, Input, Label, Static, TabbedContent, TabPane
 from textual import on
 
-import data.kassa as kassadata
+import data.cash as cashdata
 import data.customers as cdata
 import data.suppliers as sdata
 from data.settings import get_currency_symbol
 from screens.modals import ConfirmDeleteModal, PickerModal
 
 
-class KPFormModal(ModalScreen):
-    """Create a manual KP cash receipt."""
+class CRFormModal(ModalScreen):
+    """Create a manual CR cash receipt."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -23,7 +23,7 @@ class KPFormModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("New KP — Cash Receipt", classes="modal-title")
+            yield Label("New CR — Cash Receipt", classes="modal-title")
             yield Label("Customer (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-cust")
@@ -67,8 +67,8 @@ class KPFormModal(ModalScreen):
             return
         desc = self.query_one("#f-desc", Input).value.strip()
         try:
-            kassadata.create_kp(self._customer_id, None, amount, desc)
-            self.notify("KP created.", severity="information")
+            cashdata.create_cr(self._customer_id, None, amount, desc)
+            self.notify("CR created.", severity="information")
             self.dismiss(True)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
@@ -82,8 +82,8 @@ class KPFormModal(ModalScreen):
             self.dismiss(False)
 
 
-class KWFormModal(ModalScreen):
-    """Create a manual KW cash payment."""
+class CPFormModal(ModalScreen):
+    """Create a manual CP cash payment."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -91,7 +91,7 @@ class KWFormModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("New KW — Cash Payment", classes="modal-title")
+            yield Label("New CP — Cash Payment", classes="modal-title")
             yield Label("Supplier (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-sup")
@@ -135,8 +135,8 @@ class KWFormModal(ModalScreen):
             return
         desc = self.query_one("#f-desc", Input).value.strip()
         try:
-            kassadata.create_kw(self._supplier_id, None, amount, desc)
-            self.notify("KW created.", severity="information")
+            cashdata.create_cp(self._supplier_id, None, amount, desc)
+            self.notify("CP created.", severity="information")
             self.dismiss(True)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
@@ -194,112 +194,112 @@ class TransferModal(ModalScreen):
             self.dismiss(None)
 
 
-class KassaPanel(Widget):
-    """Cash register panel with KP and KW tabs and running balance."""
+class CashPanel(Widget):
+    """Cash register panel with CR and CP tabs and running balance."""
 
     BINDINGS = [
         ("n", "new_record",   "New Entry"),
         ("f", "focus_search", "Search"),
     ]
 
-    _kp_selected: str | None = None
-    _kw_selected: str | None = None
+    _cr_selected: str | None = None
+    _cp_selected: str | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="panel-container"):
-            yield Static("", id="kassa-balance")
+            yield Static("", id="cash-balance")
             with Horizontal(classes="toolbar"):
                 yield Button("→ Bank Acct", id="btn-transfer-bank", variant="warning")
-            with TabbedContent(id="kassa-tabs"):
-                with TabPane("KP — Receipts", id="tab-kp"):
+            with TabbedContent(id="cash-tabs"):
+                with TabPane("CR — Receipts", id="tab-cr"):
                     with Vertical():
-                        yield DataTable(id="kp-tbl", cursor_type="row", zebra_stripes=True)
+                        yield DataTable(id="cr-tbl", cursor_type="row", zebra_stripes=True)
                         with Horizontal(classes="toolbar"):
-                            yield Button("+ New KP", id="btn-new-kp", variant="success")
-                            yield Button("PDF",      id="btn-pdf-kp")
-                            yield Button("Delete",   id="btn-del-kp", variant="error")
-                            yield Label("", id="kp-count", classes="count-label")
-                with TabPane("KW — Payments", id="tab-kw"):
+                            yield Button("+ New CR", id="btn-new-cr", variant="success")
+                            yield Button("PDF",      id="btn-pdf-cr")
+                            yield Button("Delete",   id="btn-del-cr", variant="error")
+                            yield Label("", id="cr-count", classes="count-label")
+                with TabPane("CP — Payments", id="tab-cp"):
                     with Vertical():
-                        yield DataTable(id="kw-tbl", cursor_type="row", zebra_stripes=True)
+                        yield DataTable(id="cp-tbl", cursor_type="row", zebra_stripes=True)
                         with Horizontal(classes="toolbar"):
-                            yield Button("+ New KW", id="btn-new-kw", variant="success")
-                            yield Button("PDF",      id="btn-pdf-kw")
-                            yield Button("Delete",   id="btn-del-kw", variant="error")
-                            yield Label("", id="kw-count", classes="count-label")
+                            yield Button("+ New CP", id="btn-new-cp", variant="success")
+                            yield Button("PDF",      id="btn-pdf-cp")
+                            yield Button("Delete",   id="btn-del-cp", variant="error")
+                            yield Label("", id="cp-count", classes="count-label")
 
     def on_mount(self) -> None:
-        kp_tbl = self.query_one("#kp-tbl", DataTable)
+        cr_tbl = self.query_one("#cr-tbl", DataTable)
         for label, width in [
             ("ID", 6), ("Number", 16), ("Date", 12), ("Customer", 22),
             ("Amount", 12), ("Description", 20),
         ]:
-            kp_tbl.add_column(label, width=width)
+            cr_tbl.add_column(label, width=width)
 
-        kw_tbl = self.query_one("#kw-tbl", DataTable)
+        cp_tbl = self.query_one("#cp-tbl", DataTable)
         for label, width in [
             ("ID", 6), ("Number", 16), ("Date", 12), ("Supplier", 22),
             ("Amount", 12), ("Description", 20),
         ]:
-            kw_tbl.add_column(label, width=width)
+            cp_tbl.add_column(label, width=width)
 
         self._refresh_all()
 
     def _refresh_all(self) -> None:
-        self._refresh_kp()
-        self._refresh_kw()
+        self._refresh_cr()
+        self._refresh_cp()
         self._refresh_balance()
 
     def _refresh_balance(self) -> None:
         sym = get_currency_symbol()
-        kp_total = kassadata.cash_balance_kp()
-        kw_total = kassadata.cash_balance_kw()
-        balance = kp_total - kw_total
-        self.query_one("#kassa-balance", Static).update(
-            f"[b]Cash Balance:[/b]  In: {sym}{kp_total:.2f}  "
-            f"Out: {sym}{kw_total:.2f}  "
+        cr_total = cashdata.cash_balance_cr()
+        cp_total = cashdata.cash_balance_cp()
+        balance = cr_total - cp_total
+        self.query_one("#cash-balance", Static).update(
+            f"[b]Cash Balance:[/b]  In: {sym}{cr_total:.2f}  "
+            f"Out: {sym}{cp_total:.2f}  "
             f"Net: [bold]{sym}{balance:.2f}[/bold]"
         )
 
-    def _refresh_kp(self) -> None:
-        tbl = self.query_one("#kp-tbl", DataTable)
+    def _refresh_cr(self) -> None:
+        tbl = self.query_one("#cr-tbl", DataTable)
         tbl.clear()
         sym = get_currency_symbol()
-        rows = kassadata.fetch_all_kp()
+        rows = cashdata.fetch_all_cr()
         for row in rows:
             display = list(row)
             if display[4] is not None:
                 display[4] = f"{sym}{float(display[4]):.2f}"
             tbl.add_row(*[str(c) if c is not None else "" for c in display], key=str(row[0]))
         try:
-            self.query_one("#kp-count", Label).update(f"{len(rows)} records")
+            self.query_one("#cr-count", Label).update(f"{len(rows)} records")
         except Exception:
             pass
 
-    def _refresh_kw(self) -> None:
-        tbl = self.query_one("#kw-tbl", DataTable)
+    def _refresh_cp(self) -> None:
+        tbl = self.query_one("#cp-tbl", DataTable)
         tbl.clear()
         sym = get_currency_symbol()
-        rows = kassadata.fetch_all_kw()
+        rows = cashdata.fetch_all_cp()
         for row in rows:
             display = list(row)
             if display[4] is not None:
                 display[4] = f"{sym}{float(display[4]):.2f}"
             tbl.add_row(*[str(c) if c is not None else "" for c in display], key=str(row[0]))
         try:
-            self.query_one("#kw-count", Label).update(f"{len(rows)} records")
+            self.query_one("#cp-count", Label).update(f"{len(rows)} records")
         except Exception:
             pass
 
-    @on(DataTable.RowHighlighted, "#kp-tbl")
-    def on_kp_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    @on(DataTable.RowHighlighted, "#cr-tbl")
+    def on_cr_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key:
-            self._kp_selected = event.row_key.value
+            self._cr_selected = event.row_key.value
 
-    @on(DataTable.RowHighlighted, "#kw-tbl")
-    def on_kw_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    @on(DataTable.RowHighlighted, "#cp-tbl")
+    def on_cp_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key:
-            self._kw_selected = event.row_key.value
+            self._cp_selected = event.row_key.value
 
     @on(Button.Pressed, "#btn-transfer-bank")
     def on_transfer_to_bank(self) -> None:
@@ -307,98 +307,98 @@ class KassaPanel(Widget):
             if result:
                 amount, desc = result
                 try:
-                    kassadata.transfer_to_bank(amount, desc)
+                    cashdata.transfer_to_bank(amount, desc)
                     self._refresh_all()
                     self.notify(f"Transferred to bank: {amount:.2f}", severity="information")
                 except Exception as e:
                     self.notify(f"Transfer failed: {e}", severity="error")
         self.app.push_screen(TransferModal("Transfer Cash → Bank Account"), callback=after)
 
-    @on(Button.Pressed, "#btn-pdf-kp")
-    def on_pdf_kp(self) -> None:
-        if not self._kp_selected:
-            self.notify("Select a KP entry first.", severity="warning")
+    @on(Button.Pressed, "#btn-pdf-cr")
+    def on_pdf_cr(self) -> None:
+        if not self._cr_selected:
+            self.notify("Select a CR entry first.", severity="warning")
             return
         try:
             import pdf_export
-            path = pdf_export.export_kp(int(self._kp_selected))
+            path = pdf_export.export_cr(int(self._cr_selected))
             self.notify(f"PDF saved → {path}", severity="information")
         except Exception as e:
             self.notify(f"PDF error: {e}", severity="error")
 
-    @on(Button.Pressed, "#btn-pdf-kw")
-    def on_pdf_kw(self) -> None:
-        if not self._kw_selected:
-            self.notify("Select a KW entry first.", severity="warning")
+    @on(Button.Pressed, "#btn-pdf-cp")
+    def on_pdf_cp(self) -> None:
+        if not self._cp_selected:
+            self.notify("Select a CP entry first.", severity="warning")
             return
         try:
             import pdf_export
-            path = pdf_export.export_kw(int(self._kw_selected))
+            path = pdf_export.export_cp(int(self._cp_selected))
             self.notify(f"PDF saved → {path}", severity="information")
         except Exception as e:
             self.notify(f"PDF error: {e}", severity="error")
 
-    @on(Button.Pressed, "#btn-new-kp")
-    def on_new_kp(self) -> None:
+    @on(Button.Pressed, "#btn-new-cr")
+    def on_new_cr(self) -> None:
         def after(saved):
             if saved:
                 self._refresh_all()
-        self.app.push_screen(KPFormModal(), callback=after)
+        self.app.push_screen(CRFormModal(), callback=after)
 
-    @on(Button.Pressed, "#btn-new-kw")
-    def on_new_kw(self) -> None:
+    @on(Button.Pressed, "#btn-new-cp")
+    def on_new_cp(self) -> None:
         def after(saved):
             if saved:
                 self._refresh_all()
-        self.app.push_screen(KWFormModal(), callback=after)
+        self.app.push_screen(CPFormModal(), callback=after)
 
-    @on(Button.Pressed, "#btn-del-kp")
-    def on_delete_kp(self) -> None:
-        if not self._kp_selected:
-            self.notify("Select a KP entry first.", severity="warning")
+    @on(Button.Pressed, "#btn-del-cr")
+    def on_delete_cr(self) -> None:
+        if not self._cr_selected:
+            self.notify("Select a CR entry first.", severity="warning")
             return
         def after(confirmed):
             if confirmed:
                 try:
-                    kassadata.delete_kp(int(self._kp_selected))
-                    self._kp_selected = None
+                    cashdata.delete_cr(int(self._cr_selected))
+                    self._cr_selected = None
                     self._refresh_all()
-                    self.notify("KP deleted.", severity="information")
+                    self.notify("CR deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"KP #{self._kp_selected}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"CR #{self._cr_selected}"), callback=after)
 
-    @on(Button.Pressed, "#btn-del-kw")
-    def on_delete_kw(self) -> None:
-        if not self._kw_selected:
-            self.notify("Select a KW entry first.", severity="warning")
+    @on(Button.Pressed, "#btn-del-cp")
+    def on_delete_cp(self) -> None:
+        if not self._cp_selected:
+            self.notify("Select a CP entry first.", severity="warning")
             return
         def after(confirmed):
             if confirmed:
                 try:
-                    kassadata.delete_kw(int(self._kw_selected))
-                    self._kw_selected = None
+                    cashdata.delete_cp(int(self._cp_selected))
+                    self._cp_selected = None
                     self._refresh_all()
-                    self.notify("KW deleted.", severity="information")
+                    self.notify("CP deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"KW #{self._kw_selected}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"CP #{self._cp_selected}"), callback=after)
 
     def action_new_record(self) -> None:
         try:
             active = self.query_one(TabbedContent).active
         except Exception:
-            active = "tab-kp"
-        if active == "tab-kw":
+            active = "tab-cr"
+        if active == "tab-cp":
             def after(saved):
                 if saved:
                     self._refresh_all()
-            self.app.push_screen(KWFormModal(), callback=after)
+            self.app.push_screen(CPFormModal(), callback=after)
         else:
             def after(saved):
                 if saved:
                     self._refresh_all()
-            self.app.push_screen(KPFormModal(), callback=after)
+            self.app.push_screen(CRFormModal(), callback=after)
 
     def refresh_data(self) -> None:
         self._refresh_all()

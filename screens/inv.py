@@ -1,5 +1,5 @@
 from __future__ import annotations
-"""screens/fv.py — FV (Faktura VAT) panel, detail, and creation flow."""
+"""screens/inv.py — INV (Invoice) panel, detail, and creation flow."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -7,37 +7,37 @@ from textual.widget import Widget
 from textual.widgets import Button, DataTable, Input, Label, Select, Static
 from textual import on
 
-import data.fv as fvdata
+import data.inv as invdata
 import data.customers as cdata
-import data.wz as wzdata
+import data.dn as dndata
 from data.settings import get_currency_symbol
 from data.users import has_permission
 from screens.modals import ConfirmDeleteModal, CancellationReasonModal, PickerModal
 
 
-class FVNewModal(ModalScreen):
-    """Multi-step modal to create a new FV invoice."""
+class INVNewModal(ModalScreen):
+    """Multi-step modal to create a new INV invoice."""
 
     def __init__(self) -> None:
         super().__init__()
         self._customer_id = None
         self._customer_name = ""
-        self._selected_wz_ids: set[int] = set()
+        self._selected_dn_ids: set[int] = set()
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="order-detail-dialog"):
-            yield Label("New FV — Faktura VAT", classes="modal-title")
+            yield Label("New INV — Invoice", classes="modal-title")
             yield Label("Customer *:")
             with Horizontal():
                 yield Label("(none)", id="lbl-customer")
                 yield Button("Pick Customer", id="btn-pick-cust")
-            yield Label("Available WZ (issued, not invoiced):", classes="section-label")
-            yield DataTable(id="wz-tbl", cursor_type="row", zebra_stripes=True)
-            yield Static("", id="wz-hint")
+            yield Label("Available DN (issued, not invoiced):", classes="section-label")
+            yield DataTable(id="dn-tbl", cursor_type="row", zebra_stripes=True)
+            yield Static("", id="dn-hint")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
-                    yield Label("FV Date (YYYY-MM-DD) *:")
-                    yield Input(id="f-fvdate", placeholder="2026-01-01")
+                    yield Label("INV Date (YYYY-MM-DD) *:")
+                    yield Input(id="f-invdate", placeholder="2026-01-01")
                 with Vertical(classes="form-field"):
                     yield Label("Payment Terms:")
                     yield Select(
@@ -62,54 +62,54 @@ class FVNewModal(ModalScreen):
             with Horizontal(classes="modal-buttons"):
                 yield Button("Create Invoice", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
-            yield Label("Space=toggle WZ selection  ESC=close", classes="modal-hint")
+            yield Label("Space=toggle DN selection  ESC=close", classes="modal-hint")
 
     def on_mount(self) -> None:
         from datetime import date
-        self.query_one("#f-fvdate", Input).value = str(date.today())
-        tbl = self.query_one("#wz-tbl", DataTable)
+        self.query_one("#f-invdate", Input).value = str(date.today())
+        tbl = self.query_one("#dn-tbl", DataTable)
         for label, width in [
-            ("Sel", 4), ("WZ_ID", 6), ("Number", 20), ("Date", 12), ("Total", 12),
+            ("Sel", 4), ("DN_ID", 6), ("Number", 20), ("Date", 12), ("Total", 12),
         ]:
             tbl.add_column(label, width=width)
         self._update_due_label()
 
     def _update_due_label(self) -> None:
         from datetime import date, timedelta
-        fv_date_str = self.query_one("#f-fvdate", Input).value.strip()
+        inv_date_str = self.query_one("#f-invdate", Input).value.strip()
         terms = self.query_one("#f-terms", Select).value
         try:
-            fv_date = date.fromisoformat(fv_date_str)
+            inv_date = date.fromisoformat(inv_date_str)
             days = int(terms) if terms != Select.BLANK else 30
-            due_date = fv_date + timedelta(days=days)
+            due_date = inv_date + timedelta(days=days)
             self.query_one("#lbl-due", Static).update(f"Due: {due_date}")
         except (ValueError, TypeError):
-            self.query_one("#lbl-due", Static).update("Due: (enter a valid FV date)")
+            self.query_one("#lbl-due", Static).update("Due: (enter a valid INV date)")
 
-    def _refresh_wz_table(self) -> None:
-        tbl = self.query_one("#wz-tbl", DataTable)
+    def _refresh_dn_table(self) -> None:
+        tbl = self.query_one("#dn-tbl", DataTable)
         tbl.clear()
         if not self._customer_id:
-            self.query_one("#wz-hint", Static).update("Pick a customer to see available WZ.")
+            self.query_one("#dn-hint", Static).update("Pick a customer to see available DN.")
             return
         sym = get_currency_symbol()
-        rows = wzdata.fetch_issued_for_customer(self._customer_id)
+        rows = dndata.fetch_issued_for_customer(self._customer_id)
         for row in rows:
-            sel = "[X]" if row[0] in self._selected_wz_ids else "[ ]"
+            sel = "[X]" if row[0] in self._selected_dn_ids else "[ ]"
             tbl.add_row(
                 sel, str(row[0]), row[1], row[2], f"{sym}{float(row[3]):.2f}",
                 key=str(row[0]),
             )
         if not rows:
-            self.query_one("#wz-hint", Static).update("No issued WZ documents for this customer.")
+            self.query_one("#dn-hint", Static).update("No issued DN documents for this customer.")
         else:
-            count = len(self._selected_wz_ids)
-            self.query_one("#wz-hint", Static).update(
+            count = len(self._selected_dn_ids)
+            self.query_one("#dn-hint", Static).update(
                 f"{len(rows)} available · {count} selected (press Space to toggle)"
             )
 
-    @on(Input.Changed, "#f-fvdate")
-    def on_fvdate_changed(self, event: Input.Changed) -> None:
+    @on(Input.Changed, "#f-invdate")
+    def on_invdate_changed(self, event: Input.Changed) -> None:
         self._update_due_label()
 
     @on(Select.Changed, "#f-terms")
@@ -122,27 +122,27 @@ class FVNewModal(ModalScreen):
         def after(pk):
             if pk:
                 self._customer_id = pk
-                self._selected_wz_ids.clear()
+                self._selected_dn_ids.clear()
                 cust = cdata.get_by_pk(pk)
                 if cust:
                     self._customer_name = cust["CompanyName"]
                     self.query_one("#lbl-customer", Label).update(cust["CompanyName"])
-                self._refresh_wz_table()
+                self._refresh_dn_table()
         self.app.push_screen(
             PickerModal("Select Customer",
                         [("ID", 6), ("Company", 26), ("Contact", 18), ("City", 12)], rows),
             callback=after,
         )
 
-    @on(DataTable.RowSelected, "#wz-tbl")
-    def on_wz_selected(self, event: DataTable.RowSelected) -> None:
+    @on(DataTable.RowSelected, "#dn-tbl")
+    def on_dn_selected(self, event: DataTable.RowSelected) -> None:
         if event.row_key:
-            wz_id = int(event.row_key.value)
-            if wz_id in self._selected_wz_ids:
-                self._selected_wz_ids.discard(wz_id)
+            dn_id = int(event.row_key.value)
+            if dn_id in self._selected_dn_ids:
+                self._selected_dn_ids.discard(dn_id)
             else:
-                self._selected_wz_ids.add(wz_id)
-            self._refresh_wz_table()
+                self._selected_dn_ids.add(dn_id)
+            self._refresh_dn_table()
 
     @on(Button.Pressed, "#btn-save")
     def on_save(self) -> None:
@@ -150,14 +150,14 @@ class FVNewModal(ModalScreen):
         if not self._customer_id:
             self.notify("Customer is required.", severity="error")
             return
-        if not self._selected_wz_ids:
-            self.notify("Select at least one WZ document.", severity="error")
+        if not self._selected_dn_ids:
+            self.notify("Select at least one DN document.", severity="error")
             return
-        fv_date = self.query_one("#f-fvdate", Input).value.strip()
+        inv_date = self.query_one("#f-invdate", Input).value.strip()
         try:
-            datetime.strptime(fv_date, "%Y-%m-%d")
+            datetime.strptime(inv_date, "%Y-%m-%d")
         except ValueError:
-            self.notify("FV Date must be YYYY-MM-DD.", severity="error")
+            self.notify("INV Date must be YYYY-MM-DD.", severity="error")
             return
         terms = self.query_one("#f-terms", Select).value
         payment_term_days = int(terms) if terms != Select.BLANK else 30
@@ -166,12 +166,12 @@ class FVNewModal(ModalScreen):
             payment = ""
         notes = self.query_one("#f-notes", Input).value.strip()
         try:
-            fv_id = fvdata.create(
-                self._customer_id, list(self._selected_wz_ids),
-                fv_date, payment_term_days, payment, notes,
+            inv_id = invdata.create(
+                self._customer_id, list(self._selected_dn_ids),
+                inv_date, payment_term_days, payment, notes,
             )
-            self.notify(f"Invoice created (FV #{fv_id}).", severity="information")
-            self.dismiss(fv_id)
+            self.notify(f"Invoice created (INV #{inv_id}).", severity="information")
+            self.dismiss(inv_id)
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
 
@@ -185,19 +185,19 @@ class FVNewModal(ModalScreen):
 
 
 class RecordPaymentModal(ModalScreen):
-    """Modal to record a payment against an FV invoice."""
+    """Modal to record a payment against an INV invoice."""
 
-    def __init__(self, fv_id: int, outstanding: float,
+    def __init__(self, inv_id: int, outstanding: float,
                  preferred_method: str = "bank") -> None:
         super().__init__()
-        self.fv_id = fv_id
+        self.inv_id = inv_id
         self.outstanding = outstanding
         self.preferred_method = preferred_method
 
     def compose(self) -> ComposeResult:
         sym = get_currency_symbol()
         with Vertical(classes="modal-dialog"):
-            yield Label(f"Record Payment — FV #{self.fv_id}", classes="modal-title")
+            yield Label(f"Record Payment — INV #{self.inv_id}", classes="modal-title")
             yield Label(f"Outstanding: {sym}{self.outstanding:.2f}")
             yield Label("Amount:")
             yield Input(id="f-amount", value=f"{self.outstanding:.2f}")
@@ -229,7 +229,7 @@ class RecordPaymentModal(ModalScreen):
             method = "bank"
         desc = self.query_one("#f-desc", Input).value.strip()
         try:
-            fvdata.record_payment(self.fv_id, amount, method, desc)
+            invdata.record_payment(self.inv_id, amount, method, desc)
             self.notify("Payment recorded.", severity="information")
             self.dismiss(True)
         except Exception as e:
@@ -244,61 +244,61 @@ class RecordPaymentModal(ModalScreen):
             self.dismiss(False)
 
 
-class FVDetailModal(ModalScreen):
-    """Full FV detail with linked WZ, line items, and payment tracking."""
+class INVDetailModal(ModalScreen):
+    """Full INV detail with linked DN, line items, and payment tracking."""
 
-    def __init__(self, fv_id: int) -> None:
+    def __init__(self, inv_id: int) -> None:
         super().__init__()
-        self.fv_id = fv_id
+        self.inv_id = inv_id
         self._changed = False
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="order-detail-dialog"):
-            yield Label("", id="fv-title", classes="modal-title")
-            yield Static("", id="fv-header")
-            yield Label("Linked WZ Documents:", classes="section-label")
-            yield DataTable(id="wz-tbl", cursor_type="row", zebra_stripes=True)
-            yield Label("Line Items (from all WZ):", classes="section-label")
+            yield Label("", id="inv-title", classes="modal-title")
+            yield Static("", id="inv-header")
+            yield Label("Linked DN Documents:", classes="section-label")
+            yield DataTable(id="dn-tbl", cursor_type="row", zebra_stripes=True)
+            yield Label("Line Items (from all DN):", classes="section-label")
             yield DataTable(id="lines-tbl", cursor_type="row", zebra_stripes=True)
-            yield Static("", id="fv-payment")
-            yield Label("Linked FK (Credit Notes):", classes="section-label")
-            yield DataTable(id="fk-tbl", cursor_type="row", zebra_stripes=True)
+            yield Static("", id="inv-payment")
+            yield Label("Linked CN (Credit Notes):", classes="section-label")
+            yield DataTable(id="cn-tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="modal-buttons"):
                 yield Button("Record Payment", id="btn-record-payment", variant="primary")
-                yield Button("Issue FK",       id="btn-issue-fk",       variant="warning")
-                yield Button("Cancel FV",      id="btn-cancel-doc",     variant="warning")
+                yield Button("Issue CN",       id="btn-issue-cn",       variant="warning")
+                yield Button("Cancel INV",     id="btn-cancel-doc",     variant="warning")
                 yield Button("Delete",         id="btn-delete",         variant="error")
                 yield Button("PDF",            id="btn-pdf",            variant="default")
                 yield Button("Close",          id="btn-close")
             yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
-        wz_tbl = self.query_one("#wz-tbl", DataTable)
-        for label, width in [("WZ_ID", 6), ("Number", 20), ("Date", 12), ("Total", 12)]:
-            wz_tbl.add_column(label, width=width)
+        dn_tbl = self.query_one("#dn-tbl", DataTable)
+        for label, width in [("DN_ID", 6), ("Number", 20), ("Date", 12), ("Total", 12)]:
+            dn_tbl.add_column(label, width=width)
         lines_tbl = self.query_one("#lines-tbl", DataTable)
         for label, width in [
             ("ProdID", 6), ("Product Name", 36), ("Qty", 6), ("Price", 12), ("Line Total", 12),
         ]:
             lines_tbl.add_column(label, width=width)
-        fk_tbl = self.query_one("#fk-tbl", DataTable)
+        cn_tbl = self.query_one("#cn-tbl", DataTable)
         for label, width in [
-            ("FK_ID", 6), ("Number", 20), ("Date", 12), ("Type", 16), ("Correction", 12),
+            ("CN_ID", 6), ("Number", 20), ("Date", 12), ("Type", 16), ("Correction", 12),
         ]:
-            fk_tbl.add_column(label, width=width)
+            cn_tbl.add_column(label, width=width)
         self._load()
 
     def _load(self) -> None:
         sym = get_currency_symbol()
-        hdr = fvdata.get_by_pk(self.fv_id)
+        hdr = invdata.get_by_pk(self.inv_id)
         if not hdr:
             self.dismiss(self._changed)
             return
-        self.query_one("#fv-title", Label).update(f"FV #{self.fv_id} — {hdr.get('FV_Number', '')}")
+        self.query_one("#inv-title", Label).update(f"INV #{self.inv_id} — {hdr.get('INV_Number', '')}")
         info = [
-            f"[b]Number:[/b]   {hdr.get('FV_Number', '')}",
+            f"[b]Number:[/b]   {hdr.get('INV_Number', '')}",
             f"[b]Customer:[/b] {hdr.get('CustomerID', '')} — {hdr.get('CompanyName') or ''}",
-            f"[b]Date:[/b]     {hdr.get('FV_Date', '')}   "
+            f"[b]Date:[/b]     {hdr.get('INV_Date', '')}   "
             f"[b]Due:[/b] {hdr.get('DueDate') or '—'}   "
             f"[b]Terms:[/b] {hdr.get('PaymentTermDays') or 0} days",
             f"[b]Pref. Payment:[/b]  {hdr.get('PaymentMethod') or '—'}   "
@@ -306,19 +306,19 @@ class FVDetailModal(ModalScreen):
         ]
         if hdr.get("Notes"):
             info.append(f"[b]Notes:[/b] {hdr['Notes']}")
-        self.query_one("#fv-header", Static).update("\n".join(info))
+        self.query_one("#inv-header", Static).update("\n".join(info))
 
-        wz_tbl = self.query_one("#wz-tbl", DataTable)
-        wz_tbl.clear()
-        for wz in fvdata.fetch_linked_wz(self.fv_id):
-            wz_tbl.add_row(
-                str(wz["WZ_ID"]), wz["WZ_Number"], wz["WZ_Date"],
-                f"{sym}{wz['Total']:.2f}",
+        dn_tbl = self.query_one("#dn-tbl", DataTable)
+        dn_tbl.clear()
+        for dn in invdata.fetch_linked_dn(self.inv_id):
+            dn_tbl.add_row(
+                str(dn["DN_ID"]), dn["DN_Number"], dn["DN_Date"],
+                f"{sym}{dn['Total']:.2f}",
             )
 
         lines_tbl = self.query_one("#lines-tbl", DataTable)
         lines_tbl.clear()
-        for it in fvdata.fetch_line_items(self.fv_id):
+        for it in invdata.fetch_line_items(self.inv_id):
             lt = it["LineTotal"]
             lines_tbl.add_row(
                 str(it["ProductID"]), it["ProductName"], str(it["Quantity"]),
@@ -329,22 +329,22 @@ class FVDetailModal(ModalScreen):
         paid        = hdr.get("PaidAmount") or 0.0
         outstanding = hdr.get("Outstanding") or (total_net - paid)
         out_style   = "[bold red]" if outstanding > 0 else "[bold]"
-        self.query_one("#fv-payment", Static).update(
+        self.query_one("#inv-payment", Static).update(
             f"[b]Total Net:[/b]   {sym}{total_net:.2f}\n"
             f"[b]Paid:[/b]        {sym}{paid:.2f}\n"
             f"{out_style}Outstanding: {sym}{outstanding:.2f}[/]"
         )
 
-        # Load linked FK (credit notes)
-        fk_tbl = self.query_one("#fk-tbl", DataTable)
-        fk_tbl.clear()
+        # Load linked CN (credit notes)
+        cn_tbl = self.query_one("#cn-tbl", DataTable)
+        cn_tbl.clear()
         try:
-            import data.fk as fkdata
-            fk_docs = fkdata.fetch_for_fv(self.fv_id)
-            for fk in fk_docs:
-                fk_tbl.add_row(
-                    str(fk["FK_ID"]), fk["FK_Number"], fk["FK_Date"],
-                    fk["FK_Type"], f"{sym}{fk['TotalCorrection']:.2f}",
+            import data.cn as cndata
+            cn_docs = cndata.fetch_for_inv(self.inv_id)
+            for cn in cn_docs:
+                cn_tbl.add_row(
+                    str(cn["CN_ID"]), cn["CN_Number"], cn["CN_Date"],
+                    cn["CN_Type"], f"{sym}{cn['TotalCorrection']:.2f}",
                 )
         except Exception:
             pass
@@ -355,7 +355,7 @@ class FVDetailModal(ModalScreen):
                 f"[b]CANCELLED[/b] on {hdr['CancelledAt'][:19]} by user #{hdr.get('CancelledBy', '?')}: "
                 f"{hdr.get('CancelReason', '')}"
             )
-            self.query_one("#fv-header", Static).update("\n".join(info))
+            self.query_one("#inv-header", Static).update("\n".join(info))
 
         # Adjust buttons based on status and role
         status = hdr.get("Status", "issued")
@@ -373,15 +373,15 @@ class FVDetailModal(ModalScreen):
                 status != "issued" or paid_amount > 0 or not is_admin
             )
             cancel_btn.display = is_admin
-            fk_btn = self.query_one("#btn-issue-fk", Button)
-            fk_btn.disabled = (is_cancelled or not is_admin)
-            fk_btn.display = is_admin
+            cn_btn = self.query_one("#btn-issue-cn", Button)
+            cn_btn.disabled = (is_cancelled or not is_admin)
+            cn_btn.display = is_admin
         except Exception:
             pass
 
     @on(Button.Pressed, "#btn-record-payment")
     def on_record_payment(self) -> None:
-        hdr = fvdata.get_by_pk(self.fv_id)
+        hdr = invdata.get_by_pk(self.inv_id)
         if not hdr:
             return
         outstanding = hdr.get("Outstanding") or 0.0
@@ -393,7 +393,7 @@ class FVDetailModal(ModalScreen):
                 self._load()
 
         self.app.push_screen(
-            RecordPaymentModal(self.fv_id, outstanding, preferred),
+            RecordPaymentModal(self.inv_id, outstanding, preferred),
             callback=after,
         )
 
@@ -403,45 +403,45 @@ class FVDetailModal(ModalScreen):
             if reason:
                 try:
                     user_id = getattr(self.app, "_current_user", {}).get("user_id", 0)
-                    fvdata.cancel(self.fv_id, reason, user_id)
+                    invdata.cancel(self.inv_id, reason, user_id)
                     self._changed = True
                     self._load()
-                    self.notify("FV cancelled — linked WZ reverted to 'issued'.", severity="information")
+                    self.notify("INV cancelled — linked DN reverted to 'issued'.", severity="information")
                 except Exception as e:
                     self.notify(f"Error: {e}", severity="error")
         self.app.push_screen(
             CancellationReasonModal(
-                f"Cancel FV #{self.fv_id}?",
-                "Linked WZ will revert to 'issued'. Stock is NOT reversed.",
+                f"Cancel INV #{self.inv_id}?",
+                "Linked DN will revert to 'issued'. Stock is NOT reversed.",
             ),
             callback=after,
         )
 
-    @on(Button.Pressed, "#btn-issue-fk")
-    def on_issue_fk(self) -> None:
-        from screens.fk import FKNewModal
-        def after(fk_id):
-            if fk_id:
+    @on(Button.Pressed, "#btn-issue-cn")
+    def on_issue_cn(self) -> None:
+        from screens.cn import CNNewModal
+        def after(cn_id):
+            if cn_id:
                 self._changed = True
                 self._load()
-        self.app.push_screen(FKNewModal(self.fv_id), callback=after)
+        self.app.push_screen(CNNewModal(self.inv_id), callback=after)
 
     @on(Button.Pressed, "#btn-delete")
     def on_delete(self) -> None:
         def after(confirmed):
             if confirmed:
                 try:
-                    fvdata.delete(self.fv_id)
+                    invdata.delete(self.inv_id)
                     self.dismiss(True)
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"FV #{self.fv_id}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"INV #{self.inv_id}"), callback=after)
 
     @on(Button.Pressed, "#btn-pdf")
     def on_pdf(self) -> None:
         try:
             import pdf_export
-            path = pdf_export.export_fv(self.fv_id)
+            path = pdf_export.export_inv(self.inv_id)
             self.notify(f"PDF saved → {path}", severity="information")
         except Exception as e:
             self.notify(f"PDF error: {e}", severity="error")
@@ -455,9 +455,9 @@ class FVDetailModal(ModalScreen):
             self.dismiss(self._changed)
 
 
-class FVPanel(Widget):
+class INVPanel(Widget):
     BINDINGS = [
-        ("n", "new_record",   "New FV"),
+        ("n", "new_record",   "New INV"),
         ("f", "focus_search", "Search"),
     ]
 
@@ -485,7 +485,7 @@ class FVPanel(Widget):
     def refresh_data(self, term: str = "") -> None:
         tbl = self.query_one(DataTable)
         tbl.clear()
-        rows = fvdata.search(term) if term else fvdata.fetch_all()
+        rows = invdata.search(term) if term else invdata.fetch_all()
         sym = get_currency_symbol()
         for row in rows:
             display = list(row)
@@ -512,11 +512,11 @@ class FVPanel(Widget):
         if event.row_key:
             self._open_detail(int(event.row_key.value))
 
-    def _open_detail(self, fv_id: int) -> None:
+    def _open_detail(self, inv_id: int) -> None:
         def after(changed):
             if changed:
                 self.refresh_data(self.query_one("#search-box", Input).value)
-        self.app.push_screen(FVDetailModal(fv_id), callback=after)
+        self.app.push_screen(INVDetailModal(inv_id), callback=after)
 
     @on(Button.Pressed, "#btn-new")
     def on_btn_new(self) -> None:
@@ -537,21 +537,21 @@ class FVPanel(Widget):
         def after(confirmed):
             if confirmed:
                 try:
-                    fvdata.delete(int(self._selected_pk))
+                    invdata.delete(int(self._selected_pk))
                     self._selected_pk = None
                     self.refresh_data(self.query_one("#search-box", Input).value)
                     self.notify("Invoice deleted.", severity="information")
                 except Exception as e:
                     self.notify(f"Cannot delete: {e}", severity="error")
-        self.app.push_screen(ConfirmDeleteModal(f"FV #{self._selected_pk}"), callback=after)
+        self.app.push_screen(ConfirmDeleteModal(f"INV #{self._selected_pk}"), callback=after)
 
     def action_new_record(self) -> None:
-        def after_form(fv_id):
-            if fv_id:
+        def after_form(inv_id):
+            if inv_id:
                 def after_detail(changed):
                     self.refresh_data(self.query_one("#search-box", Input).value)
-                self.app.push_screen(FVDetailModal(fv_id), callback=after_detail)
-        self.app.push_screen(FVNewModal(), callback=after_form)
+                self.app.push_screen(INVDetailModal(inv_id), callback=after_detail)
+        self.app.push_screen(INVNewModal(), callback=after_form)
 
     def action_focus_search(self) -> None:
         self.query_one("#search-box", Input).focus()

@@ -382,7 +382,7 @@ class ChartsPanel(Widget):
             sym = get_currency_symbol()
             lines: list[str] = []
 
-            kassa_data = trend["kassa"]
+            kassa_data = trend["cash"]
             if kassa_data:
                 vals = [v for _, v in kassa_data]
                 spark = _sparkline(vals) if len(vals) > 1 else "█"

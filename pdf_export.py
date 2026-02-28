@@ -16,7 +16,7 @@ def _branding() -> dict:
         "co_phone", "co_email", "co_website", "co_vat", "co_tax_id",
         "co_bank_account", "co_logo_path",
         "doc_footer", "doc_theme",
-        "doc_title_wz", "doc_title_fv", "doc_title_fk", "doc_wz_show_prices",
+        "doc_title_dn", "doc_title_inv", "doc_title_cn", "doc_dn_show_prices",
     ]
     return {k: get_setting(k, "") for k in keys}
 
@@ -129,19 +129,19 @@ def _draw_header(
     pdf.ln(4)
 
 
-def export_wz(wz_id: int) -> str:
-    """Generate a branded PDF for a WZ delivery note. Returns the saved file path."""
-    import data.wz as wzdata
+def export_dn(dn_id: int) -> str:
+    """Generate a branded PDF for a DN delivery note. Returns the saved file path."""
+    import data.dn as dndata
     import data.customers as cdata
 
-    hdr = wzdata.get_by_pk(wz_id)
+    hdr = dndata.get_by_pk(dn_id)
     if not hdr:
-        raise ValueError(f"WZ #{wz_id} not found.")
-    items = wzdata.fetch_items(wz_id)
+        raise ValueError(f"DN #{dn_id} not found.")
+    items = dndata.fetch_items(dn_id)
     customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
     b = _branding()
     sym = get_currency_symbol()
-    show_prices = b.get("doc_wz_show_prices", "true").lower() != "false"
+    show_prices = b.get("doc_dn_show_prices", "true").lower() != "false"
     theme = _theme_colour(b.get("doc_theme", ""))
 
     pdf = _NorthwindPDF(footer_text=b.get("doc_footer", ""), theme_rgb=theme)
@@ -150,9 +150,9 @@ def export_wz(wz_id: int) -> str:
     pdf.set_margins(15, 15, 15)
     pdf.add_page()
 
-    title = b.get("doc_title_wz") or "Delivery Note"
-    doc_number = hdr.get("WZ_Number", f"WZ-{wz_id}")
-    doc_date = hdr.get("WZ_Date", "")
+    title = b.get("doc_title_dn") or "Delivery Note"
+    doc_number = hdr.get("DN_Number", f"DN-{dn_id}")
+    doc_date = hdr.get("DN_Date", "")
     _draw_header(pdf, b, title, doc_number, doc_date)
 
     margin = pdf.l_margin
@@ -279,21 +279,21 @@ def export_wz(wz_id: int) -> str:
     os.makedirs(downloads, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_number = doc_number.replace("/", "-").replace("\\", "-")
-    path = os.path.join(downloads, f"northwind_wz_{safe_number}_{ts}.pdf")
+    path = os.path.join(downloads, f"northwind_dn_{safe_number}_{ts}.pdf")
     pdf.output(path)
     return path
 
 
-def export_fv(fv_id: int) -> str:
-    """Generate a branded PDF for an FV invoice. Returns the saved file path."""
-    import data.fv as fvdata
+def export_inv(inv_id: int) -> str:
+    """Generate a branded PDF for an INV invoice. Returns the saved file path."""
+    import data.inv as invdata
     import data.customers as cdata
 
-    hdr = fvdata.get_by_pk(fv_id)
+    hdr = invdata.get_by_pk(inv_id)
     if not hdr:
-        raise ValueError(f"FV #{fv_id} not found.")
-    items = fvdata.fetch_line_items(fv_id)
-    linked_wz = fvdata.fetch_linked_wz(fv_id)
+        raise ValueError(f"INV #{inv_id} not found.")
+    items = invdata.fetch_line_items(inv_id)
+    linked_wz = invdata.fetch_linked_wz(inv_id)
     customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
     b = _branding()
     sym = get_currency_symbol()
@@ -305,9 +305,9 @@ def export_fv(fv_id: int) -> str:
     pdf.set_margins(15, 15, 15)
     pdf.add_page()
 
-    title = b.get("doc_title_fv") or "Invoice"
-    doc_number = hdr.get("FV_Number", f"FV-{fv_id}")
-    doc_date = hdr.get("FV_Date", "")
+    title = b.get("doc_title_inv") or "Invoice"
+    doc_number = hdr.get("INV_Number", f"INV-{inv_id}")
+    doc_date = hdr.get("INV_Date", "")
     _draw_header(pdf, b, title, doc_number, doc_date)
 
     margin = pdf.l_margin
@@ -454,14 +454,14 @@ def export_fv(fv_id: int) -> str:
     pdf.cell(totals_val_w, 6, f"{sym}{outstanding:.2f}", align="R")
     pdf.ln()
 
-    # --- Linked WZ references ---
+    # --- Linked DN references ---
     if linked_wz:
         pdf.ln(3)
-        wz_numbers = ", ".join(w["WZ_Number"] for w in linked_wz)
+        dn_numbers = ", ".join(w["DN_Number"] for w in linked_wz)
         pdf.set_font("Helvetica", size=8)
         pdf.set_text_color(120, 120, 120)
         pdf.set_x(margin)
-        pdf.cell(0, 5, f"Based on WZ: {wz_numbers}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, f"Based on DN: {dn_numbers}", new_x="LMARGIN", new_y="NEXT")
 
     # --- Legal footer: VAT / Tax ID ---
     if b.get("co_vat") or b.get("co_tax_id"):
@@ -481,7 +481,7 @@ def export_fv(fv_id: int) -> str:
     os.makedirs(downloads, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_number = doc_number.replace("/", "-").replace("\\", "-")
-    path = os.path.join(downloads, f"northwind_fv_{safe_number}_{ts}.pdf")
+    path = os.path.join(downloads, f"northwind_inv_{safe_number}_{ts}.pdf")
     pdf.output(path)
     return path
 
@@ -545,17 +545,17 @@ def _save_pdf(pdf: _NorthwindPDF, prefix: str, doc_number: str) -> str:
     return path
 
 
-# ── PZ — Goods Receipt ────────────────────────────────────────────────────────
+# ── GR — Goods Receipt ────────────────────────────────────────────────────────
 
-def export_pz(pz_id: int) -> str:
-    """Generate a branded PDF for a PZ goods receipt. Returns the saved file path."""
-    import data.pz as pzdata
+def export_gr(gr_id: int) -> str:
+    """Generate a branded PDF for a GR goods receipt. Returns the saved file path."""
+    import data.gr as grdata
     import data.suppliers as sdata
 
-    hdr = pzdata.get_by_pk(pz_id)
+    hdr = grdata.get_by_pk(gr_id)
     if not hdr:
-        raise ValueError(f"PZ #{pz_id} not found.")
-    items = pzdata.fetch_items(pz_id)
+        raise ValueError(f"GR #{gr_id} not found.")
+    items = grdata.fetch_items(gr_id)
     supplier = sdata.get_by_pk(hdr["SupplierID"]) if hdr.get("SupplierID") else {}
     b = _branding()
     sym = get_currency_symbol()
@@ -567,8 +567,8 @@ def export_pz(pz_id: int) -> str:
     pdf.set_margins(15, 15, 15)
     pdf.add_page()
 
-    doc_number = hdr.get("PZ_Number", f"PZ-{pz_id}")
-    doc_date = hdr.get("PZ_Date", "")
+    doc_number = hdr.get("GR_Number", f"GR-{gr_id}")
+    doc_date = hdr.get("GR_Date", "")
     _draw_header(pdf, b, "Goods Receipt", doc_number, doc_date)
 
     margin = pdf.l_margin
@@ -674,19 +674,19 @@ def export_pz(pz_id: int) -> str:
         pdf.set_xy(margin + 3, vat_y + 1.5)
         pdf.cell(page_w - 6, 5, "   |   ".join(vat_parts))
 
-    return _save_pdf(pdf, "pz", doc_number)
+    return _save_pdf(pdf, "gr", doc_number)
 
 
-# ── KP — Cash Receipt ─────────────────────────────────────────────────────────
+# ── CR — Cash Receipt ─────────────────────────────────────────────────────────
 
-def export_kp(kp_id: int) -> str:
-    """Generate a branded PDF for a KP cash receipt. Returns the saved file path."""
-    import data.kassa as kassadata
+def export_cr(cr_id: int) -> str:
+    """Generate a branded PDF for a CR cash receipt. Returns the saved file path."""
+    import data.cash as cashdata
     import data.customers as cdata
 
-    hdr = kassadata.get_kp_by_pk(kp_id)
+    hdr = cashdata.get_cr_by_pk(cr_id)
     if not hdr:
-        raise ValueError(f"KP #{kp_id} not found.")
+        raise ValueError(f"CR #{cr_id} not found.")
     customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
     b = _branding()
     sym = get_currency_symbol()
@@ -698,8 +698,8 @@ def export_kp(kp_id: int) -> str:
     pdf.set_margins(15, 15, 15)
     pdf.add_page()
 
-    doc_number = hdr.get("KP_Number", f"KP-{kp_id}")
-    doc_date = hdr.get("KP_Date", "")
+    doc_number = hdr.get("CR_Number", f"CR-{cr_id}")
+    doc_date = hdr.get("CR_Date", "")
     _draw_header(pdf, b, "Cash Receipt", doc_number, doc_date)
 
     margin = pdf.l_margin
@@ -710,8 +710,8 @@ def export_kp(kp_id: int) -> str:
     cust_name = cust.get("CompanyName") or hdr.get("CompanyName", "")
     if cust_name:
         _draw_field_row(pdf, margin, page_w, "Received From:", cust_name)
-    if hdr.get("FV_ID"):
-        _draw_field_row(pdf, margin, page_w, "FV Reference:", f"FV #{hdr['FV_ID']}")
+    if hdr.get("INV_ID"):
+        _draw_field_row(pdf, margin, page_w, "INV Reference:", f"INV #{hdr['INV_ID']}")
     if hdr.get("Description"):
         _draw_field_row(pdf, margin, page_w, "Description:", hdr["Description"])
 
@@ -722,19 +722,19 @@ def export_kp(kp_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "kp", doc_number)
+    return _save_pdf(pdf, "cr", doc_number)
 
 
-# ── KW — Cash Payment ─────────────────────────────────────────────────────────
+# ── CP — Cash Payment ─────────────────────────────────────────────────────────
 
-def export_kw(kw_id: int) -> str:
-    """Generate a branded PDF for a KW cash payment. Returns the saved file path."""
-    import data.kassa as kassadata
+def export_cp(cp_id: int) -> str:
+    """Generate a branded PDF for a CP cash payment. Returns the saved file path."""
+    import data.cash as cashdata
     import data.suppliers as sdata
 
-    hdr = kassadata.get_kw_by_pk(kw_id)
+    hdr = cashdata.get_cp_by_pk(cp_id)
     if not hdr:
-        raise ValueError(f"KW #{kw_id} not found.")
+        raise ValueError(f"CP #{cp_id} not found.")
     supplier = sdata.get_by_pk(hdr["SupplierID"]) if hdr.get("SupplierID") else {}
     b = _branding()
     sym = get_currency_symbol()
@@ -746,8 +746,8 @@ def export_kw(kw_id: int) -> str:
     pdf.set_margins(15, 15, 15)
     pdf.add_page()
 
-    doc_number = hdr.get("KW_Number", f"KW-{kw_id}")
-    doc_date = hdr.get("KW_Date", "")
+    doc_number = hdr.get("CP_Number", f"CP-{cp_id}")
+    doc_date = hdr.get("CP_Date", "")
     _draw_header(pdf, b, "Cash Payment", doc_number, doc_date)
 
     margin = pdf.l_margin
@@ -757,8 +757,8 @@ def export_kw(kw_id: int) -> str:
     sup_name = sup.get("CompanyName") or hdr.get("CompanyName", "")
     if sup_name:
         _draw_field_row(pdf, margin, page_w, "Paid To:", sup_name)
-    if hdr.get("PZ_ID"):
-        _draw_field_row(pdf, margin, page_w, "PZ Reference:", f"PZ #{hdr['PZ_ID']}")
+    if hdr.get("GR_ID"):
+        _draw_field_row(pdf, margin, page_w, "GR Reference:", f"GR #{hdr['GR_ID']}")
     if hdr.get("Description"):
         _draw_field_row(pdf, margin, page_w, "Description:", hdr["Description"])
 
@@ -768,7 +768,7 @@ def export_kw(kw_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "kw", doc_number)
+    return _save_pdf(pdf, "cp", doc_number)
 
 
 # ── Bank Entry ────────────────────────────────────────────────────────────────
@@ -818,10 +818,10 @@ def export_bank_entry(entry_id: int) -> str:
     party_label = "Customer:" if hdr.get("CustomerName") else "Supplier:"
     if counterparty:
         _draw_field_row(pdf, margin, page_w, party_label, counterparty)
-    if hdr.get("FV_ID"):
-        _draw_field_row(pdf, margin, page_w, "FV Reference:", f"FV #{hdr['FV_ID']}")
-    if hdr.get("PZ_ID"):
-        _draw_field_row(pdf, margin, page_w, "PZ Reference:", f"PZ #{hdr['PZ_ID']}")
+    if hdr.get("INV_ID"):
+        _draw_field_row(pdf, margin, page_w, "INV Reference:", f"INV #{hdr['INV_ID']}")
+    if hdr.get("GR_ID"):
+        _draw_field_row(pdf, margin, page_w, "GR Reference:", f"GR #{hdr['GR_ID']}")
     if hdr.get("Description"):
         _draw_field_row(pdf, margin, page_w, "Description:", hdr["Description"])
     if b.get("co_bank_account"):
@@ -836,17 +836,17 @@ def export_bank_entry(entry_id: int) -> str:
     return _save_pdf(pdf, "bank", doc_number)
 
 
-# ── FK — Credit Note (Faktura Korygujaca) ────────────────────────────────────
+# ── CN — Credit Note ─────────────────────────────────────────────────────────
 
-def export_fk(fk_id: int) -> str:
-    """Generate a branded PDF for an FK credit note. Returns the saved file path."""
-    import data.fk as fkdata
+def export_cn(cn_id: int) -> str:
+    """Generate a branded PDF for a CN credit note. Returns the saved file path."""
+    import data.cn as cndata
     import data.customers as cdata
 
-    hdr = fkdata.get_by_pk(fk_id)
+    hdr = cndata.get_by_pk(cn_id)
     if not hdr:
-        raise ValueError(f"FK #{fk_id} not found.")
-    items = fkdata.fetch_items(fk_id)
+        raise ValueError(f"CN #{cn_id} not found.")
+    items = cndata.fetch_items(cn_id)
     customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
     b = _branding()
     sym = get_currency_symbol()
@@ -858,9 +858,9 @@ def export_fk(fk_id: int) -> str:
     pdf.set_margins(15, 15, 15)
     pdf.add_page()
 
-    title = b.get("doc_title_fk") or "Faktura Korygujaca"
-    doc_number = hdr.get("FK_Number", f"FK-{fk_id}")
-    doc_date = hdr.get("FK_Date", "")
+    title = b.get("doc_title_cn") or "Credit Note"
+    doc_number = hdr.get("CN_Number", f"CN-{cn_id}")
+    doc_date = hdr.get("CN_Date", "")
     _draw_header(pdf, b, title, doc_number, doc_date)
 
     margin = pdf.l_margin
@@ -868,18 +868,18 @@ def export_fk(fk_id: int) -> str:
     cust = customer or {}
 
     # --- Cancellation banner ---
-    if hdr.get("FK_Type") == "cancellation":
+    if hdr.get("CN_Type") == "cancellation":
         banner_y = pdf.get_y()
         pdf.set_fill_color(200, 30, 30)
         pdf.rect(margin, banner_y, page_w, 10, style="F")
         pdf.set_font("Helvetica", style="B", size=14)
         pdf.set_text_color(255, 255, 255)
         pdf.set_xy(margin, banner_y + 1.5)
-        pdf.cell(page_w, 7, "ANULOWANIE / CANCELLATION", align="C")
+        pdf.cell(page_w, 7, "CANCELLATION", align="C")
         pdf.set_y(banner_y + 14)
         pdf.set_text_color(0, 0, 0)
 
-    # --- Two-column section: Customer (left) + FK Details (right) ---
+    # --- Two-column section: Customer (left) + CN Details (right) ---
     section_y = pdf.get_y()
     left_col_w = 90
     gap = 5
@@ -920,19 +920,19 @@ def export_fk(fk_id: int) -> str:
             pdf.cell(left_col_w - 6, 5, line_text)
             inner_y += 5
 
-    # FK details box
+    # CN details box
     pdf.set_fill_color(245, 245, 245)
     pdf.rect(right_col_x, detail_y, right_col_w, box_h, style="F")
 
-    fk_type_labels = {
+    cn_type_labels = {
         "full_reversal": "Full Reversal",
         "partial_correction": "Partial Correction",
         "cancellation": "Cancellation",
     }
     inner_d_y = detail_y + 3
     for label, val in [
-        ("Original FV:", hdr.get("FV_Number", "")),
-        ("Type:", fk_type_labels.get(hdr.get("FK_Type", ""), hdr.get("FK_Type", ""))),
+        ("Original INV:", hdr.get("INV_Number", "")),
+        ("Type:", cn_type_labels.get(hdr.get("CN_Type", ""), hdr.get("CN_Type", ""))),
         ("Status:", (hdr.get("Status") or "").capitalize()),
     ]:
         if val and str(val).strip():
@@ -1055,4 +1055,4 @@ def export_fk(fk_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "fk", doc_number)
+    return _save_pdf(pdf, "cn", doc_number)
