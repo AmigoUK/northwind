@@ -14,7 +14,48 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.1** | PDF Export | Branded A4 PDF delivery notes (WZ) & invoices (FV) — company logo, theme colours, totals, linked WZ references |
 | **v2.2** | PDF All Docs + UX | PDF export for PZ, KP, KW & Bank entries; Business Details tabbed layout with docked Save button |
 | **v2.3** | UI Polish | Business Details compact one-screen tabs; form layout optimisation across Company / Tax / Documents |
+| **v2.4** | Data Integrity | 3-tier roles (user/manager/admin), delete guards, document cancellation, Credit Notes (FK), 82 automated tests |
 | ... | ... | ... |
+
+---
+
+## Features (v2.4)
+
+### New in v2.4 — Data Integrity, Cancellation & Credit Notes
+
+**3-Tier Role System**
+- Hierarchical permissions: **user** (view + create) → **manager** (+ delete) → **admin** (+ cancel, FK, system)
+- Delete buttons hidden from users without manager+ role
+- Admin sections (SQL, Users, Business Details, Settings) remain admin-only
+
+**Delete Guards**
+- Referential integrity enforcement across all document and master data types
+- Cannot delete an Order if WZ exists, cannot delete FV if payments exist, etc.
+- Side-effects on delete: deleting a KP/BankEntry decrements FV.PaidAmount; deleting PW/RW reverses stock
+- Human-readable error messages: *"Cannot delete: WZ WZ/2026/003 exists for this order"*
+
+**Document Cancellation**
+- Admin-only soft cancel for WZ, FV, and PZ — keeps full audit trail (CancelledAt, CancelledBy, CancelReason)
+- **Cancel WZ** — reverses stock, blocks if invoiced (*"Cancel the FV first"*)
+- **Cancel FV** — reverts linked WZ to "issued", blocks if payments exist (*"Issue FK instead"*)
+- **Cancel PZ** — reverses stock, leaves linked payments for manual handling
+- Cancellation reason modal with mandatory input; cancelled documents show reason in detail view
+
+**Credit Notes (FK — Faktura Korygujaca)**
+- Full invoice correction system following Polish accounting model
+- Three FK types: **Full Reversal**, **Partial Correction**, **Cancellation**
+- Adjusts FV.TotalNet in-place; recalculates payment status (paid / partial / issued / cancelled)
+- Optional stock reversal via "Return goods to stock" checkbox
+- Creation wizard: pick FV → select type → edit line items (partial) → reason + date → preview → create
+- Read-only detail view with original vs corrected values side-by-side
+- FK PDF export with correction table, original FV reference, and prominent "ANULOWANIE" banner for cancellations
+- FV detail modal shows linked FK documents and "Issue FK" button
+- Navigation: Documents → FK — Credit Notes
+
+**Test Suite (82 tests)**
+- `test_delete_guards.py` — guard functions, side-effects, master data referential integrity
+- `test_cancellation.py` — WZ/FV/PZ cancellation rules, cascade behaviour, error cases
+- `test_fk.py` — FK creation (all 3 types), payment/stock/pricing effects, search, numbering
 
 ---
 
@@ -61,8 +102,8 @@ A terminal-based warehouse/distribution management application built on the clas
 - **SQL Query editor** — type any SQL, press `ctrl+r`, see results in a table
 - **Reports** with CSV export (11 report types)
 - **Configurable currency** — symbol and name saved to SQLite ($ → £ → € etc.)
-- **PIN-based login** with role management (admin / user)
-- **Role-based UI** — admin sees SQL Query, Users, Settings and Business Details panels; regular users do not
+- **PIN-based login** with 3-tier role management (admin / manager / user)
+- **Role-based UI** — admin sees SQL Query, Users, Settings and Business Details panels; managers can delete documents; regular users view and create only
 - **Compact multi-column form modals** — related fields shown side-by-side via CSS `1fr` columns
 
 ### New in v2.0 — Documents & Finance
@@ -250,35 +291,39 @@ pip install -r requirements.txt
 northwind/
 ├── app.py              # Textual App entry point, login flow, sidebar nav
 ├── db.py               # SQLite schema DDL + seed data
-├── pdf_export.py       # PDF generation for WZ delivery notes and FV invoices (v2.1)
+├── pdf_export.py       # PDF generation for all document types (v2.1–v2.4)
 ├── northwind.tcss      # Textual CSS (layout, modals, panels, charts)
 ├── requirements.txt    # Python dependencies
 ├── data/               # Data-access layer (pure SQL, no UI)
 │   ├── settings.py     # AppSettings key-value store (currency, theme, business details)
-│   ├── users.py        # AppUsers CRUD + PIN authentication
+│   ├── users.py        # AppUsers CRUD + PIN authentication + role hierarchy (v2.4)
 │   ├── dashboard.py    # KPI aggregations + kpis_extended()
 │   ├── reports.py      # 11 report queries (sales, stock, trend, overdue…)
-│   ├── wz.py           # WZ document CRUD + issue workflow
-│   ├── fv.py           # FV invoice CRUD
-│   ├── pz.py           # PZ goods receipt CRUD
+│   ├── delete_guards.py # Centralized delete guards + side-effect handlers (v2.4)
+│   ├── wz.py           # WZ document CRUD + issue + cancel workflow
+│   ├── fv.py           # FV invoice CRUD + cancel
+│   ├── fk.py           # FK credit note CRUD + business logic (v2.4)
+│   ├── pz.py           # PZ goods receipt CRUD + cancel
 │   ├── kassa.py        # Cash Register entries
 │   ├── bank.py         # Bank Account entries
 │   └── ...             # customers, orders, products, employees, …
-└── screens/            # Textual Widget subclasses (one per section)
-    ├── login.py        # LoginScreen modal (PIN gate)
-    ├── dashboard.py    # Dashboard KPI cards + recent orders
-    ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
-    ├── reports.py      # Reports panel with 11 report types + CSV export
-    ├── sql.py          # SQL Query panel
-    ├── settings.py     # Settings panel (currency, theme, stock control)
-    ├── business.py     # Business Details panel (company info, doc defaults)
-    ├── users.py        # User management panel
-    ├── wz.py           # WZ Delivery Notes panel + modals
-    ├── fv.py           # FV Invoices panel + modals
-    ├── pz.py           # PZ Goods Receipts panel + modals
-    ├── kassa.py        # Cash Register panel
-    ├── bank.py         # Bank Account entries panel
-    └── ...             # customers, orders, products, employees, …
+├── screens/            # Textual Widget subclasses (one per section)
+│   ├── login.py        # LoginScreen modal (PIN gate)
+│   ├── dashboard.py    # Dashboard KPI cards + recent orders
+│   ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
+│   ├── reports.py      # Reports panel with 11 report types + CSV export
+│   ├── fk.py           # FK Credit Notes panel + creation wizard + detail modal (v2.4)
+│   ├── modals.py       # Shared modals: ConfirmDelete, CancellationReason (v2.4)
+│   ├── wz.py           # WZ Delivery Notes panel + modals + cancel button
+│   ├── fv.py           # FV Invoices panel + modals + FK integration
+│   ├── pz.py           # PZ Goods Receipts panel + modals + cancel button
+│   └── ...             # sql, settings, business, users, kassa, bank, …
+└── tests/              # Automated test suite (v2.4)
+    ├── conftest.py     # Fresh temp DB per test
+    ├── test_data.py    # Core business logic (19 tests)
+    ├── test_delete_guards.py  # Delete guards + side-effects (26 tests)
+    ├── test_cancellation.py   # WZ/FV/PZ cancellation (13 tests)
+    └── test_fk.py             # Credit Notes — all 3 types (24 tests)
 ```
 
 ---
@@ -328,3 +373,13 @@ northwind/
 | Grouping related fields into 2- and 3-column `form-row` layouts to reduce vertical height | `screens/business.py` |
 | Merging redundant sections (Company Identity + Contact Details) into one compact block | `screens/business.py` |
 | Balancing widget height (Select `height: 2`) vs readability to keep forms within one screen | `northwind.tcss` |
+| Hierarchical RBAC — numeric role levels with `has_permission()` comparator | `data/users.py` |
+| Centralized delete guards returning `(bool, list[str])` reason tuples | `data/delete_guards.py` |
+| Side-effect handlers that run before DELETE — payment reversal, stock restoration | `data/delete_guards.py` |
+| Document cancellation as a state-machine transition with audit fields (CancelledAt/By/Reason) | `data/wz.py`, `data/fv.py`, `data/pz.py` |
+| Credit note (FK) pattern — recording original vs corrected values per line item | `data/fk.py` |
+| In-place FV.TotalNet adjustment on FK creation + status recalculation | `data/fk.py` |
+| Multi-step creation wizard in a single ModalScreen (pick FV → type → items → confirm) | `screens/fk.py` |
+| `conn.execute()` vs `conn.executescript()` for reliable schema migration on existing databases | `db.py` |
+| pytest fixtures with `tmp_path` for isolated per-test SQLite databases | `tests/conftest.py` |
+| Testing cross-document effects: Order → WZ → FV → KP → FK → verify all balances | `tests/test_fk.py` |

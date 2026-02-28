@@ -1,8 +1,19 @@
 """
-app.py — Northwind Traders v2.3
+app.py — Northwind Traders v2.4
 Textual TUI entry point.
 """
 from __future__ import annotations
+
+import atexit
+import os
+import signal
+import sys
+
+# Ensure consistent 24-bit color rendering across machines.
+# The x86_64 Mac has COLORTERM unset, which makes Textual fall back to
+# 256 colors. Terminal.app supports truecolor when told explicitly.
+if "COLORTERM" not in os.environ:
+    os.environ["COLORTERM"] = "truecolor"
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -41,7 +52,37 @@ from screens.pz              import PZPanel
 from screens.stock_movements import StockMovementsPanel
 from screens.kassa           import KassaPanel
 from screens.bank            import BankPanel
+from screens.fk              import FKPanel
 from screens.business        import BusinessDetailsPanel
+
+# ── Terminal cleanup ──────────────────────────────────────────────────────────
+# Textual enables mouse reporting via escape sequences on startup. If the app
+# is killed by SIGTERM/SIGHUP (e.g. terminal close, SSH drop), Textual's normal
+# cleanup never runs, leaving mouse reporting active. Every subsequent mouse
+# movement then dumps raw escape codes into the shell, making the terminal
+# unusable. iTerm2 detects this: "mouse reporting was left on when an app
+# misbehaved." This atexit handler is our safety net.
+
+_MOUSE_CLEANUP = (
+    "\x1b[?1000l"  # disable normal mouse tracking
+    "\x1b[?1003l"  # disable any-event mouse tracking
+    "\x1b[?1015l"  # disable urxvt mouse mode
+    "\x1b[?1006l"  # disable SGR extended mouse mode
+    "\x1b[?1016l"  # disable SGR pixel mouse mode (Textual enables but never disables)
+    "\x1b[?2004l"  # disable bracketed paste mode
+)
+
+
+def _reset_terminal_modes():
+    """Last-resort cleanup: disable mouse reporting and bracketed paste."""
+    try:
+        sys.stdout.write(_MOUSE_CLEANUP)
+        sys.stdout.flush()
+    except Exception:
+        pass
+
+
+atexit.register(_reset_terminal_modes)
 
 
 _NAV_GROUPS = [
@@ -59,6 +100,7 @@ _NAV_GROUPS = [
     ("── Documents ──", "nav-group-docs", [
         ("wz",         "WZ — Delivery"),
         ("fv",         "FV — Invoices"),
+        ("fk",         "FK — Credit Notes"),
         ("pz",         "PZ — Receipts"),
         ("movements",  "PW/RW — Stock"),
     ]),
@@ -106,7 +148,7 @@ class SidebarNav(Widget):
 
 
 class NorthwindApp(App):
-    TITLE = "Northwind Traders v2.3"
+    TITLE = "Northwind Traders v2.4"
     CSS_PATH = "northwind.tcss"
 
     BINDINGS = [
@@ -136,6 +178,7 @@ class NorthwindApp(App):
                 yield ChartsPanel(id="charts")
                 yield WZPanel(id="wz")
                 yield FVPanel(id="fv")
+                yield FKPanel(id="fk")
                 yield PZPanel(id="pz")
                 yield StockMovementsPanel(id="movements")
                 yield KassaPanel(id="kassa")
@@ -148,15 +191,31 @@ class NorthwindApp(App):
 
     def on_mount(self) -> None:
         init_db()
+        # SIGTERM is being sent by an external process (endpoint security
+        # agent?) on the x86_64 machine. Ignore it — the app has Ctrl+Q
+        # for intentional quit, and SIGHUP handles real terminal close.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGHUP, self._handle_termination_signal)
         self.push_screen(LoginScreen(), callback=self._on_login)
 
+    def _handle_termination_signal(self, signum: int, frame) -> None:
+        """Gracefully exit on SIGHUP so Textual disables mouse reporting."""
+        self.exit()
+
     def _on_login(self, user: dict) -> None:
-        from data.settings import get_theme_name
         self._current_user = user
         nav = self.query_one("#nav-list", ListView)
         nav.index = 0
         self._apply_role_visibility()
-        self.theme = get_theme_name()
+        self.call_later(self._apply_saved_theme)
+
+    def _apply_saved_theme(self) -> None:
+        """Apply the user's saved theme after the widget tree is stable."""
+        try:
+            from data.settings import get_theme_name
+            self.theme = get_theme_name()
+        except Exception:
+            pass
 
     def watch_theme(self, theme: str) -> None:
         """Auto-save theme whenever it changes (via ^p palette or settings)."""
@@ -166,7 +225,8 @@ class NorthwindApp(App):
 
     def _apply_role_visibility(self) -> None:
         """Show admin-only sidebar items only for admin users."""
-        is_admin = self._current_user and self._current_user["role"] == "admin"
+        from data.users import has_permission
+        is_admin = has_permission(self._current_user, "admin")
         for section_id in _ADMIN_SECTIONS:
             try:
                 item = self.query_one(f"#nav-{section_id}", ListItem)

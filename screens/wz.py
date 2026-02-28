@@ -11,7 +11,8 @@ import data.wz as wzdata
 import data.customers as cdata
 import data.products as pdata
 from data.settings import get_currency_symbol, get_backorder_allowed
-from screens.modals import ConfirmActionModal, ConfirmDeleteModal, PickerModal
+from data.users import has_permission
+from screens.modals import ConfirmActionModal, ConfirmDeleteModal, CancellationReasonModal, PickerModal
 
 
 class WZItemFormModal(ModalScreen):
@@ -202,6 +203,7 @@ class WZDetailModal(ModalScreen):
                 yield Button("Issue WZ",   id="btn-issue",  variant="primary")
                 yield Button("+ Item",     id="btn-add",    variant="success")
                 yield Button("- Item",     id="btn-remove", variant="warning")
+                yield Button("Cancel WZ",  id="btn-cancel-doc", variant="warning")
                 yield Button("Delete",     id="btn-delete", variant="error")
                 yield Button("PDF",        id="btn-pdf",    variant="default")
                 yield Button("Close",      id="btn-close")
@@ -265,13 +267,28 @@ class WZDetailModal(ModalScreen):
         else:
             total_widget.update("")
 
-        # Adjust buttons based on status
+        # Show cancellation info if cancelled
+        if hdr.get("CancelledAt"):
+            by_user = hdr.get("CancelledBy", "?")
+            lines_info.append(
+                f"[b]CANCELLED[/b] on {hdr['CancelledAt'][:19]} by user #{by_user}: "
+                f"{hdr.get('CancelReason', '')}"
+            )
+            self.query_one("#wz-header", Static).update("\n".join(lines_info))
+
+        # Adjust buttons based on status and role
         status = hdr.get("Status", "draft")
+        is_cancelled = status == "cancelled"
+        is_admin = has_permission(getattr(self.app, "_current_user", None), "admin")
+        is_manager = has_permission(getattr(self.app, "_current_user", None), "manager")
         try:
-            self.query_one("#btn-issue", Button).disabled = (status != "draft")
-            self.query_one("#btn-add",   Button).disabled = (status != "draft")
-            self.query_one("#btn-remove",Button).disabled = (status != "draft")
-            self.query_one("#btn-delete",Button).disabled = (status == "issued")
+            self.query_one("#btn-issue", Button).disabled = (status != "draft" or is_cancelled)
+            self.query_one("#btn-add",   Button).disabled = (status != "draft" or is_cancelled)
+            self.query_one("#btn-remove",Button).disabled = (status != "draft" or is_cancelled)
+            self.query_one("#btn-delete",Button).disabled = (status != "draft" or not is_manager)
+            cancel_btn = self.query_one("#btn-cancel-doc", Button)
+            cancel_btn.disabled = (status != "issued" or not is_admin)
+            cancel_btn.display = is_admin
         except Exception:
             pass
 
@@ -324,6 +341,26 @@ class WZDetailModal(ModalScreen):
                 except Exception as e:
                     self.notify(f"Error: {e}", severity="error")
         self.app.push_screen(ConfirmDeleteModal("this line item"), callback=after)
+
+    @on(Button.Pressed, "#btn-cancel-doc")
+    def on_cancel_doc(self) -> None:
+        def after(reason):
+            if reason:
+                try:
+                    user_id = getattr(self.app, "_current_user", {}).get("user_id", 0)
+                    wzdata.cancel(self.wz_id, reason, user_id)
+                    self._changed = True
+                    self._load()
+                    self.notify("WZ cancelled — stock restored.", severity="information")
+                except Exception as e:
+                    self.notify(f"Error: {e}", severity="error")
+        self.app.push_screen(
+            CancellationReasonModal(
+                f"Cancel WZ #{self.wz_id}?",
+                "Stock will be restored for each line item.",
+            ),
+            callback=after,
+        )
 
     @on(Button.Pressed, "#btn-delete")
     def on_delete(self) -> None:

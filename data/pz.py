@@ -146,11 +146,45 @@ def receive(pz_id: int) -> None:
         )
 
 
-def delete(pk) -> None:
+def cancel(pz_id: int, reason: str, user_id: int) -> None:
+    """Cancel a received PZ: reverse stock, mark as cancelled."""
+    from datetime import datetime
     conn = get_connection()
-    pz = conn.execute("SELECT Status FROM PZ WHERE PZ_ID=?", (pk,)).fetchone()
-    if pz and pz[0] == "received":
-        raise ValueError("Cannot delete a received PZ.")
+    pz = conn.execute("SELECT Status FROM PZ WHERE PZ_ID=?", (pz_id,)).fetchone()
+    if not pz:
+        conn.close()
+        raise ValueError(f"PZ #{pz_id} not found.")
+    status = pz[0]
+    if status == "draft":
+        conn.close()
+        raise ValueError("Delete the draft instead of cancelling.")
+    if status == "cancelled":
+        conn.close()
+        raise ValueError("PZ is already cancelled.")
+    if status != "received":
+        conn.close()
+        raise ValueError(f"Cannot cancel PZ with status '{status}'.")
+    # Reverse stock
+    items = conn.execute(
+        "SELECT ProductID, Quantity FROM PZ_Items WHERE PZ_ID=?", (pz_id,)
+    ).fetchall()
+    for it in items:
+        apply_stock_delta(it["ProductID"], -it["Quantity"], conn)
+    conn.execute(
+        "UPDATE PZ SET Status='cancelled', CancelledAt=?, CancelledBy=?, CancelReason=? "
+        "WHERE PZ_ID=?",
+        (datetime.now().isoformat(), user_id, reason, pz_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete(pk) -> None:
+    from data.delete_guards import can_delete_pz
+    ok, reasons = can_delete_pz(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
+    conn = get_connection()
     conn.execute("DELETE FROM PZ WHERE PZ_ID=?", (pk,))
     conn.commit()
     conn.close()

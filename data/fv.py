@@ -41,13 +41,22 @@ def get_by_pk(pk) -> dict | None:
            WHERE f.FV_ID = ?""",
         (pk,),
     ).fetchone()
-    conn.close()
     if not row:
+        conn.close()
         return None
     d = dict(row)
     total = d.get("TotalNet") or 0.0
     paid  = d.get("PaidAmount") or 0.0
     d["Outstanding"] = total - paid
+    # FK correction summary
+    fk_row = conn.execute(
+        "SELECT COUNT(*) AS cnt, COALESCE(SUM(TotalCorrection), 0) AS total_corr "
+        "FROM FK WHERE FV_ID = ?",
+        (pk,),
+    ).fetchone()
+    conn.close()
+    d["FK_Count"] = fk_row["cnt"] if fk_row else 0
+    d["FK_TotalCorrection"] = fk_row["total_corr"] if fk_row else 0.0
     return d
 
 
@@ -164,13 +173,48 @@ def mark_paid(fv_id: int) -> None:
     conn.close()
 
 
-def delete(pk) -> None:
+def cancel(fv_id: int, reason: str, user_id: int) -> None:
+    """Cancel an unpaid FV: mark as cancelled, revert linked WZ to 'issued'."""
+    from datetime import datetime
     conn = get_connection()
-    # Restore WZ docs to 'issued' status
+    fv = conn.execute(
+        "SELECT Status, COALESCE(PaidAmount, 0) FROM FV WHERE FV_ID=?", (fv_id,)
+    ).fetchone()
+    if not fv:
+        conn.close()
+        raise ValueError(f"FV #{fv_id} not found.")
+    status, paid = fv[0], fv[1]
+    if status == "cancelled":
+        conn.close()
+        raise ValueError("FV is already cancelled.")
+    if status not in ("issued", "partial", "paid"):
+        conn.close()
+        raise ValueError(f"Cannot cancel FV with status '{status}'.")
+    if paid > 0:
+        conn.close()
+        raise ValueError("FV has payments. Issue a Faktura Korygujaca (FK) instead.")
+    # Revert linked WZ from 'invoiced' to 'issued'
     conn.execute(
-        "UPDATE WZ SET Status='issued' WHERE WZ_ID IN (SELECT WZ_ID FROM FV_WZ WHERE FV_ID=?)",
-        (pk,),
+        "UPDATE WZ SET Status='issued' WHERE WZ_ID IN "
+        "(SELECT WZ_ID FROM FV_WZ WHERE FV_ID=?) AND Status='invoiced'",
+        (fv_id,),
     )
+    conn.execute(
+        "UPDATE FV SET Status='cancelled', CancelledAt=?, CancelledBy=?, CancelReason=? "
+        "WHERE FV_ID=?",
+        (datetime.now().isoformat(), user_id, reason, fv_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete(pk) -> None:
+    from data.delete_guards import can_delete_fv, before_delete_fv
+    ok, reasons = can_delete_fv(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
+    before_delete_fv(pk)  # restore WZ docs to 'issued'
+    conn = get_connection()
     conn.execute("DELETE FROM FV WHERE FV_ID=?", (pk,))
     conn.commit()
     conn.close()

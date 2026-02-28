@@ -46,13 +46,16 @@ class ConfirmActionModal(ModalScreen[bool]):
 class ConfirmDeleteModal(ModalScreen[bool]):
     """Ask the user to confirm deletion. Returns True if confirmed."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, details: str = "") -> None:
         super().__init__()
         self._name = name
+        self._details = details
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="confirm-dialog"):
             yield Label(f"Delete '{self._name}'?", classes="modal-title")
+            if self._details:
+                yield Label(self._details, classes="modal-subtitle")
             yield Label("This action cannot be undone.", classes="modal-subtitle")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Delete", id="btn-yes", variant="error")
@@ -104,6 +107,46 @@ class QuitConfirmModal(ModalScreen[bool]):
     @on(Button.Pressed, "#btn-no")
     def on_no(self) -> None:
         self.dismiss(False)
+
+
+class CancellationReasonModal(ModalScreen):
+    """Ask for a mandatory cancellation reason. Returns reason string or None."""
+
+    def __init__(self, title: str, warning: str = "") -> None:
+        super().__init__()
+        self._title = title
+        self._warning = warning
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="confirm-dialog"):
+            yield Label(self._title, classes="modal-title")
+            if self._warning:
+                yield Label(self._warning, classes="modal-subtitle")
+            yield Label("Reason (required):")
+            yield Input(placeholder="Cancellation reason...", id="f-reason")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Confirm Cancel", id="btn-yes", variant="warning")
+                yield Button("Back", id="btn-no", variant="primary")
+            yield Label("ESC to close", classes="modal-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#f-reason", Input).focus()
+
+    @on(Button.Pressed, "#btn-yes")
+    def on_yes(self) -> None:
+        reason = self.query_one("#f-reason", Input).value.strip()
+        if not reason:
+            self.notify("Reason is required.", severity="error")
+            return
+        self.dismiss(reason)
+
+    @on(Button.Pressed, "#btn-no")
+    def on_no(self) -> None:
+        self.dismiss(None)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
 
 
 class PickerModal(ModalScreen):

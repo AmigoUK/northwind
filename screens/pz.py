@@ -11,7 +11,8 @@ import data.pz as pzdata
 import data.suppliers as sdata
 import data.products as pdata
 from data.settings import get_currency_symbol
-from screens.modals import ConfirmActionModal, ConfirmDeleteModal, PickerModal
+from data.users import has_permission
+from screens.modals import ConfirmActionModal, ConfirmDeleteModal, CancellationReasonModal, PickerModal
 
 
 class PZItemFormModal(ModalScreen):
@@ -207,12 +208,13 @@ class PZDetailModal(ModalScreen):
             yield DataTable(id="items-tbl", cursor_type="row", zebra_stripes=True)
             yield Static("", id="pz-total")
             with Horizontal(classes="modal-buttons"):
-                yield Button("Receive",  id="btn-receive", variant="primary")
-                yield Button("+ Item",   id="btn-add",     variant="success")
-                yield Button("- Item",   id="btn-remove",  variant="warning")
-                yield Button("Delete",   id="btn-delete",  variant="error")
-                yield Button("PDF",      id="btn-pdf",     variant="default")
-                yield Button("Close",    id="btn-close")
+                yield Button("Receive",    id="btn-receive",    variant="primary")
+                yield Button("+ Item",     id="btn-add",        variant="success")
+                yield Button("- Item",     id="btn-remove",     variant="warning")
+                yield Button("Cancel PZ",  id="btn-cancel-doc", variant="warning")
+                yield Button("Delete",     id="btn-delete",     variant="error")
+                yield Button("PDF",        id="btn-pdf",        variant="default")
+                yield Button("Close",      id="btn-close")
             yield Label("ESC to close", classes="modal-hint")
 
     def on_mount(self) -> None:
@@ -257,12 +259,26 @@ class PZDetailModal(ModalScreen):
             )
         self.query_one("#pz-total", Static).update(f"[b]Total Cost:[/b] {sym}{total:.2f}")
 
+        # Show cancellation info if cancelled
+        if hdr.get("CancelledAt"):
+            info.append(
+                f"[b]CANCELLED[/b] on {hdr['CancelledAt'][:19]} by user #{hdr.get('CancelledBy', '?')}: "
+                f"{hdr.get('CancelReason', '')}"
+            )
+            self.query_one("#pz-header", Static).update("\n".join(info))
+
         status = hdr.get("Status", "draft")
+        is_cancelled = status == "cancelled"
+        is_admin = has_permission(getattr(self.app, "_current_user", None), "admin")
+        is_manager = has_permission(getattr(self.app, "_current_user", None), "manager")
         try:
-            self.query_one("#btn-receive", Button).disabled = (status != "draft")
-            self.query_one("#btn-add",     Button).disabled = (status != "draft")
-            self.query_one("#btn-remove",  Button).disabled = (status != "draft")
-            self.query_one("#btn-delete",  Button).disabled = (status == "received")
+            self.query_one("#btn-receive", Button).disabled = (status != "draft" or is_cancelled)
+            self.query_one("#btn-add",     Button).disabled = (status != "draft" or is_cancelled)
+            self.query_one("#btn-remove",  Button).disabled = (status != "draft" or is_cancelled)
+            self.query_one("#btn-delete",  Button).disabled = (status != "draft" or not is_manager)
+            cancel_btn = self.query_one("#btn-cancel-doc", Button)
+            cancel_btn.disabled = (status != "received" or not is_admin)
+            cancel_btn.display = is_admin
         except Exception:
             pass
 
@@ -315,6 +331,26 @@ class PZDetailModal(ModalScreen):
                 except Exception as e:
                     self.notify(f"Error: {e}", severity="error")
         self.app.push_screen(ConfirmDeleteModal("this line item"), callback=after)
+
+    @on(Button.Pressed, "#btn-cancel-doc")
+    def on_cancel_doc(self) -> None:
+        def after(reason):
+            if reason:
+                try:
+                    user_id = getattr(self.app, "_current_user", {}).get("user_id", 0)
+                    pzdata.cancel(self.pz_id, reason, user_id)
+                    self._changed = True
+                    self._load()
+                    self.notify("PZ cancelled — stock reversed.", severity="information")
+                except Exception as e:
+                    self.notify(f"Error: {e}", severity="error")
+        self.app.push_screen(
+            CancellationReasonModal(
+                f"Cancel PZ #{self.pz_id}?",
+                "Stock will be reversed. Linked payment docs will NOT be deleted.",
+            ),
+            callback=after,
+        )
 
     @on(Button.Pressed, "#btn-delete")
     def on_delete(self) -> None:

@@ -198,6 +198,10 @@ def mark_shipped(order_id, shipped_date: str) -> None:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import can_delete_order
+    ok, reasons = can_delete_order(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
     conn.execute("DELETE FROM Orders WHERE OrderID=?", (pk,))
     conn.commit()

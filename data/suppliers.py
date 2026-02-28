@@ -93,6 +93,10 @@ def update(pk, data: dict) -> None:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import can_delete_supplier
+    ok, reasons = can_delete_supplier(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
     conn.execute("DELETE FROM Suppliers WHERE SupplierID=?", (pk,))
     conn.commit()

@@ -123,6 +123,10 @@ def update(pk, data: dict) -> None:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import can_delete_employee
+    ok, reasons = can_delete_employee(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
     conn.execute("DELETE FROM Employees WHERE EmployeeID=?", (pk,))
     conn.commit()

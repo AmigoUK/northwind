@@ -63,6 +63,11 @@ def create_pw(pw_date: str, reason: str = "", notes: str = "",
 
 
 def delete_pw(pk) -> None:
+    from data.delete_guards import can_delete_pw, before_delete_pw
+    ok, reasons = can_delete_pw(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
+    before_delete_pw(pk)  # reverse stock increases
     conn = get_connection()
     conn.execute("DELETE FROM PW WHERE PW_ID=?", (pk,))
     conn.commit()
@@ -128,6 +133,8 @@ def create_rw(rw_date: str, reason: str = "", notes: str = "",
 
 
 def delete_rw(pk) -> None:
+    from data.delete_guards import before_delete_rw
+    before_delete_rw(pk)  # reverse stock decreases
     conn = get_connection()
     conn.execute("DELETE FROM RW WHERE RW_ID=?", (pk,))
     conn.commit()

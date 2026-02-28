@@ -57,6 +57,10 @@ def update(pk, data: dict) -> None:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import can_delete_category
+    ok, reasons = can_delete_category(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
     conn.execute("DELETE FROM Categories WHERE CategoryID=?", (pk,))
     conn.commit()

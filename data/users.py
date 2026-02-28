@@ -4,12 +4,26 @@ Educational patterns:
 - hashlib.sha256 for one-way PIN hashing (no plain-text stored)
 - Conditional UPDATE (change PIN only when a new one is supplied)
 - Standard CRUD pattern matching all other data/*.py modules
+- Hierarchical RBAC: admin > manager > user
 """
 from __future__ import annotations  # enables X | Y union syntax on Python 3.9
 
 import hashlib
 from datetime import datetime
 from db import get_connection
+
+# ── Role hierarchy ────────────────────────────────────────────────────────────
+_ROLE_HIERARCHY = {"user": 0, "manager": 1, "admin": 2}
+VALID_ROLES = tuple(_ROLE_HIERARCHY.keys())
+
+
+def has_permission(user: dict | None, level: str) -> bool:
+    """Hierarchical check: admin > manager > user."""
+    if user is None:
+        return False
+    user_level = _ROLE_HIERARCHY.get(user.get("role", "user"), 0)
+    required = _ROLE_HIERARCHY.get(level, 0)
+    return user_level >= required
 
 
 def hash_pin(pin: str) -> str:

@@ -151,6 +151,10 @@ def apply_stock_delta(product_id: int, delta: int, conn) -> None:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import can_delete_product
+    ok, reasons = can_delete_product(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
     conn.execute("DELETE FROM Products WHERE ProductID=?", (pk,))
     conn.commit()

@@ -95,6 +95,10 @@ def update(pk, data: dict) -> None:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import can_delete_customer
+    ok, reasons = can_delete_customer(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
     conn = get_connection()
     conn.execute("DELETE FROM Customers WHERE CustomerID=?", (pk,))
     conn.commit()

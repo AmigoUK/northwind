@@ -49,7 +49,7 @@ class UserFormModal(ModalScreen):
             yield Input(placeholder="••••", id="f-pin", password=True, max_length=4)
             yield Label("Role")
             yield Select(
-                [("User", "user"), ("Admin", "admin")],
+                [("User", "user"), ("Manager", "manager"), ("Admin", "admin")],
                 value=self._user["role"] if self._user else "user",
                 id="f-role",
             )

@@ -16,7 +16,7 @@ def _branding() -> dict:
         "co_phone", "co_email", "co_website", "co_vat", "co_tax_id",
         "co_bank_account", "co_logo_path",
         "doc_footer", "doc_theme",
-        "doc_title_wz", "doc_title_fv", "doc_wz_show_prices",
+        "doc_title_wz", "doc_title_fv", "doc_title_fk", "doc_wz_show_prices",
     ]
     return {k: get_setting(k, "") for k in keys}
 
@@ -834,3 +834,225 @@ def export_bank_entry(entry_id: int) -> str:
     _draw_signature_line(pdf, margin, page_w, theme)
 
     return _save_pdf(pdf, "bank", doc_number)
+
+
+# ── FK — Credit Note (Faktura Korygujaca) ────────────────────────────────────
+
+def export_fk(fk_id: int) -> str:
+    """Generate a branded PDF for an FK credit note. Returns the saved file path."""
+    import data.fk as fkdata
+    import data.customers as cdata
+
+    hdr = fkdata.get_by_pk(fk_id)
+    if not hdr:
+        raise ValueError(f"FK #{fk_id} not found.")
+    items = fkdata.fetch_items(fk_id)
+    customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
+    b = _branding()
+    sym = get_currency_symbol()
+    theme = _theme_colour(b.get("doc_theme", ""))
+
+    pdf = _NorthwindPDF(footer_text=b.get("doc_footer", ""), theme_rgb=theme)
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(15, 15, 15)
+    pdf.add_page()
+
+    title = b.get("doc_title_fk") or "Faktura Korygujaca"
+    doc_number = hdr.get("FK_Number", f"FK-{fk_id}")
+    doc_date = hdr.get("FK_Date", "")
+    _draw_header(pdf, b, title, doc_number, doc_date)
+
+    margin = pdf.l_margin
+    page_w = pdf.w - pdf.l_margin - pdf.r_margin
+    cust = customer or {}
+
+    # --- Cancellation banner ---
+    if hdr.get("FK_Type") == "cancellation":
+        banner_y = pdf.get_y()
+        pdf.set_fill_color(200, 30, 30)
+        pdf.rect(margin, banner_y, page_w, 10, style="F")
+        pdf.set_font("Helvetica", style="B", size=14)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_xy(margin, banner_y + 1.5)
+        pdf.cell(page_w, 7, "ANULOWANIE / CANCELLATION", align="C")
+        pdf.set_y(banner_y + 14)
+        pdf.set_text_color(0, 0, 0)
+
+    # --- Two-column section: Customer (left) + FK Details (right) ---
+    section_y = pdf.get_y()
+    left_col_w = 90
+    gap = 5
+    right_col_x = margin + left_col_w + gap
+    right_col_w = pdf.w - pdf.r_margin - right_col_x
+    box_h = 28
+
+    pdf.set_xy(margin, section_y)
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(left_col_w, 5, "CUSTOMER:")
+
+    pdf.set_xy(right_col_x, section_y)
+    pdf.cell(right_col_w, 5, "CORRECTION DETAILS:", align="R")
+
+    bill_y = section_y + 5
+    detail_y = section_y + 5
+
+    # Customer box
+    pdf.set_fill_color(245, 245, 245)
+    pdf.rect(margin, bill_y, left_col_w, box_h, style="F")
+
+    inner_y = bill_y + 3
+    pdf.set_font("Helvetica", style="B", size=10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(margin + 3, inner_y)
+    pdf.cell(left_col_w - 6, 5, cust.get("CompanyName", hdr.get("CompanyName", "")))
+    inner_y += 5
+
+    pdf.set_font("Helvetica", size=9)
+    pdf.set_text_color(50, 50, 50)
+    city_line = " ".join(filter(None, [
+        cust.get("PostalCode", ""), cust.get("City", ""), cust.get("Country", ""),
+    ]))
+    for line_text in [cust.get("Address", ""), city_line]:
+        if line_text and line_text.strip():
+            pdf.set_xy(margin + 3, inner_y)
+            pdf.cell(left_col_w - 6, 5, line_text)
+            inner_y += 5
+
+    # FK details box
+    pdf.set_fill_color(245, 245, 245)
+    pdf.rect(right_col_x, detail_y, right_col_w, box_h, style="F")
+
+    fk_type_labels = {
+        "full_reversal": "Full Reversal",
+        "partial_correction": "Partial Correction",
+        "cancellation": "Cancellation",
+    }
+    inner_d_y = detail_y + 3
+    for label, val in [
+        ("Original FV:", hdr.get("FV_Number", "")),
+        ("Type:", fk_type_labels.get(hdr.get("FK_Type", ""), hdr.get("FK_Type", ""))),
+        ("Status:", (hdr.get("Status") or "").capitalize()),
+    ]:
+        if val and str(val).strip():
+            pdf.set_xy(right_col_x + 3, inner_d_y)
+            pdf.set_font("Helvetica", style="B", size=9)
+            pdf.set_text_color(80, 80, 80)
+            pdf.cell(22, 5, label)
+            pdf.set_font("Helvetica", size=9)
+            pdf.set_text_color(50, 50, 50)
+            pdf.cell(right_col_w - 28, 5, str(val), align="R")
+            inner_d_y += 5
+
+    pdf.set_y(section_y + 5 + box_h + 4)
+
+    # --- Reason ---
+    if hdr.get("Reason"):
+        pdf.set_font("Helvetica", style="B", size=9)
+        pdf.set_text_color(80, 80, 80)
+        pdf.set_x(margin)
+        pdf.cell(25, 5, "Reason:")
+        pdf.set_font("Helvetica", size=9)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(page_w - 25, 5, hdr["Reason"], new_x="LMARGIN", new_y="NEXT")
+
+    if hdr.get("Notes"):
+        pdf.set_font("Helvetica", style="I", size=9)
+        pdf.set_text_color(60, 60, 60)
+        pdf.set_x(margin)
+        pdf.cell(0, 5, f"Notes: {hdr['Notes']}", new_x="LMARGIN", new_y="NEXT")
+
+    pdf.ln(3)
+
+    # --- Correction items table ---
+    # Columns: #, Product, Orig Qty, Corr Qty, Orig Price, Corr Price, Orig Total, Corr Total, Correction
+    c1 = 6                           # #
+    c9 = 20                          # Correction
+    c8 = 20                          # Corr Total
+    c7 = 20                          # Orig Total
+    c6 = 18                          # Corr Price
+    c5 = 18                          # Orig Price
+    c4 = 12                          # Corr Qty
+    c3 = 12                          # Orig Qty
+    c2 = page_w - c1 - c3 - c4 - c5 - c6 - c7 - c8 - c9  # Product
+    col_widths = [c1, c2, c3, c4, c5, c6, c7, c8, c9]
+    headers = ["#", "Product", "O.Qty", "C.Qty", "O.Price", "C.Price",
+               "O.Total", "C.Total", "Corr."]
+    row_h = 7
+
+    pdf.set_fill_color(*theme)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", style="B", size=8)
+    pdf.set_x(margin)
+    for i, (h, w) in enumerate(zip(headers, col_widths)):
+        align = "R" if i >= 2 else "L"
+        pdf.cell(w, row_h, h, border=0, align=align, fill=True)
+    pdf.ln()
+
+    total_correction = 0.0
+    pdf.set_font("Helvetica", size=8)
+    for idx, it in enumerate(items):
+        fill = (idx % 2 == 1)
+        if fill:
+            pdf.set_fill_color(245, 248, 252)
+        pdf.set_text_color(0, 0, 0)
+
+        orig_qty = it.get("OrigQuantity", 0)
+        corr_qty = it.get("CorrQuantity", 0)
+        orig_price = it.get("OrigUnitPrice", 0)
+        corr_price = it.get("CorrUnitPrice", 0)
+        orig_total = orig_qty * orig_price
+        corr_total = corr_qty * corr_price
+        line_corr = it.get("LineCorrection", 0)
+        total_correction += line_corr
+
+        row_data = [
+            str(idx + 1),
+            it.get("ProductName", ""),
+            str(orig_qty),
+            str(corr_qty),
+            f"{sym}{orig_price:.2f}",
+            f"{sym}{corr_price:.2f}",
+            f"{sym}{orig_total:.2f}",
+            f"{sym}{corr_total:.2f}",
+            f"{sym}{line_corr:.2f}",
+        ]
+        pdf.set_x(margin)
+        for i, (val, w) in enumerate(zip(row_data, col_widths)):
+            align = "R" if i >= 2 else "L"
+            pdf.cell(w, row_h, val, border=0, align=align, fill=fill)
+        pdf.ln()
+
+    # Total correction row
+    pdf.set_fill_color(225, 225, 225)
+    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_x(margin)
+    pre_w = sum(col_widths[:-1])
+    pdf.cell(pre_w, row_h, "TOTAL CORRECTION", align="R", border=0, fill=True)
+    corr_colour = (200, 30, 30) if total_correction < 0 else (34, 139, 34)
+    pdf.set_text_color(*corr_colour)
+    pdf.cell(col_widths[-1], row_h, f"{sym}{total_correction:.2f}", align="R",
+             border=0, fill=True)
+    pdf.ln()
+
+    # --- VAT / Tax band ---
+    pdf.ln(4)
+    if b.get("co_vat") or b.get("co_tax_id"):
+        vat_parts = []
+        if b.get("co_vat"):
+            vat_parts.append(f"VAT No: {b['co_vat']}")
+        if b.get("co_tax_id"):
+            vat_parts.append(f"Tax ID: {b['co_tax_id']}")
+        vat_y = pdf.get_y()
+        pdf.set_fill_color(245, 245, 245)
+        pdf.rect(margin, vat_y, page_w, 8, style="F")
+        pdf.set_font("Helvetica", size=8)
+        pdf.set_text_color(100, 100, 100)
+        pdf.set_xy(margin + 3, vat_y + 1.5)
+        pdf.cell(page_w - 6, 5, "   |   ".join(vat_parts))
+
+    _draw_signature_line(pdf, margin, page_w, theme)
+
+    return _save_pdf(pdf, "fk", doc_number)

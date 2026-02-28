@@ -11,7 +11,8 @@ import data.fv as fvdata
 import data.customers as cdata
 import data.wz as wzdata
 from data.settings import get_currency_symbol
-from screens.modals import ConfirmDeleteModal, PickerModal
+from data.users import has_permission
+from screens.modals import ConfirmDeleteModal, CancellationReasonModal, PickerModal
 
 
 class FVNewModal(ModalScreen):
@@ -260,8 +261,12 @@ class FVDetailModal(ModalScreen):
             yield Label("Line Items (from all WZ):", classes="section-label")
             yield DataTable(id="lines-tbl", cursor_type="row", zebra_stripes=True)
             yield Static("", id="fv-payment")
+            yield Label("Linked FK (Credit Notes):", classes="section-label")
+            yield DataTable(id="fk-tbl", cursor_type="row", zebra_stripes=True)
             with Horizontal(classes="modal-buttons"):
                 yield Button("Record Payment", id="btn-record-payment", variant="primary")
+                yield Button("Issue FK",       id="btn-issue-fk",       variant="warning")
+                yield Button("Cancel FV",      id="btn-cancel-doc",     variant="warning")
                 yield Button("Delete",         id="btn-delete",         variant="error")
                 yield Button("PDF",            id="btn-pdf",            variant="default")
                 yield Button("Close",          id="btn-close")
@@ -276,6 +281,11 @@ class FVDetailModal(ModalScreen):
             ("ProdID", 6), ("Product Name", 36), ("Qty", 6), ("Price", 12), ("Line Total", 12),
         ]:
             lines_tbl.add_column(label, width=width)
+        fk_tbl = self.query_one("#fk-tbl", DataTable)
+        for label, width in [
+            ("FK_ID", 6), ("Number", 20), ("Date", 12), ("Type", 16), ("Correction", 12),
+        ]:
+            fk_tbl.add_column(label, width=width)
         self._load()
 
     def _load(self) -> None:
@@ -325,9 +335,47 @@ class FVDetailModal(ModalScreen):
             f"{out_style}Outstanding: {sym}{outstanding:.2f}[/]"
         )
 
-        status = hdr.get("Status", "issued")
+        # Load linked FK (credit notes)
+        fk_tbl = self.query_one("#fk-tbl", DataTable)
+        fk_tbl.clear()
         try:
-            self.query_one("#btn-record-payment", Button).disabled = (status == "paid")
+            import data.fk as fkdata
+            fk_docs = fkdata.fetch_for_fv(self.fv_id)
+            for fk in fk_docs:
+                fk_tbl.add_row(
+                    str(fk["FK_ID"]), fk["FK_Number"], fk["FK_Date"],
+                    fk["FK_Type"], f"{sym}{fk['TotalCorrection']:.2f}",
+                )
+        except Exception:
+            pass
+
+        # Show cancellation info if cancelled
+        if hdr.get("CancelledAt"):
+            info.append(
+                f"[b]CANCELLED[/b] on {hdr['CancelledAt'][:19]} by user #{hdr.get('CancelledBy', '?')}: "
+                f"{hdr.get('CancelReason', '')}"
+            )
+            self.query_one("#fv-header", Static).update("\n".join(info))
+
+        # Adjust buttons based on status and role
+        status = hdr.get("Status", "issued")
+        is_cancelled = status == "cancelled"
+        is_admin = has_permission(getattr(self.app, "_current_user", None), "admin")
+        is_manager = has_permission(getattr(self.app, "_current_user", None), "manager")
+        paid_amount = hdr.get("PaidAmount") or 0.0
+        try:
+            self.query_one("#btn-record-payment", Button).disabled = (
+                status in ("paid", "cancelled")
+            )
+            self.query_one("#btn-delete", Button).disabled = (not is_manager or is_cancelled)
+            cancel_btn = self.query_one("#btn-cancel-doc", Button)
+            cancel_btn.disabled = (
+                status != "issued" or paid_amount > 0 or not is_admin
+            )
+            cancel_btn.display = is_admin
+            fk_btn = self.query_one("#btn-issue-fk", Button)
+            fk_btn.disabled = (is_cancelled or not is_admin)
+            fk_btn.display = is_admin
         except Exception:
             pass
 
@@ -348,6 +396,35 @@ class FVDetailModal(ModalScreen):
             RecordPaymentModal(self.fv_id, outstanding, preferred),
             callback=after,
         )
+
+    @on(Button.Pressed, "#btn-cancel-doc")
+    def on_cancel_doc(self) -> None:
+        def after(reason):
+            if reason:
+                try:
+                    user_id = getattr(self.app, "_current_user", {}).get("user_id", 0)
+                    fvdata.cancel(self.fv_id, reason, user_id)
+                    self._changed = True
+                    self._load()
+                    self.notify("FV cancelled — linked WZ reverted to 'issued'.", severity="information")
+                except Exception as e:
+                    self.notify(f"Error: {e}", severity="error")
+        self.app.push_screen(
+            CancellationReasonModal(
+                f"Cancel FV #{self.fv_id}?",
+                "Linked WZ will revert to 'issued'. Stock is NOT reversed.",
+            ),
+            callback=after,
+        )
+
+    @on(Button.Pressed, "#btn-issue-fk")
+    def on_issue_fk(self) -> None:
+        from screens.fk import FKNewModal
+        def after(fk_id):
+            if fk_id:
+                self._changed = True
+                self._load()
+        self.app.push_screen(FKNewModal(self.fv_id), callback=after)
 
     @on(Button.Pressed, "#btn-delete")
     def on_delete(self) -> None:

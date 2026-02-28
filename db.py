@@ -8,9 +8,12 @@ from datetime import date, datetime
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "northwind.db")
 
+_db_path_override: str | None = None
+
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    path = _db_path_override or DB_PATH
+    conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -308,6 +311,44 @@ def create_tables():
         except Exception:
             pass  # column already exists — safe on re-run
 
+    # Cancellation columns for WZ, FV, PZ
+    for table in ("WZ", "FV", "PZ"):
+        for col_ddl in [
+            f"ALTER TABLE {table} ADD COLUMN CancelledAt TEXT",
+            f"ALTER TABLE {table} ADD COLUMN CancelledBy INTEGER",
+            f"ALTER TABLE {table} ADD COLUMN CancelReason TEXT",
+        ]:
+            try:
+                conn.execute(col_ddl)
+            except Exception:
+                pass
+
+    # FK (Credit Note) tables — use execute() for reliable migration on existing DBs
+    conn.execute("""CREATE TABLE IF NOT EXISTS FK (
+        FK_ID           INTEGER PRIMARY KEY AUTOINCREMENT,
+        FK_Number       TEXT NOT NULL UNIQUE,
+        FV_ID           INTEGER NOT NULL REFERENCES FV,
+        CustomerID      TEXT NOT NULL REFERENCES Customers,
+        FK_Date         TEXT NOT NULL,
+        FK_Type         TEXT NOT NULL,
+        Reason          TEXT NOT NULL,
+        Status          TEXT DEFAULT 'issued',
+        TotalCorrection REAL DEFAULT 0,
+        Notes           TEXT,
+        CreatedBy       INTEGER,
+        CreatedAt       TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS FK_Items (
+        FK_ID           INTEGER REFERENCES FK ON DELETE CASCADE,
+        ProductID       INTEGER REFERENCES Products,
+        OrigQuantity    INTEGER NOT NULL,
+        CorrQuantity    INTEGER NOT NULL,
+        OrigUnitPrice   REAL NOT NULL,
+        CorrUnitPrice   REAL NOT NULL,
+        LineCorrection  REAL NOT NULL,
+        PRIMARY KEY (FK_ID, ProductID)
+    )""")
+
     conn.commit()
     conn.close()
 
@@ -587,6 +628,7 @@ def _seed_settings() -> None:
         ("doc_title_fv",      "Invoice"),
         ("doc_title_pz",      "Goods Receipt"),
         ("doc_wz_show_prices","true"),
+        ("doc_title_fk",      "Faktura Korygujaca"),
     ]
     for key, value in defaults:
         conn.execute(

@@ -84,6 +84,8 @@ def bank_balance() -> float:
 
 
 def delete(pk) -> None:
+    from data.delete_guards import before_delete_bank_entry
+    before_delete_bank_entry(pk)  # decrement FV.PaidAmount if linked
     conn = get_connection()
     conn.execute("DELETE FROM BankEntry WHERE Entry_ID=?", (pk,))
     conn.commit()

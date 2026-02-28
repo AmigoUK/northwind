@@ -57,6 +57,8 @@ def cash_balance_kp() -> float:
 
 
 def delete_kp(pk) -> None:
+    from data.delete_guards import before_delete_kp
+    before_delete_kp(pk)  # decrement FV.PaidAmount if linked
     conn = get_connection()
     conn.execute("DELETE FROM KP WHERE KP_ID=?", (pk,))
     conn.commit()
@@ -120,7 +122,7 @@ def delete_kw(pk) -> None:
     conn = get_connection()
     conn.execute("DELETE FROM KW WHERE KW_ID=?", (pk,))
     conn.commit()
-    conn.close()
+    conn.close()  # KW has no side-effects to reverse
 
 
 # ── Transfers ─────────────────────────────────────────────────────────────────

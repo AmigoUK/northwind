@@ -233,11 +233,48 @@ def create_from_order(order_id: int, wz_date: str) -> int:
     return wz_id
 
 
-def delete(pk) -> None:
+def cancel(wz_id: int, reason: str, user_id: int) -> None:
+    """Cancel an issued WZ: reverse stock, mark as cancelled."""
+    from datetime import datetime
     conn = get_connection()
-    wz = conn.execute("SELECT Status FROM WZ WHERE WZ_ID=?", (pk,)).fetchone()
-    if wz and wz[0] == "issued":
-        raise ValueError("Cannot delete an issued WZ. Reverse stock manually.")
+    wz = conn.execute("SELECT Status FROM WZ WHERE WZ_ID=?", (wz_id,)).fetchone()
+    if not wz:
+        conn.close()
+        raise ValueError(f"WZ #{wz_id} not found.")
+    status = wz[0]
+    if status == "draft":
+        conn.close()
+        raise ValueError("Delete the draft instead of cancelling.")
+    if status == "invoiced":
+        conn.close()
+        raise ValueError("Cancel or issue FK on the FV first.")
+    if status == "cancelled":
+        conn.close()
+        raise ValueError("WZ is already cancelled.")
+    if status != "issued":
+        conn.close()
+        raise ValueError(f"Cannot cancel WZ with status '{status}'.")
+    # Reverse stock
+    items = conn.execute(
+        "SELECT ProductID, Quantity FROM WZ_Items WHERE WZ_ID=?", (wz_id,)
+    ).fetchall()
+    for it in items:
+        apply_stock_delta(it["ProductID"], it["Quantity"], conn)
+    conn.execute(
+        "UPDATE WZ SET Status='cancelled', CancelledAt=?, CancelledBy=?, CancelReason=? "
+        "WHERE WZ_ID=?",
+        (datetime.now().isoformat(), user_id, reason, wz_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete(pk) -> None:
+    from data.delete_guards import can_delete_wz
+    ok, reasons = can_delete_wz(pk)
+    if not ok:
+        raise ValueError("Cannot delete: " + "; ".join(reasons))
+    conn = get_connection()
     conn.execute("DELETE FROM WZ WHERE WZ_ID=?", (pk,))
     conn.commit()
     conn.close()
