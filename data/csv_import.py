@@ -42,10 +42,40 @@ TABLE_CONFIGS = {
     },
 }
 
+# Alias mappings: export display header → canonical column name
+_ALIASES: dict[str, dict[str, str]] = {
+    "Customers": {
+        "id": "CustomerID",
+        "company": "CompanyName",
+        "contact": "ContactName",
+    },
+    "Suppliers": {
+        "id": "SupplierID",
+        "company": "CompanyName",
+        "contact": "ContactName",
+    },
+    "Products": {
+        "id": "ProductID",
+        "productname": "ProductName",
+        "category": "CategoryID",
+        "supplier": "SupplierID",
+        "price": "UnitPrice",
+        "instock": "UnitsInStock",
+    },
+    "Categories": {
+        "id": "CategoryID",
+        "categoryname": "CategoryName",
+    },
+}
+
 # Map normalised header → canonical column name for each table
 _HEADER_MAPS: dict[str, dict[str, str]] = {}
 for _tbl, _cfg in TABLE_CONFIGS.items():
-    _HEADER_MAPS[_tbl] = {col.lower().replace(" ", ""): col for col in _cfg["columns"]}
+    _map = {col.lower().replace(" ", ""): col for col in _cfg["columns"]}
+    # Merge aliases (don't overwrite existing canonical names)
+    for alias, canon in _ALIASES.get(_tbl, {}).items():
+        _map.setdefault(alias, canon)
+    _HEADER_MAPS[_tbl] = _map
 
 
 def parse_csv(path: str, table: str) -> tuple[list[dict], list[str]]:

@@ -19,6 +19,19 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.6** | UI Polish | Wider modals, stretch Select/Button widgets, compact picker layout |
 | **v2.7** | CSV Import | CSV import for master data — Customers, Suppliers, Products, Categories |
 | **v2.8** | File Selector & Export Cleanup | File browser modal for all exports/imports, centralized CSV export logic |
+| **v2.9** | CSV Round-Trip Fix | CSV import now accepts export display headers (ID, Company, Contact…) via alias mappings |
+
+---
+
+## Features (v2.9)
+
+### New in v2.9 — CSV Round-Trip Fix
+
+CSV import now accepts the short display headers used by CSV export (e.g. `ID`, `Company`, `Contact`) in addition to the original database column names (`CustomerID`, `CompanyName`, `ContactName`). This means you can export a table with Ctrl+X, clean the database, and re-import the same CSV with Ctrl+I without errors.
+
+- Added `_ALIASES` mapping in `data/csv_import.py` covering all 4 importable tables (Customers, Suppliers, Products, Categories)
+- Aliases are merged into the header normalization map using `setdefault` so exact DB column matches always take priority
+- 145 automated tests pass (including all 15 CSV import tests)
 
 ---
 
@@ -438,3 +451,4 @@ northwind/
 | Textual `DirectoryTree` subclassing with `filter_paths()` for extension-based file filtering | `screens/modals.py` |
 | Stacking `ModalScreen` instances — pushing a file browser from within an import modal | `screens/modals.py` |
 | Extracting duplicated logic into a shared helper with callback-based modal integration | `screens/export_helpers.py` |
+| Header alias maps with `setdefault` to accept multiple CSV column naming conventions without overriding exact matches | `data/csv_import.py` |
