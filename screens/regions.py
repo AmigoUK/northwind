@@ -465,9 +465,7 @@ class RegionsPanel(Widget):
         self.app.push_screen(ConfirmDeleteModal(name), callback=after_confirm)
 
     def action_export_csv(self) -> None:
-        import csv, os
-        from datetime import datetime
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        from screens.export_helpers import export_csv_with_selector
         try:
             tabs = self.query_one(TabbedContent)
             if tabs.active == "tab-territories":
@@ -484,13 +482,7 @@ class RegionsPanel(Widget):
             rows = rdata.fetch_all()
             headers = ["ID", "Region Description"]
             name = "regions"
-        path = os.path.expanduser(f"~/Downloads/northwind_{name}_{ts}.csv")
-        with open(path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow([str(c) if c is not None else "" for c in row])
-        self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+        export_csv_with_selector(self, name, headers, rows)
 
     def action_new_record(self) -> None:
         # Dispatch to whichever tab is active

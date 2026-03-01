@@ -173,20 +173,12 @@ class ReportsPanel(Widget):
             self.notify(f"Error running report: {e}", severity="error")
 
     def action_export_csv(self) -> None:
-        import csv, os
-        from datetime import datetime
+        from screens.export_helpers import export_csv_with_selector
         if not self._last_rows:
             self.notify("Run a report first, then press X to export.", severity="warning")
             return
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_type = str(self.query_one("#report-type", Select).value)
-        path = os.path.expanduser(f"~/Downloads/northwind_report_{report_type}_{ts}.csv")
-        with open(path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(self._last_headers)
-            for row in self._last_rows:
-                writer.writerow([str(c) if c is not None else "" for c in row])
-        self.notify(f"Exported {len(self._last_rows)} rows → {path}", severity="information")
+        export_csv_with_selector(self, f"report_{report_type}", self._last_headers, self._last_rows)
 
     def action_run_report(self) -> None:
         dates = self._get_validated_dates()

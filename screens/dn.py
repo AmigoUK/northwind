@@ -375,12 +375,19 @@ class DNDetailModal(ModalScreen):
 
     @on(Button.Pressed, "#btn-pdf")
     def on_pdf(self) -> None:
-        try:
-            import pdf_export
-            path = pdf_export.export_dn(self.dn_id)
-            self.notify(f"PDF saved → {path}", severity="information")
-        except Exception as e:
-            self.notify(f"PDF error: {e}", severity="error")
+        from datetime import datetime
+        from screens.modals import FileSelectModal
+        suggested = f"northwind_dn_{self.dn_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        def after(path):
+            if path:
+                try:
+                    import pdf_export
+                    pdf_export.export_dn(self.dn_id, save_path=path)
+                    self.notify(f"PDF saved → {path}", severity="information")
+                except Exception as e:
+                    self.notify(f"PDF error: {e}", severity="error")
+        self.app.push_screen(FileSelectModal(title="Save DN PDF", mode="save",
+            default_path="~/Downloads", suggested_name=suggested, file_filter=".pdf"), callback=after)
 
     @on(Button.Pressed, "#btn-close")
     def on_close(self) -> None:

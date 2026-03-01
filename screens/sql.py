@@ -105,12 +105,8 @@ class SqlPanel(Widget):
         self._result_headers = []
 
     def action_export_csv(self) -> None:
+        from screens.export_helpers import export_csv_with_selector
         if not self._result_headers:
             self.notify("No results to export.", severity="warning")
             return
-        filename = f"sql_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        with open(filename, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(self._result_headers)
-            writer.writerows(self._result_rows)
-        self.notify(f"Exported to {filename}", severity="information")
+        export_csv_with_selector(self, "sql_export", self._result_headers, self._result_rows)

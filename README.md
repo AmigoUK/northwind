@@ -16,7 +16,35 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.3** | UI Polish | Business Details compact one-screen tabs; form layout optimisation across Company / Tax / Documents |
 | **v2.4** | Data Integrity | 3-tier roles (user/manager/admin), delete guards, document cancellation, Credit Notes (CN), 82 automated tests |
 | **v2.5** | English International | All Polish abbreviations replaced with English (WZ→DN, FV→INV, FK→CN, PZ→GR, PW→SI, RW→SO, KP→CR, KW→CP) |
-| ... | ... | ... |
+| **v2.6** | UI Polish | Wider modals, stretch Select/Button widgets, compact picker layout |
+| **v2.7** | CSV Import | CSV import for master data — Customers, Suppliers, Products, Categories |
+| **v2.8** | File Selector & Export Cleanup | File browser modal for all exports/imports, centralized CSV export logic |
+
+---
+
+## Features (v2.8)
+
+### New in v2.8 — File Selector & Export Cleanup
+
+**File Browser Modal (`FileSelectModal`)**
+- Reusable file browser with `DirectoryTree` navigation, rooted at home directory
+- Two modes: **save** (CSV/PDF export — pick save location) and **open** (CSV import — pick existing file)
+- Pre-filled suggested filename for exports; extension filter hides irrelevant files in the tree
+- Clicking a directory updates the path; clicking a file selects it; validates before accepting
+
+**CSV Export Centralized**
+- All 10 CSV export screens now use a shared `export_csv_with_selector()` helper
+- Each `action_export_csv()` reduced from ~12 lines to ~4 lines
+- File selector modal opens on export — user chooses save location instead of hardcoded `~/Downloads/`
+
+**PDF Export with Save Location**
+- All 7 PDF export functions (`export_dn`, `export_inv`, `export_gr`, `export_cr`, `export_cp`, `export_bank_entry`, `export_cn`) accept optional `save_path` parameter
+- `export_dn` and `export_inv` refactored to use shared `_save_pdf()` helper (eliminated inline save duplication)
+- All 7 PDF screen handlers wrapped with `FileSelectModal` for user-chosen save location
+
+**CSV Import Browse Button**
+- `ImportCSVModal` gains a **Browse...** button that opens `FileSelectModal(mode="open", file_filter=".csv")`
+- Selected path fills the existing file path Input; manual typing still works
 
 ---
 
@@ -336,7 +364,8 @@ northwind/
 │   ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
 │   ├── reports.py      # Reports panel with 11 report types + CSV export
 │   ├── cn.py           # CN Credit Notes panel + creation wizard + detail modal (v2.4)
-│   ├── modals.py       # Shared modals: ConfirmDelete, CancellationReason (v2.4)
+│   ├── modals.py       # Shared modals: ConfirmDelete, CancellationReason, FileSelectModal (v2.8)
+│   ├── export_helpers.py # Centralized CSV export logic + FileSelectModal integration (v2.8)
 │   ├── dn.py           # DN Delivery Notes panel + modals + cancel button
 │   ├── inv.py          # INV Invoices panel + modals + CN integration
 │   ├── gr.py           # GR Goods Receipts panel + modals + cancel button
@@ -377,7 +406,7 @@ northwind/
 | Role-based UI (same app, different views per role) | `app.py` `_apply_role_visibility()` |
 | Textual `ContentSwitcher` for single-page navigation | `app.py` |
 | `TextArea` widget for multi-line code input | `screens/sql.py` |
-| CSV export with Python's `csv` module | `screens/sql.py`, reports |
+| CSV export with Python's `csv` module + centralized helper pattern | `screens/export_helpers.py` |
 | MVC-style layered architecture (`data/` + `screens/`) | whole project |
 | CSS `1fr` columns for multi-column form rows | `northwind.tcss`, all form modals |
 | `plotext` for ANSI ASCII charts inside Textual `Static` widgets | `screens/charts.py` |
@@ -406,3 +435,6 @@ northwind/
 | `conn.execute()` vs `conn.executescript()` for reliable schema migration on existing databases | `db.py` |
 | pytest fixtures with `tmp_path` for isolated per-test SQLite databases | `tests/conftest.py` |
 | Testing cross-document effects: Order → DN → INV → CR → CN → verify all balances | `tests/test_cn.py` |
+| Textual `DirectoryTree` subclassing with `filter_paths()` for extension-based file filtering | `screens/modals.py` |
+| Stacking `ModalScreen` instances — pushing a file browser from within an import modal | `screens/modals.py` |
+| Extracting duplicated logic into a shared helper with callback-based modal integration | `screens/export_helpers.py` |

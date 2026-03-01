@@ -229,16 +229,7 @@ class ShippersPanel(Widget):
         self.query_one("#search-box", Input).focus()
 
     def action_export_csv(self) -> None:
-        import csv, os
-        from datetime import datetime
+        from screens.export_helpers import export_csv_with_selector
         term = self.query_one("#search-box", Input).value
         rows = sdata.search(term) if term else sdata.fetch_all()
-        headers = ["ID", "Company Name", "Phone"]
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.expanduser(f"~/Downloads/northwind_shippers_{ts}.csv")
-        with open(path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow([str(c) if c is not None else "" for c in row])
-        self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+        export_csv_with_selector(self, "shippers", ["ID", "Company Name", "Phone"], rows)

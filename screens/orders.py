@@ -740,19 +740,10 @@ class OrdersPanel(Widget):
         self.query_one("#search-box", Input).focus()
 
     def action_export_csv(self) -> None:
-        import csv, os
-        from datetime import datetime
+        from screens.export_helpers import export_csv_with_selector
         term = self.query_one("#search-box", Input).value
         rows = odata.search(term) if term else odata.fetch_all()
-        headers = ["ID", "Customer", "Employee", "Order Date", "Shipped", "Total"]
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.expanduser(f"~/Downloads/northwind_orders_{ts}.csv")
-        with open(path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow([str(c) if c is not None else "" for c in row])
-        self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+        export_csv_with_selector(self, "orders", ["ID", "Customer", "Employee", "Order Date", "Shipped", "Total"], rows)
 
     def action_add_item(self) -> None:
         if not self._selected_pk:

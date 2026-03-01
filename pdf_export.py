@@ -129,7 +129,7 @@ def _draw_header(
     pdf.ln(4)
 
 
-def export_dn(dn_id: int) -> str:
+def export_dn(dn_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for a DN delivery note. Returns the saved file path."""
     import data.dn as dndata
     import data.customers as cdata
@@ -274,17 +274,10 @@ def export_dn(dn_id: int) -> str:
         pdf.set_xy(margin + 3, vat_y + 1.5)
         pdf.cell(page_w - 6, 5, "   |   ".join(vat_parts))
 
-    # --- Save ---
-    downloads = os.path.expanduser("~/Downloads")
-    os.makedirs(downloads, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_number = doc_number.replace("/", "-").replace("\\", "-")
-    path = os.path.join(downloads, f"northwind_dn_{safe_number}_{ts}.pdf")
-    pdf.output(path)
-    return path
+    return _save_pdf(pdf, "dn", doc_number, save_path)
 
 
-def export_inv(inv_id: int) -> str:
+def export_inv(inv_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for an INV invoice. Returns the saved file path."""
     import data.inv as invdata
     import data.customers as cdata
@@ -476,14 +469,7 @@ def export_inv(inv_id: int) -> str:
         pdf.set_x(margin)
         pdf.cell(0, 5, "   |   ".join(vat_parts), new_x="LMARGIN", new_y="NEXT")
 
-    # --- Save ---
-    downloads = os.path.expanduser("~/Downloads")
-    os.makedirs(downloads, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_number = doc_number.replace("/", "-").replace("\\", "-")
-    path = os.path.join(downloads, f"northwind_inv_{safe_number}_{ts}.pdf")
-    pdf.output(path)
-    return path
+    return _save_pdf(pdf, "inv", doc_number, save_path)
 
 
 # ── Shared helpers for voucher-style single-entry documents ───────────────────
@@ -534,8 +520,12 @@ def _draw_signature_line(pdf: _NorthwindPDF, margin: float, page_w: float,
     pdf.cell(sig_w, 5, "Authorised signature", align="C")
 
 
-def _save_pdf(pdf: _NorthwindPDF, prefix: str, doc_number: str) -> str:
-    """Output PDF to ~/Downloads and return the path."""
+def _save_pdf(pdf: _NorthwindPDF, prefix: str, doc_number: str, save_path: str | None = None) -> str:
+    """Output PDF to save_path (if given) or ~/Downloads and return the path."""
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        pdf.output(save_path)
+        return save_path
     downloads = os.path.expanduser("~/Downloads")
     os.makedirs(downloads, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -547,7 +537,7 @@ def _save_pdf(pdf: _NorthwindPDF, prefix: str, doc_number: str) -> str:
 
 # ── GR — Goods Receipt ────────────────────────────────────────────────────────
 
-def export_gr(gr_id: int) -> str:
+def export_gr(gr_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for a GR goods receipt. Returns the saved file path."""
     import data.gr as grdata
     import data.suppliers as sdata
@@ -674,12 +664,12 @@ def export_gr(gr_id: int) -> str:
         pdf.set_xy(margin + 3, vat_y + 1.5)
         pdf.cell(page_w - 6, 5, "   |   ".join(vat_parts))
 
-    return _save_pdf(pdf, "gr", doc_number)
+    return _save_pdf(pdf, "gr", doc_number, save_path)
 
 
 # ── CR — Cash Receipt ─────────────────────────────────────────────────────────
 
-def export_cr(cr_id: int) -> str:
+def export_cr(cr_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for a CR cash receipt. Returns the saved file path."""
     import data.cash as cashdata
     import data.customers as cdata
@@ -722,12 +712,12 @@ def export_cr(cr_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "cr", doc_number)
+    return _save_pdf(pdf, "cr", doc_number, save_path)
 
 
 # ── CP — Cash Payment ─────────────────────────────────────────────────────────
 
-def export_cp(cp_id: int) -> str:
+def export_cp(cp_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for a CP cash payment. Returns the saved file path."""
     import data.cash as cashdata
     import data.suppliers as sdata
@@ -768,12 +758,12 @@ def export_cp(cp_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "cp", doc_number)
+    return _save_pdf(pdf, "cp", doc_number, save_path)
 
 
 # ── Bank Entry ────────────────────────────────────────────────────────────────
 
-def export_bank_entry(entry_id: int) -> str:
+def export_bank_entry(entry_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for a Bank Account entry. Returns the saved file path."""
     import data.bank as bankdata
 
@@ -833,12 +823,12 @@ def export_bank_entry(entry_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "bank", doc_number)
+    return _save_pdf(pdf, "bank", doc_number, save_path)
 
 
 # ── CN — Credit Note ─────────────────────────────────────────────────────────
 
-def export_cn(cn_id: int) -> str:
+def export_cn(cn_id: int, save_path: str | None = None) -> str:
     """Generate a branded PDF for a CN credit note. Returns the saved file path."""
     import data.cn as cndata
     import data.customers as cdata
@@ -1055,4 +1045,4 @@ def export_cn(cn_id: int) -> str:
 
     _draw_signature_line(pdf, margin, page_w, theme)
 
-    return _save_pdf(pdf, "cn", doc_number)
+    return _save_pdf(pdf, "cn", doc_number, save_path)

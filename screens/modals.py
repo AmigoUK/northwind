@@ -1,8 +1,11 @@
-"""screens/modals.py — Shared modal dialogs: ConfirmActionModal, ConfirmDeleteModal, CleanDatabaseModal, PickerModal, ImportCSVModal."""
+"""screens/modals.py — Shared modal dialogs: ConfirmActionModal, ConfirmDeleteModal, CleanDatabaseModal, PickerModal, ImportCSVModal, FileSelectModal."""
+import os
+from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, DataTable, Input, Label, Static
+from textual.widgets import Button, DataTable, DirectoryTree, Input, Label, Static
 from textual import on
 
 
@@ -311,6 +314,7 @@ class ImportCSVModal(ModalScreen):
             yield Label("File path:")
             yield Input(placeholder="~/Downloads/data.csv", id="f-path")
             with Horizontal(classes="modal-buttons"):
+                yield Button("Browse...", id="btn-browse-csv")
                 yield Button("Preview", id="btn-preview", variant="primary")
                 yield Button("Cancel", id="btn-cancel-import")
             yield Static("", id="import-status", classes="import-status")
@@ -318,6 +322,17 @@ class ImportCSVModal(ModalScreen):
 
     def on_mount(self) -> None:
         self.query_one("#f-path", Input).focus()
+
+    @on(Button.Pressed, "#btn-browse-csv")
+    def on_browse(self) -> None:
+        def after(path):
+            if path:
+                self.query_one("#f-path", Input).value = path
+        self.app.push_screen(
+            FileSelectModal(title="Select CSV File", mode="open",
+                default_path="~/Downloads", file_filter=".csv"),
+            callback=after,
+        )
 
     @on(Input.Submitted, "#f-path")
     def on_path_submitted(self) -> None:
@@ -405,3 +420,107 @@ class ImportCSVModal(ModalScreen):
     def on_key(self, event) -> None:
         if event.key == "escape":
             self.dismiss(None)
+
+
+class _FilteredDirectoryTree(DirectoryTree):
+    """DirectoryTree that filters files by extension."""
+
+    def __init__(self, path: str, file_filter: str = "") -> None:
+        super().__init__(path)
+        self._file_filter = file_filter.lower()
+
+    def filter_paths(self, paths):
+        if not self._file_filter:
+            return paths
+        result = []
+        for p in paths:
+            if p.is_dir() or p.suffix.lower() == self._file_filter:
+                result.append(p)
+        return result
+
+
+class FileSelectModal(ModalScreen[str | None]):
+    """File browser modal for open/save operations. Returns chosen path or None."""
+
+    def __init__(
+        self,
+        title: str = "Select File",
+        mode: str = "save",
+        default_path: str = "~/Downloads",
+        suggested_name: str = "",
+        file_filter: str = "",
+    ) -> None:
+        super().__init__()
+        self._title = title
+        self._mode = mode  # "open" | "save"
+        self._default_path = os.path.expanduser(default_path)
+        self._suggested_name = suggested_name
+        self._file_filter = file_filter
+
+    def compose(self) -> ComposeResult:
+        initial = self._default_path
+        if self._mode == "save" and self._suggested_name:
+            initial = os.path.join(self._default_path, self._suggested_name)
+
+        action_label = "Save" if self._mode == "save" else "Open"
+        tree_root = str(Path.home())
+
+        with Vertical(classes="modal-dialog"):
+            yield Label(self._title, classes="modal-title")
+            yield Label("Path:")
+            yield Input(value=initial, id="f-file-path")
+            yield Label("Browse:")
+            yield _FilteredDirectoryTree(tree_root, file_filter=self._file_filter)
+            with Horizontal(classes="modal-buttons"):
+                yield Button(action_label, id="btn-file-ok", variant="primary")
+                yield Button("Cancel", id="btn-file-cancel")
+            yield Label("ESC to close", classes="modal-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#f-file-path", Input).focus()
+
+    @on(DirectoryTree.FileSelected)
+    def on_file_selected(self, event: DirectoryTree.FileSelected) -> None:
+        self.query_one("#f-file-path", Input).value = str(event.path)
+
+    @on(DirectoryTree.DirectorySelected)
+    def on_dir_selected(self, event: DirectoryTree.DirectorySelected) -> None:
+        if self._mode == "save" and self._suggested_name:
+            self.query_one("#f-file-path", Input).value = os.path.join(
+                str(event.path), self._suggested_name
+            )
+        else:
+            self.query_one("#f-file-path", Input).value = str(event.path)
+
+    @on(Input.Submitted, "#f-file-path")
+    def on_path_submitted(self) -> None:
+        self._accept()
+
+    @on(Button.Pressed, "#btn-file-ok")
+    def on_ok(self) -> None:
+        self._accept()
+
+    @on(Button.Pressed, "#btn-file-cancel")
+    def on_cancel(self) -> None:
+        self.dismiss(None)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+    def _accept(self) -> None:
+        path = self.query_one("#f-file-path", Input).value.strip()
+        if not path:
+            self.notify("Please enter a file path.", severity="error")
+            return
+        path = os.path.expanduser(path)
+        if self._mode == "open":
+            if not os.path.isfile(path):
+                self.notify("File not found.", severity="error")
+                return
+        else:
+            parent = os.path.dirname(path)
+            if parent and not os.path.isdir(parent):
+                self.notify("Directory does not exist.", severity="error")
+                return
+        self.dismiss(path)

@@ -242,12 +242,20 @@ class BankPanel(Widget):
         if not self._selected_pk:
             self.notify("Select a Bank Account entry first.", severity="warning")
             return
-        try:
-            import pdf_export
-            path = pdf_export.export_bank_entry(int(self._selected_pk))
-            self.notify(f"PDF saved → {path}", severity="information")
-        except Exception as e:
-            self.notify(f"PDF error: {e}", severity="error")
+        from datetime import datetime
+        from screens.modals import FileSelectModal
+        entry_id = int(self._selected_pk)
+        suggested = f"northwind_bank_{entry_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        def after(path):
+            if path:
+                try:
+                    import pdf_export
+                    pdf_export.export_bank_entry(entry_id, save_path=path)
+                    self.notify(f"PDF saved → {path}", severity="information")
+                except Exception as e:
+                    self.notify(f"PDF error: {e}", severity="error")
+        self.app.push_screen(FileSelectModal(title="Save Bank Entry PDF", mode="save",
+            default_path="~/Downloads", suggested_name=suggested, file_filter=".pdf"), callback=after)
 
     @on(Button.Pressed, "#btn-delete")
     def on_btn_delete(self) -> None:

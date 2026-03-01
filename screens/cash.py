@@ -319,24 +319,40 @@ class CashPanel(Widget):
         if not self._cr_selected:
             self.notify("Select a CR entry first.", severity="warning")
             return
-        try:
-            import pdf_export
-            path = pdf_export.export_cr(int(self._cr_selected))
-            self.notify(f"PDF saved → {path}", severity="information")
-        except Exception as e:
-            self.notify(f"PDF error: {e}", severity="error")
+        from datetime import datetime
+        from screens.modals import FileSelectModal
+        cr_id = int(self._cr_selected)
+        suggested = f"northwind_cr_{cr_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        def after(path):
+            if path:
+                try:
+                    import pdf_export
+                    pdf_export.export_cr(cr_id, save_path=path)
+                    self.notify(f"PDF saved → {path}", severity="information")
+                except Exception as e:
+                    self.notify(f"PDF error: {e}", severity="error")
+        self.app.push_screen(FileSelectModal(title="Save CR PDF", mode="save",
+            default_path="~/Downloads", suggested_name=suggested, file_filter=".pdf"), callback=after)
 
     @on(Button.Pressed, "#btn-pdf-cp")
     def on_pdf_cp(self) -> None:
         if not self._cp_selected:
             self.notify("Select a CP entry first.", severity="warning")
             return
-        try:
-            import pdf_export
-            path = pdf_export.export_cp(int(self._cp_selected))
-            self.notify(f"PDF saved → {path}", severity="information")
-        except Exception as e:
-            self.notify(f"PDF error: {e}", severity="error")
+        from datetime import datetime
+        from screens.modals import FileSelectModal
+        cp_id = int(self._cp_selected)
+        suggested = f"northwind_cp_{cp_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        def after(path):
+            if path:
+                try:
+                    import pdf_export
+                    pdf_export.export_cp(cp_id, save_path=path)
+                    self.notify(f"PDF saved → {path}", severity="information")
+                except Exception as e:
+                    self.notify(f"PDF error: {e}", severity="error")
+        self.app.push_screen(FileSelectModal(title="Save CP PDF", mode="save",
+            default_path="~/Downloads", suggested_name=suggested, file_filter=".pdf"), callback=after)
 
     @on(Button.Pressed, "#btn-new-cr")
     def on_new_cr(self) -> None:

@@ -410,19 +410,10 @@ class EmployeesPanel(Widget):
         self.query_one("#search-box", Input).focus()
 
     def action_export_csv(self) -> None:
-        import csv, os
-        from datetime import datetime
+        from screens.export_helpers import export_csv_with_selector
         term = self.query_one("#search-box", Input).value
         rows = edata.search(term) if term else edata.fetch_all()
-        headers = ["ID", "Name", "Title", "City", "Manager"]
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.expanduser(f"~/Downloads/northwind_employees_{ts}.csv")
-        with open(path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow([str(c) if c is not None else "" for c in row])
-        self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+        export_csv_with_selector(self, "employees", ["ID", "Name", "Title", "City", "Manager"], rows)
 
     def action_org_chart(self) -> None:
         self.app.push_screen(OrgChartModal())

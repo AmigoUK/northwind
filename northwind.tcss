@@ -583,3 +583,10 @@ SettingsPanel .settings-section {
     max-height: 14;
     width: 1fr;
 }
+
+/* ── File select modal — DirectoryTree ────────────────────────────────────*/
+.modal-dialog DirectoryTree {
+    height: 16;
+    border: solid $primary-darken-2;
+    margin: 1 0;
+}
