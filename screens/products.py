@@ -50,11 +50,11 @@ class ProductFormModal(ModalScreen):
             yield Label("Category:")
             with Horizontal():
                 yield Label("(none)", id="lbl-category")
-                yield Button("Pick Category", id="btn-pick-cat")
+                yield Button("Pick Category ▼", id="btn-pick-cat")
             yield Label("Supplier:")
             with Horizontal():
                 yield Label("(none)", id="lbl-supplier")
-                yield Button("Pick Supplier", id="btn-pick-sup")
+                yield Button("Pick Supplier ▼", id="btn-pick-sup")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")

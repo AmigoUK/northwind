@@ -115,7 +115,7 @@ class EmployeeFormModal(ModalScreen):
             yield Label("Reports To:")
             with Horizontal():
                 yield Label("(none)", id="lbl-manager")
-                yield Button("Pick Manager", id="btn-pick-mgr")
+                yield Button("Pick Manager ▼", id="btn-pick-mgr")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")

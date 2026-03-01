@@ -84,10 +84,11 @@ def fetch_issued_for_customer(customer_id: str) -> list:
     return [list(r) for r in rows]
 
 
-def create_draft(customer_id: str, dn_date: str, order_id=None, notes: str = "") -> int:
+def create_draft(customer_id: str, dn_date: str, order_id=None, notes: str = "",
+                 year_override: int | None = None) -> int:
     """Create a DN document in 'draft' status. Returns DN_ID."""
     conn = get_connection()
-    number = next_doc_number("DN", conn)
+    number = next_doc_number("DN", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO DN (DN_Number, OrderID, CustomerID, DN_Date, Status, Notes) "
         "VALUES (?,?,?,?,'draft',?)",

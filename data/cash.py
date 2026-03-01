@@ -32,15 +32,18 @@ def get_cr_by_pk(pk) -> dict | None:
 
 
 def create_cr(customer_id: str | None, inv_id: int | None,
-              amount: float, description: str = "") -> int:
+              amount: float, description: str = "",
+              date_override: str | None = None) -> int:
     """Create a CR cash receipt. Returns CR_ID."""
     from datetime import date
+    cr_date = date_override or str(date.today())
+    year_override = int(cr_date[:4]) if date_override else None
     conn = get_connection()
-    number = next_doc_number("CR", conn)
+    number = next_doc_number("CR", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO CR (CR_Number, CR_Date, CustomerID, INV_ID, Amount, Description) "
         "VALUES (?,?,?,?,?,?)",
-        (number, str(date.today()), customer_id or None, inv_id or None,
+        (number, cr_date, customer_id or None, inv_id or None,
          amount, description or None),
     )
     cr_id = cur.lastrowid
@@ -94,15 +97,18 @@ def get_cp_by_pk(pk) -> dict | None:
 
 
 def create_cp(supplier_id: int | None, gr_id: int | None,
-              amount: float, description: str = "") -> int:
+              amount: float, description: str = "",
+              date_override: str | None = None) -> int:
     """Create a CP cash payment. Returns CP_ID."""
     from datetime import date
+    cp_date = date_override or str(date.today())
+    year_override = int(cp_date[:4]) if date_override else None
     conn = get_connection()
-    number = next_doc_number("CP", conn)
+    number = next_doc_number("CP", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO CP (CP_Number, CP_Date, SupplierID, GR_ID, Amount, Description) "
         "VALUES (?,?,?,?,?,?)",
-        (number, str(date.today()), supplier_id or None, gr_id or None,
+        (number, cp_date, supplier_id or None, gr_id or None,
          amount, description or None),
     )
     cp_id = cur.lastrowid
@@ -127,15 +133,17 @@ def delete_cp(pk) -> None:
 
 # ── Transfers ─────────────────────────────────────────────────────────────────
 
-def transfer_to_bank(amount: float, description: str = "") -> tuple[int, int]:
+def transfer_to_bank(amount: float, description: str = "",
+                     date_override: str | None = None) -> tuple[int, int]:
     """Create CP (cash out) + BankEntry (in) atomically. Returns (cp_id, entry_id)."""
     from datetime import date
     conn = get_connection()
-    today = str(date.today())
+    today = date_override or str(date.today())
+    year_override = int(today[:4]) if date_override else None
     desc = description or "Deposit to bank"
 
-    cp_number   = next_doc_number("CP",   conn)
-    bank_number = next_doc_number("Bank", conn)
+    cp_number   = next_doc_number("CP",   conn, year_override=year_override)
+    bank_number = next_doc_number("Bank", conn, year_override=year_override)
 
     cp_desc   = f"{desc} → {bank_number}"
     bank_desc = f"{desc} ← {cp_number}"

@@ -1,4 +1,4 @@
-"""screens/modals.py — Shared modal dialogs: ConfirmDeleteModal, PickerModal."""
+"""screens/modals.py — Shared modal dialogs: ConfirmActionModal, ConfirmDeleteModal, CleanDatabaseModal, PickerModal."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -147,6 +147,79 @@ class CancellationReasonModal(ModalScreen):
     def on_key(self, event) -> None:
         if event.key == "escape":
             self.dismiss(None)
+
+
+class CleanDatabaseModal(ModalScreen[bool]):
+    """PIN-protected confirmation for cleaning the entire database."""
+
+    MAX_ATTEMPTS = 3
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._attempts = 0
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="confirm-dialog"):
+            yield Label("Clean Database", classes="modal-title")
+            yield Label(
+                "This will DELETE all data (master + transactional) "
+                "and enter production mode. This cannot be undone.",
+                classes="modal-subtitle",
+            )
+            yield Label("Enter admin PIN to confirm:")
+            yield Input(
+                placeholder="PIN", id="f-admin-pin",
+                password=True, max_length=4,
+            )
+            yield Label("", id="pin-error")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Clean", id="btn-yes", variant="error")
+                yield Button("Cancel", id="btn-no", variant="primary")
+            yield Label("ESC to close", classes="modal-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#f-admin-pin", Input).focus()
+
+    def _validate_and_dismiss(self) -> None:
+        from data.users import verify_admin_pin
+        pin = self.query_one("#f-admin-pin", Input).value.strip()
+        if not pin:
+            self.query_one("#pin-error", Label).update("PIN is required.")
+            return
+        if not verify_admin_pin(pin):
+            self._attempts += 1
+            remaining = self.MAX_ATTEMPTS - self._attempts
+            if remaining <= 0:
+                self.query_one("#pin-error", Label).update(
+                    "Too many failed attempts. Closing."
+                )
+                self.set_timer(1.5, lambda: self.dismiss(False))
+                self.query_one("#btn-yes", Button).disabled = True
+                self.query_one("#f-admin-pin", Input).disabled = True
+                return
+            self.query_one("#pin-error", Label).update(
+                f"Invalid PIN. {remaining} attempt{'s' if remaining != 1 else ''} remaining."
+            )
+            self.query_one("#f-admin-pin", Input).value = ""
+            self.query_one("#f-admin-pin", Input).focus()
+            return
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#btn-yes")
+    def on_yes(self) -> None:
+        self._validate_and_dismiss()
+
+    @on(Button.Pressed, "#btn-no")
+    def on_no(self) -> None:
+        self.dismiss(False)
+
+    @on(Input.Submitted, "#f-admin-pin")
+    def on_pin_submitted(self) -> None:
+        self._validate_and_dismiss()
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(False)
 
 
 class PickerModal(ModalScreen):

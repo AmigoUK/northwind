@@ -38,11 +38,11 @@ class BankEntryFormModal(ModalScreen):
             yield Label("Customer (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-cust")
-                yield Button("Pick Customer", id="btn-pick-cust")
+                yield Button("Pick Customer ▼", id="btn-pick-cust")
             yield Label("Supplier (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-sup")
-                yield Button("Pick Supplier", id="btn-pick-sup")
+                yield Button("Pick Supplier ▼", id="btn-pick-sup")
             yield Label("Description:")
             yield Input(id="f-desc", placeholder="Description")
             with Horizontal(classes="modal-buttons"):

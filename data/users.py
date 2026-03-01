@@ -41,6 +41,19 @@ def authenticate(username: str, pin: str) -> dict | None:
     return dict(row) if row else None
 
 
+def verify_admin_pin(pin: str) -> bool:
+    """Return True if the given PIN matches any admin-role user."""
+    if not pin:
+        return False
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM AppUsers WHERE role='admin' AND pin_hash=?",
+        (hash_pin(pin),),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
 def fetch_all() -> list:
     conn = get_connection()
     rows = conn.execute(

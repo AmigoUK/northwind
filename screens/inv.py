@@ -30,7 +30,7 @@ class INVNewModal(ModalScreen):
             yield Label("Customer *:")
             with Horizontal():
                 yield Label("(none)", id="lbl-customer")
-                yield Button("Pick Customer", id="btn-pick-cust")
+                yield Button("Pick Customer ▼", id="btn-pick-cust")
             yield Label("Available DN (issued, not invoiced):", classes="section-label")
             yield DataTable(id="dn-tbl", cursor_type="row", zebra_stripes=True)
             yield Static("", id="dn-hint")

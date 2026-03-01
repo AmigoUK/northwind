@@ -30,7 +30,7 @@ class DNItemFormModal(ModalScreen):
             yield Label("Product:")
             with Horizontal():
                 yield Label("(none)", id="lbl-product")
-                yield Button("Pick Product", id="btn-pick-prod")
+                yield Button("Pick Product ▼", id="btn-pick-prod")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Unit Price:")
@@ -122,7 +122,7 @@ class DNFormModal(ModalScreen):
             yield Label("Customer *:")
             with Horizontal():
                 yield Label("(none)", id="lbl-customer")
-                yield Button("Pick Customer", id="btn-pick-cust")
+                yield Button("Pick Customer ▼", id="btn-pick-cust")
             yield Label("DN Date (YYYY-MM-DD):")
             yield Input(id="f-date", placeholder="2026-01-01")
             yield Label("Notes:")

@@ -27,7 +27,7 @@ class CRFormModal(ModalScreen):
             yield Label("Customer (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-cust")
-                yield Button("Pick Customer", id="btn-pick-cust")
+                yield Button("Pick Customer ▼", id="btn-pick-cust")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Amount *:")
@@ -95,7 +95,7 @@ class CPFormModal(ModalScreen):
             yield Label("Supplier (optional):")
             with Horizontal():
                 yield Label("(none)", id="lbl-sup")
-                yield Button("Pick Supplier", id="btn-pick-sup")
+                yield Button("Pick Supplier ▼", id="btn-pick-sup")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Amount *:")

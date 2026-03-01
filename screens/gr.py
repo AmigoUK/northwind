@@ -30,7 +30,7 @@ class GRItemFormModal(ModalScreen):
             yield Label("Product:")
             with Horizontal():
                 yield Label("(none)", id="lbl-product")
-                yield Button("Pick Product", id="btn-pick-prod")
+                yield Button("Pick Product ▼", id="btn-pick-prod")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Unit Cost:")
@@ -107,7 +107,7 @@ class GRFormModal(ModalScreen):
             yield Label("Supplier *:")
             with Horizontal():
                 yield Label("(none)", id="lbl-supplier")
-                yield Button("Pick Supplier", id="btn-pick-sup")
+                yield Button("Pick Supplier ▼", id="btn-pick-sup")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("GR Date (YYYY-MM-DD) *:")

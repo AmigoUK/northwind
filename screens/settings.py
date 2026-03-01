@@ -1,17 +1,25 @@
-"""screens/settings.py — App settings panel (currency symbol & name).
+"""screens/settings.py — App settings panel (currency, theme, stock, demo data).
 
 Educational patterns:
 - on_mount() to pre-populate inputs from the DB
 - INSERT OR REPLACE upsert via the settings data layer
 - notify() for lightweight user feedback without a modal
+- ConfirmActionModal for destructive actions (demo data insert/clean)
+- @work(thread=True) to run long operations without freezing the TUI
 """
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Switch
-from textual import on
+from textual.widgets import Button, Input, Label, Select, Static, Switch
+from textual.worker import Worker, WorkerState
+from textual import on, work
 
 import data.settings as app_settings
+from data.demo import has_demo_data, insert_demo_data, clean_demo_data, demo_status
+from screens.modals import ConfirmActionModal, CleanDatabaseModal
+
+# Document keys to show in the notification (excludes metadata like elapsed_seconds)
+_DOC_KEYS = {"DN", "INV", "GR", "CN", "SI", "SO", "CR", "CP", "BankEntry"}
 
 
 class SettingsPanel(Widget):
@@ -22,7 +30,7 @@ class SettingsPanel(Widget):
                 yield Label("Currency", classes="settings-label")
                 with Horizontal(classes="form-row"):
                     with Vertical(classes="form-field"):
-                        yield Label("Symbol (e.g. $, £, €, zł)")
+                        yield Label("Symbol (e.g. $, £, €, zl)")
                         yield Input(placeholder="$", id="f-currency-symbol")
                     with Vertical(classes="form-field"):
                         yield Label("Name (e.g. USD, GBP, PLN)")
@@ -39,6 +47,21 @@ class SettingsPanel(Widget):
                 with Horizontal(classes="setting-row"):
                     yield Label("Show Discontinued Products")
                     yield Switch(id="f-show-disc", value=False)
+            with Vertical(classes="settings-section"):
+                yield Label("Demo Data", classes="settings-label")
+                yield Static(
+                    "Populate all data (master + transactional) for demos, "
+                    "or clean everything for production use.",
+                    id="demo-description",
+                )
+                yield Static("Checking...", id="demo-status")
+                with Horizontal(classes="toolbar"):
+                    yield Button(
+                        "Insert Demo Data", id="btn-demo-insert", variant="success",
+                    )
+                    yield Button(
+                        "Clean Demo Data", id="btn-demo-clean", variant="error",
+                    )
             yield Button("Save Settings", id="btn-save", variant="primary")
 
     def on_mount(self) -> None:
@@ -60,6 +83,18 @@ class SettingsPanel(Widget):
         self.query_one("#f-show-disc", Switch).value = (
             app_settings.get_setting("show_discontinued", "false").lower() == "true"
         )
+        self._refresh_demo_status()
+
+    def _refresh_demo_status(self) -> None:
+        status = self.query_one("#demo-status", Static)
+        status.update(f"Status: {demo_status()}")
+        demo_exists = has_demo_data()
+        self.query_one("#btn-demo-insert", Button).disabled = demo_exists
+        self.query_one("#btn-demo-clean", Button).disabled = not demo_exists
+
+    def refresh_data(self) -> None:
+        """Called by app.switch_section() to keep demo status current."""
+        self._refresh_demo_status()
 
     @on(Button.Pressed, "#btn-save")
     def do_save(self) -> None:
@@ -77,3 +112,58 @@ class SettingsPanel(Widget):
         show_disc = self.query_one("#f-show-disc", Switch).value
         app_settings.set_setting("show_discontinued", "true" if show_disc else "false")
         self.notify("Settings saved.", severity="information")
+
+    @on(Button.Pressed, "#btn-demo-insert")
+    def do_demo_insert(self) -> None:
+        self.app.push_screen(
+            ConfirmActionModal(
+                "Insert Demo Data?",
+                "This will create sample DN, INV, GR, CN, SI/SO, "
+                "and cash/bank documents.",
+                confirm_label="Insert",
+            ),
+            self._on_demo_insert_confirmed,
+        )
+
+    def _on_demo_insert_confirmed(self, confirmed: bool) -> None:
+        if not confirmed:
+            return
+        self.query_one("#btn-demo-insert", Button).disabled = True
+        self.query_one("#btn-demo-clean", Button).disabled = True
+        self.query_one("#demo-status", Static).update("Status: Inserting demo data...")
+        self._run_demo_insert()
+
+    @work(thread=True)
+    def _run_demo_insert(self) -> None:
+        """Run demo insertion in a background thread to keep the TUI responsive."""
+        try:
+            counts = insert_demo_data()
+            parts = [f"{v} {k}" for k, v in counts.items()
+                     if k in _DOC_KEYS and v]
+            elapsed = counts.get("elapsed_seconds", 0)
+            msg = f"Demo inserted: {', '.join(parts)} ({elapsed}s)."
+            self.app.call_from_thread(
+                self.notify, msg, severity="information"
+            )
+        except ValueError as exc:
+            self.app.call_from_thread(
+                self.notify, str(exc), severity="error"
+            )
+        self.app.call_from_thread(self._refresh_demo_status)
+
+    @on(Button.Pressed, "#btn-demo-clean")
+    def do_demo_clean(self) -> None:
+        self.app.push_screen(
+            CleanDatabaseModal(),
+            self._on_demo_clean_confirmed,
+        )
+
+    def _on_demo_clean_confirmed(self, confirmed: bool) -> None:
+        if not confirmed:
+            return
+        deleted = clean_demo_data()
+        total = sum(deleted.values())
+        self.notify(f"Cleaned {total} rows across {len(deleted)} tables. "
+                    "Production mode enabled.",
+                    severity="warning")
+        self._refresh_demo_status()

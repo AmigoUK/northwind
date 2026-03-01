@@ -152,7 +152,7 @@ class TerritoryFormModal(ModalScreen):
             yield Label("Region:")
             with Horizontal():
                 yield Label("(none)", id="lbl-region")
-                yield Button("Pick Region", id="btn-pick-region")
+                yield Button("Pick Region ▼", id="btn-pick-region")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")

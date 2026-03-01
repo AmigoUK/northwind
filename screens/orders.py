@@ -80,7 +80,7 @@ class LineItemFormModal(ModalScreen):
             yield Label("Product:")
             with Horizontal():
                 yield Label("(none)", id="lbl-product")
-                yield Button("Pick Product", id="btn-pick-prod")
+                yield Button("Pick Product ▼", id="btn-pick-prod")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Unit Price:")
@@ -160,18 +160,16 @@ class OrderFormModal(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
             yield Label("Create New Order", classes="modal-title")
-            yield Label("Customer *:")
-            with Horizontal():
-                yield Label(self._customer_id or "(none)", id="lbl-customer")
-                yield Button("Pick Customer", id="btn-pick-cust")
-            yield Label("Employee:")
-            with Horizontal():
-                yield Label("(none)", id="lbl-employee")
-                yield Button("Pick Employee", id="btn-pick-emp")
-            yield Label("Shipper:")
-            with Horizontal():
-                yield Label("(none)", id="lbl-shipper")
-                yield Button("Pick Shipper", id="btn-pick-ship")
+            with Horizontal(classes="form-row"):
+                with Vertical(classes="form-field"):
+                    yield Label("Customer *:")
+                    yield Button(self._customer_id or "Pick Customer ▼", id="btn-pick-cust")
+                with Vertical(classes="form-field"):
+                    yield Label("Employee:")
+                    yield Button("Pick Employee ▼", id="btn-pick-emp")
+                with Vertical(classes="form-field"):
+                    yield Label("Shipper:")
+                    yield Button("Pick Shipper ▼", id="btn-pick-ship")
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Order Date (YYYY-MM-DD):")
@@ -209,7 +207,7 @@ class OrderFormModal(ModalScreen):
         if self._customer_id:
             cust = cdata.get_by_pk(self._customer_id)
             if cust:
-                self.query_one("#lbl-customer",  Label).update(cust["CompanyName"])
+                self.query_one("#btn-pick-cust", Button).label = cust["CompanyName"]
                 self.query_one("#f-shipname",    Input).value = cust.get("CompanyName") or ""
                 self.query_one("#f-shipaddr",    Input).value = cust.get("Address")     or ""
                 self.query_one("#f-shipcity",    Input).value = cust.get("City")        or ""
@@ -225,7 +223,7 @@ class OrderFormModal(ModalScreen):
                 self._customer_id = pk
                 cust = cdata.get_by_pk(pk)
                 if cust:
-                    self.query_one("#lbl-customer", Label).update(cust["CompanyName"])
+                    self.query_one("#btn-pick-cust", Button).label = cust["CompanyName"]
                     self.query_one("#f-shipname",   Input).value = cust.get("CompanyName") or ""
                     self.query_one("#f-shipaddr",   Input).value = cust.get("Address")     or ""
                     self.query_one("#f-shipcity",   Input).value = cust.get("City")        or ""
@@ -245,7 +243,7 @@ class OrderFormModal(ModalScreen):
                 self._employee_id = int(pk)
                 emp = edata.get_by_pk(int(pk))
                 if emp:
-                    self.query_one("#lbl-employee", Label).update(
+                    self.query_one("#btn-pick-emp", Button).label = (
                         f"{emp['FirstName']} {emp['LastName']}"
                     )
         self.app.push_screen(
@@ -261,7 +259,7 @@ class OrderFormModal(ModalScreen):
                 self._shipper_id = int(pk)
                 ship = shdata.get_by_pk(int(pk))
                 if ship:
-                    self.query_one("#lbl-shipper", Label).update(ship["CompanyName"])
+                    self.query_one("#btn-pick-ship", Button).label = ship["CompanyName"]
         self.app.push_screen(
             PickerModal("Select Shipper", [("ID", 4), ("Company", 30), ("Phone", 20)], rows),
             callback=after,

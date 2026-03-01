@@ -101,6 +101,9 @@ class DashboardPanel(Widget):
         except Exception as e:
             self.notify(f"Recent orders error: {e}", severity="error")
 
+    def refresh_data(self) -> None:
+        self._load()
+
     def action_refresh(self) -> None:
         self._load()
         self.notify("Dashboard refreshed.", severity="information")

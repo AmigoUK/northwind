@@ -241,11 +241,12 @@ class NorthwindApp(App):
     def switch_section(self, section: str) -> None:
         """Switch the active content panel and update sidebar highlight."""
         self.query_one(ContentSwitcher).current = section
-        if section in ("products", "bank", "cash"):
-            try:
-                self.query_one(f"#{section}").refresh_data()
-            except Exception:
-                pass
+        try:
+            panel = self.query_one(f"#{section}")
+            if hasattr(panel, "refresh_data"):
+                panel.refresh_data()
+        except Exception:
+            pass
         for key, _ in _SECTIONS:
             try:
                 item = self.query_one(f"#nav-{key}", ListItem)

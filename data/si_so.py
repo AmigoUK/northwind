@@ -42,10 +42,11 @@ def fetch_si_items(si_id) -> list:
 
 
 def create_si(si_date: str, reason: str = "", notes: str = "",
-              items: list[dict] | None = None) -> int:
+              items: list[dict] | None = None,
+              year_override: int | None = None) -> int:
     """Create SI and immediately apply stock increase. Returns SI_ID."""
     conn = get_connection()
-    number = next_doc_number("SI", conn)
+    number = next_doc_number("SI", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO SI (SI_Number, SI_Date, Reason, Notes) VALUES (?,?,?,?)",
         (number, si_date, reason or None, notes or None),
@@ -112,10 +113,11 @@ def fetch_so_items(so_id) -> list:
 
 
 def create_so(so_date: str, reason: str = "", notes: str = "",
-              items: list[dict] | None = None) -> int:
+              items: list[dict] | None = None,
+              year_override: int | None = None) -> int:
     """Create SO and immediately apply stock decrease. Returns SO_ID."""
     conn = get_connection()
-    number = next_doc_number("SO", conn)
+    number = next_doc_number("SO", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO SO (SO_Number, SO_Date, Reason, Notes) VALUES (?,?,?,?)",
         (number, so_date, reason or None, notes or None),

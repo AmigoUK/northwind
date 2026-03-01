@@ -68,10 +68,11 @@ def fetch_items(gr_id) -> list:
 
 
 def create_draft(supplier_id: int, gr_date: str, supplier_doc_ref: str = "",
-                 payment_method: str = "", notes: str = "") -> int:
+                 payment_method: str = "", notes: str = "",
+                 year_override: int | None = None) -> int:
     """Create GR document in 'draft' status. Returns GR_ID."""
     conn = get_connection()
-    number = next_doc_number("GR", conn)
+    number = next_doc_number("GR", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO GR (GR_Number, SupplierID, SupplierDocRef, GR_Date, Status, PaymentMethod, Notes) "
         "VALUES (?,?,?,?,'draft',?,?)",
@@ -103,7 +104,7 @@ def remove_item(gr_id: int, product_id: int) -> None:
     conn.close()
 
 
-def receive(gr_id: int) -> None:
+def receive(gr_id: int, date_override: str | None = None) -> None:
     """Set GR status to 'received', increment stock, auto-generate payment doc."""
     from data.cash import create_cp
     from data.bank import create_bank_entry
@@ -138,11 +139,12 @@ def receive(gr_id: int) -> None:
     # Auto-generate payment document
     desc = f"Payment for {gr_number}"
     if payment_method == "cash":
-        create_cp(supplier_id=supplier_id, gr_id=gr_id, amount=total, description=desc)
+        create_cp(supplier_id=supplier_id, gr_id=gr_id, amount=total,
+                  description=desc, date_override=date_override)
     elif payment_method == "bank":
         create_bank_entry(
             direction="out", supplier_id=supplier_id, gr_id=gr_id,
-            amount=total, description=desc,
+            amount=total, description=desc, date_override=date_override,
         )
 
 

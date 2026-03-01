@@ -150,7 +150,8 @@ def create_full_reversal(inv_id: int, reason: str, cn_date: str,
 def create_partial_correction(inv_id: int, reason: str, cn_date: str,
                               user_id: int, corrections: list[dict],
                               reverse_stock: bool = False,
-                              notes: str = "") -> int:
+                              notes: str = "",
+                              year_override: int | None = None) -> int:
     """Partial correction CN.
     corrections = [{product_id, new_quantity, new_unit_price}, ...]
     """
@@ -164,7 +165,7 @@ def create_partial_correction(inv_id: int, reason: str, cn_date: str,
         raise ValueError(f"INV #{inv_id} not found.")
     customer_id = inv[0]
 
-    number = next_doc_number("CN", conn)
+    number = next_doc_number("CN", conn, year_override=year_override)
 
     # Get original items to compare
     orig_items = {}

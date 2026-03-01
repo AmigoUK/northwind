@@ -32,7 +32,7 @@ class CNNewModal(ModalScreen):
             yield Label("Original Invoice:")
             with Horizontal():
                 yield Label("(none)", id="lbl-inv")
-                yield Button("Pick INV", id="btn-pick-inv")
+                yield Button("Pick INV ▼", id="btn-pick-inv")
             yield Static("", id="inv-info")
             yield Label("CN Type:")
             yield Select(

@@ -98,7 +98,7 @@ def fetch_line_items(inv_id) -> list:
 
 def create(customer_id: str, wz_ids: list[int], inv_date: str,
            payment_term_days: int = 30, payment_method: str = "",
-           notes: str = "") -> int:
+           notes: str = "", year_override: int | None = None) -> int:
     """Create INV from list of DN IDs. No payment doc is auto-created. Returns INV_ID."""
     from datetime import date, timedelta
     conn = get_connection()
@@ -110,7 +110,7 @@ def create(customer_id: str, wz_ids: list[int], inv_date: str,
     ).fetchone()[0]
     inv_date_obj = date.fromisoformat(inv_date)
     due_date = str(inv_date_obj + timedelta(days=payment_term_days))
-    number = next_doc_number("INV", conn)
+    number = next_doc_number("INV", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO INV (INV_Number, CustomerID, INV_Date, DueDate, PaymentMethod, "
         "Status, TotalNet, Notes, PaymentTermDays, PaidAmount) "
@@ -128,7 +128,8 @@ def create(customer_id: str, wz_ids: list[int], inv_date: str,
 
 
 def record_payment(inv_id: int, amount: float, method: str,
-                   description: str = "") -> int:
+                   description: str = "",
+                   date_override: str | None = None) -> int:
     """Record a payment against an INV. Creates CR or BankEntry. Returns payment doc ID."""
     from data.cash import create_cr
     from data.bank import create_bank_entry
@@ -158,11 +159,12 @@ def record_payment(inv_id: int, amount: float, method: str,
     desc = description or f"Payment for {inv_number}"
     if method == "cash":
         return create_cr(customer_id=customer_id, inv_id=inv_id,
-                         amount=amount, description=desc)
+                         amount=amount, description=desc,
+                         date_override=date_override)
     else:
         return create_bank_entry(
             direction="in", customer_id=customer_id, inv_id=inv_id,
-            amount=amount, description=desc,
+            amount=amount, description=desc, date_override=date_override,
         )
 
 

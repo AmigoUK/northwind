@@ -24,10 +24,10 @@ def get_connection():
     return conn
 
 
-def next_doc_number(doc_type: str, conn) -> str:
+def next_doc_number(doc_type: str, conn, year_override: int | None = None) -> str:
     """Return next sequential doc number like DN/2026/001. Caller must commit."""
     from datetime import date
-    year = date.today().year
+    year = year_override or date.today().year
     row = conn.execute(
         "SELECT LastNum FROM DocSequence WHERE DocType=? AND Year=?",
         (doc_type, year),
@@ -765,6 +765,8 @@ def init_db():
     conn = get_connection()
     _migrate_polish_to_english(conn)
     conn.close()
-    seed_data()
-    _seed_settings()
-    _seed_users()
+    _seed_settings()    # must run first (INSERT OR IGNORE, safe)
+    _seed_users()       # empty-check guard, safe
+    from data.settings import get_setting
+    if get_setting("production_mode", "false") != "true":
+        seed_data()

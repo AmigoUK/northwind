@@ -95,7 +95,8 @@ ModalScreen {
 
 /* ── Standard modal dialog ──────────────────────────────────────────────────*/
 .modal-dialog {
-    width: 86;
+    width: 90%;
+    max-width: 120;
     max-height: 46;
     background: $surface;
     border: double $primary;
@@ -145,7 +146,8 @@ ModalScreen {
 
 /* ── Order detail dialog (taller) ───────────────────────────────────────────*/
 .order-detail-dialog {
-    width: 110;
+    width: 90%;
+    max-width: 130;
     max-height: 50;
     background: $surface;
     border: double $primary;
@@ -380,7 +382,9 @@ LoginScreen {
     margin-top: 0;
 }
 
-.form-field Input {
+.form-field Input,
+.form-field Select,
+.form-field Button {
     width: 1fr;
 }
 
@@ -531,6 +535,35 @@ BusinessDetailsPanel TabPane {
 .setting-row Label {
     width: 1fr;
     content-align: left middle;
+}
+
+/* ── Settings panel — override `.panel-container Vertical { height: 1fr }` ─*/
+/* so each section sizes to content and the panel scrolls                     */
+SettingsPanel .panel-container {
+    overflow-y: auto;
+}
+
+SettingsPanel .settings-section {
+    height: auto;
+}
+
+/* ── Demo Data section ─────────────────────────────────────────────────────*/
+#demo-description {
+    color: $text-muted;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#demo-status {
+    height: 2;
+    padding: 0 1;
+    content-align: left middle;
+}
+
+#pin-error {
+    color: $error;
+    height: 1;
+    margin-top: 0;
 }
 
 /* ── Modal ESC hint ─────────────────────────────────────────────────────────*/

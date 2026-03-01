@@ -54,15 +54,18 @@ def get_by_pk(pk) -> dict | None:
 
 def create_bank_entry(direction: str, amount: float, description: str = "",
                       customer_id: str | None = None, supplier_id: int | None = None,
-                      inv_id: int | None = None, gr_id: int | None = None) -> int:
+                      inv_id: int | None = None, gr_id: int | None = None,
+                      date_override: str | None = None) -> int:
     """Create a bank entry (in or out). Returns Entry_ID."""
     from datetime import date
+    entry_date = date_override or str(date.today())
+    year_override = int(entry_date[:4]) if date_override else None
     conn = get_connection()
-    number = next_doc_number("Bank", conn)
+    number = next_doc_number("Bank", conn, year_override=year_override)
     cur = conn.execute(
         "INSERT INTO BankEntry (Entry_Number, Entry_Date, Direction, CustomerID, "
         "SupplierID, INV_ID, GR_ID, Amount, Description) VALUES (?,?,?,?,?,?,?,?,?)",
-        (number, str(date.today()), direction, customer_id or None,
+        (number, entry_date, direction, customer_id or None,
          supplier_id or None, inv_id or None, gr_id or None, amount, description or None),
     )
     entry_id = cur.lastrowid
@@ -94,15 +97,17 @@ def delete(pk) -> None:
 
 # ── Transfers ─────────────────────────────────────────────────────────────────
 
-def withdraw_to_cash(amount: float, description: str = "") -> tuple[int, int]:
+def withdraw_to_cash(amount: float, description: str = "",
+                     date_override: str | None = None) -> tuple[int, int]:
     """Create BankEntry (out) + CR (cash in) atomically. Returns (entry_id, cr_id)."""
     from datetime import date
     conn = get_connection()
-    today = str(date.today())
+    today = date_override or str(date.today())
+    year_override = int(today[:4]) if date_override else None
     desc = description or "Cash withdrawal"
 
-    bank_number = next_doc_number("Bank", conn)
-    cr_number   = next_doc_number("CR",   conn)
+    bank_number = next_doc_number("Bank", conn, year_override=year_override)
+    cr_number   = next_doc_number("CR",   conn, year_override=year_override)
 
     bank_desc = f"{desc} → {cr_number}"
     cr_desc   = f"{desc} ← {bank_number}"
