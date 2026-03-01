@@ -1,8 +1,8 @@
-"""screens/modals.py — Shared modal dialogs: ConfirmActionModal, ConfirmDeleteModal, CleanDatabaseModal, PickerModal."""
+"""screens/modals.py — Shared modal dialogs: ConfirmActionModal, ConfirmDeleteModal, CleanDatabaseModal, PickerModal, ImportCSVModal."""
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, DataTable, Input, Label
+from textual.widgets import Button, DataTable, Input, Label, Static
 from textual import on
 
 
@@ -290,6 +290,116 @@ class PickerModal(ModalScreen):
 
     @on(Button.Pressed, "#btn-cancel")
     def on_cancel(self) -> None:
+        self.dismiss(None)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+
+class ImportCSVModal(ModalScreen):
+    """Import master data from a CSV file. Returns summary dict or None."""
+
+    def __init__(self, table: str) -> None:
+        super().__init__()
+        self._table = table
+        self._rows: list[dict] = []
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Import {self._table} from CSV", classes="modal-title")
+            yield Label("File path:")
+            yield Input(placeholder="~/Downloads/data.csv", id="f-path")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Preview", id="btn-preview", variant="primary")
+                yield Button("Cancel", id="btn-cancel-import")
+            yield Static("", id="import-status", classes="import-status")
+            yield Label("ESC to close", classes="modal-hint")
+
+    def on_mount(self) -> None:
+        self.query_one("#f-path", Input).focus()
+
+    @on(Input.Submitted, "#f-path")
+    def on_path_submitted(self) -> None:
+        self._do_preview()
+
+    @on(Button.Pressed, "#btn-preview")
+    def on_preview(self) -> None:
+        btn = self.query_one("#btn-preview", Button)
+        if btn.label.plain.startswith("Import"):
+            self._do_import()
+        else:
+            self._do_preview()
+
+    def _do_preview(self) -> None:
+        from data.csv_import import parse_csv, TABLE_CONFIGS
+
+        path = self.query_one("#f-path", Input).value.strip()
+        if not path:
+            self._set_status("[b red]Please enter a file path.[/]")
+            return
+
+        rows, errors = parse_csv(path, self._table)
+        cfg = TABLE_CONFIGS[self._table]
+
+        if errors and not rows:
+            self._set_status("\n".join(f"[b red]{e}[/]" for e in errors))
+            return
+
+        self._rows = rows
+        lines: list[str] = []
+        if errors:
+            lines.extend(f"[yellow]{e}[/]" for e in errors)
+
+        mapped_cols = set()
+        for row in rows[:1]:
+            mapped_cols = set(row.keys())
+        lines.append(f"[b]Columns:[/] {', '.join(c for c in cfg['columns'] if c in mapped_cols)}")
+        lines.append(f"[b]Rows:[/] {len(rows)}")
+
+        lines.append("")
+        for i, row in enumerate(rows[:3], start=1):
+            vals = [f"{k}={v}" for k, v in row.items() if v is not None]
+            lines.append(f"  {i}. {', '.join(vals[:4])}{'...' if len(vals) > 4 else ''}")
+        if len(rows) > 3:
+            lines.append(f"  ... and {len(rows) - 3} more rows")
+
+        self._set_status("\n".join(lines))
+
+        btn = self.query_one("#btn-preview", Button)
+        btn.label = f"Import {len(rows)} rows"
+        btn.variant = "success"
+
+    def _do_import(self) -> None:
+        from data.csv_import import import_rows
+
+        if not self._rows:
+            self._set_status("[b red]No rows to import. Preview first.[/]")
+            return
+
+        result = import_rows(self._table, self._rows)
+        parts = [f"[b green]Inserted: {result['inserted']}[/]"]
+        if result["skipped"]:
+            parts.append(f"[b yellow]Skipped (duplicates): {result['skipped']}[/]")
+        if result["errors"]:
+            parts.append(f"[b red]Errors: {len(result['errors'])}[/]")
+            for row_num, msg in result["errors"][:5]:
+                parts.append(f"  Row {row_num}: {msg}")
+
+        self._set_status("\n".join(parts))
+
+        btn = self.query_one("#btn-preview", Button)
+        btn.label = "Preview"
+        btn.variant = "primary"
+        self._rows = []
+
+        self.dismiss(result)
+
+    def _set_status(self, text: str) -> None:
+        self.query_one("#import-status", Static).update(text)
+
+    @on(Button.Pressed, "#btn-cancel-import")
+    def on_cancel_import(self) -> None:
         self.dismiss(None)
 
     def on_key(self, event) -> None:

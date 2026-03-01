@@ -7,7 +7,7 @@ from textual.widgets import Button, DataTable, Input, Label, Static
 from textual import on
 
 import data.suppliers as sdata
-from screens.modals import ConfirmDeleteModal
+from screens.modals import ConfirmDeleteModal, ImportCSVModal
 
 
 class SupplierFormModal(ModalScreen):
@@ -194,6 +194,7 @@ class SuppliersPanel(Widget):
         ("+", "new_product",    "New Product"),
         ("p", "new_gr",         "New GR"),
         ("x", "export_csv",     "Export CSV"),
+        ("i", "import_csv",     "Import CSV"),
     ]
 
     _selected_pk = None
@@ -206,6 +207,7 @@ class SuppliersPanel(Widget):
                 yield Button("+ New",  id="btn-new",    variant="success")
                 yield Button("Open",   id="btn-open")
                 yield Button("Delete", id="btn-delete", variant="error")
+                yield Button("Import", id="btn-import", variant="warning")
                 yield Label("", id="count-label", classes="count-label")
 
     def on_mount(self) -> None:
@@ -303,6 +305,16 @@ class SuppliersPanel(Widget):
             for row in rows:
                 writer.writerow([str(c) if c is not None else "" for c in row])
         self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+
+    @on(Button.Pressed, "#btn-import")
+    def on_btn_import(self) -> None:
+        self.action_import_csv()
+
+    def action_import_csv(self) -> None:
+        def after(result):
+            if result:
+                self.refresh_data(self.query_one("#search-box", Input).value)
+        self.app.push_screen(ImportCSVModal(table="Suppliers"), callback=after)
 
     def action_new_gr(self) -> None:
         from screens.gr import GRFormModal, GRDetailModal

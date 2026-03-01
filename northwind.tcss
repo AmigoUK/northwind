@@ -575,3 +575,11 @@ SettingsPanel .settings-section {
     content-align: right middle;
     width: 1fr;
 }
+
+.import-status {
+    margin-top: 1;
+    padding: 1 2;
+    height: auto;
+    max-height: 14;
+    width: 1fr;
+}

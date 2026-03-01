@@ -10,7 +10,7 @@ import data.products as pdata
 from data.settings import get_currency_symbol
 import data.categories as cdata
 import data.suppliers as sdata
-from screens.modals import ConfirmDeleteModal, PickerModal
+from screens.modals import ConfirmDeleteModal, ImportCSVModal, PickerModal
 
 
 class ProductFormModal(ModalScreen):
@@ -247,6 +247,7 @@ class ProductsPanel(Widget):
         ("f", "focus_search", "Search"),
         ("l", "low_stock",    "Low Stock"),
         ("x", "export_csv",   "Export CSV"),
+        ("i", "import_csv",   "Import CSV"),
     ]
 
     _selected_pk = None
@@ -260,6 +261,7 @@ class ProductsPanel(Widget):
                 yield Button("+ New",      id="btn-new",    variant="success")
                 yield Button("Open",       id="btn-open")
                 yield Button("Delete",     id="btn-delete", variant="error")
+                yield Button("Import",     id="btn-import", variant="warning")
                 yield Button("Low Stock",  id="btn-low")
                 yield Label("", id="count-label", classes="count-label")
 
@@ -362,6 +364,16 @@ class ProductsPanel(Widget):
             for row in rows:
                 writer.writerow([str(c) if c is not None else "" for c in row])
         self.notify(f"Exported {len(rows)} rows → {path}", severity="information")
+
+    @on(Button.Pressed, "#btn-import")
+    def on_btn_import(self) -> None:
+        self.action_import_csv()
+
+    def action_import_csv(self) -> None:
+        def after(result):
+            if result:
+                self.refresh_data(self.query_one("#search-box", Input).value)
+        self.app.push_screen(ImportCSVModal(table="Products"), callback=after)
 
     def action_low_stock(self) -> None:
         self._low_stock_mode = not self._low_stock_mode
