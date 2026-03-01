@@ -60,7 +60,7 @@ def get_by_pk(pk) -> dict | None:
     return d
 
 
-def fetch_linked_wz(inv_id) -> list:
+def fetch_linked_dn(inv_id) -> list:
     conn = get_connection()
     rows = conn.execute(
         """SELECT w.DN_ID, w.DN_Number, w.DN_Date,

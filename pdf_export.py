@@ -293,7 +293,7 @@ def export_inv(inv_id: int) -> str:
     if not hdr:
         raise ValueError(f"INV #{inv_id} not found.")
     items = invdata.fetch_line_items(inv_id)
-    linked_wz = invdata.fetch_linked_wz(inv_id)
+    linked_wz = invdata.fetch_linked_dn(inv_id)
     customer = cdata.get_by_pk(hdr["CustomerID"]) if hdr.get("CustomerID") else {}
     b = _branding()
     sym = get_currency_symbol()

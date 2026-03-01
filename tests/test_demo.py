@@ -1,4 +1,6 @@
 """Tests for data/demo.py — demo data insert, clean, and full DB lifecycle."""
+import re
+
 import pytest
 
 from data.demo import (
@@ -281,3 +283,177 @@ class TestFullCycle:
         assert has_demo_data() is True
         assert has_master_data() is True
         assert counts["DN"] >= 1500
+
+
+class TestDataConsistency:
+    """Verify referential integrity and data consistency after demo insert."""
+
+    @pytest.fixture(autouse=True)
+    def _with_demo(self):
+        insert_demo_data()
+
+    def test_all_data_modules_callable(self):
+        """Every data module's fetch_all / search runs without SQL errors."""
+        from data import (
+            customers, suppliers, products, categories, shippers,
+            orders, regions, employees, dn, inv, gr, cn, cash, bank,
+            si_so,
+        )
+        for mod in (customers, suppliers, products, categories, shippers,
+                    orders, regions, employees):
+            mod.fetch_all()
+            mod.search("")
+        dn.fetch_all()
+        inv.fetch_all()
+        gr.fetch_all()
+        cn.fetch_all()
+        cash.fetch_all_cr()
+        cash.fetch_all_cp()
+        bank.fetch_all()
+        si_so.fetch_all_si()
+        si_so.fetch_all_so()
+
+    def test_inv_has_linked_dns(self):
+        """Every invoice has at least one linked DN via INV_DN."""
+        from data import inv as invdata
+        conn = get_connection()
+        inv_ids = [r[0] for r in conn.execute(
+            "SELECT INV_ID FROM INV LIMIT 50"
+        ).fetchall()]
+        conn.close()
+        assert len(inv_ids) > 0
+        for inv_id in inv_ids:
+            linked = invdata.fetch_linked_dn(inv_id)
+            assert len(linked) > 0, f"INV {inv_id} has no linked DNs"
+            for dn in linked:
+                assert "DN_ID" in dn
+                assert "DN_Number" in dn
+                assert "DN_Date" in dn
+                assert "Total" in dn
+
+    def test_fk_inv_customer(self):
+        """Every INV references a valid CustomerID."""
+        conn = get_connection()
+        orphans = conn.execute(
+            "SELECT i.INV_ID, i.CustomerID FROM INV i "
+            "LEFT JOIN Customers c ON i.CustomerID = c.CustomerID "
+            "WHERE c.CustomerID IS NULL"
+        ).fetchall()
+        conn.close()
+        assert len(orphans) == 0, f"INVs with invalid CustomerID: {orphans[:5]}"
+
+    def test_fk_dn_customer(self):
+        """Every DN references a valid CustomerID."""
+        conn = get_connection()
+        orphans = conn.execute(
+            "SELECT d.DN_ID, d.CustomerID FROM DN d "
+            "LEFT JOIN Customers c ON d.CustomerID = c.CustomerID "
+            "WHERE c.CustomerID IS NULL"
+        ).fetchall()
+        conn.close()
+        assert len(orphans) == 0, f"DNs with invalid CustomerID: {orphans[:5]}"
+
+    def test_fk_gr_supplier(self):
+        """Every GR references a valid SupplierID."""
+        conn = get_connection()
+        orphans = conn.execute(
+            "SELECT g.GR_ID, g.SupplierID FROM GR g "
+            "LEFT JOIN Suppliers s ON g.SupplierID = s.SupplierID "
+            "WHERE s.SupplierID IS NULL"
+        ).fetchall()
+        conn.close()
+        assert len(orphans) == 0, f"GRs with invalid SupplierID: {orphans[:5]}"
+
+    def test_fk_inv_dn_join(self):
+        """Every INV_DN row references valid INV_ID and DN_ID."""
+        conn = get_connection()
+        bad_inv = conn.execute(
+            "SELECT j.INV_ID FROM INV_DN j "
+            "LEFT JOIN INV i ON j.INV_ID = i.INV_ID "
+            "WHERE i.INV_ID IS NULL"
+        ).fetchall()
+        bad_dn = conn.execute(
+            "SELECT j.DN_ID FROM INV_DN j "
+            "LEFT JOIN DN d ON j.DN_ID = d.DN_ID "
+            "WHERE d.DN_ID IS NULL"
+        ).fetchall()
+        conn.close()
+        assert len(bad_inv) == 0, f"INV_DN orphan INV refs: {bad_inv[:5]}"
+        assert len(bad_dn) == 0, f"INV_DN orphan DN refs: {bad_dn[:5]}"
+
+    def test_no_orphan_line_items(self):
+        """DN_Items and GR_Items all reference existing parent docs."""
+        conn = get_connection()
+        orphan_dn = conn.execute(
+            "SELECT di.DN_ID FROM DN_Items di "
+            "LEFT JOIN DN d ON di.DN_ID = d.DN_ID "
+            "WHERE d.DN_ID IS NULL"
+        ).fetchall()
+        orphan_gr = conn.execute(
+            "SELECT gi.GR_ID FROM GR_Items gi "
+            "LEFT JOIN GR g ON gi.GR_ID = g.GR_ID "
+            "WHERE g.GR_ID IS NULL"
+        ).fetchall()
+        conn.close()
+        assert len(orphan_dn) == 0, f"Orphan DN_Items: {orphan_dn[:5]}"
+        assert len(orphan_gr) == 0, f"Orphan GR_Items: {orphan_gr[:5]}"
+
+    def test_line_items_reference_valid_products(self):
+        """All line items reference existing ProductIDs."""
+        conn = get_connection()
+        bad_dn = conn.execute(
+            "SELECT di.ProductID FROM DN_Items di "
+            "LEFT JOIN Products p ON di.ProductID = p.ProductID "
+            "WHERE p.ProductID IS NULL"
+        ).fetchall()
+        bad_gr = conn.execute(
+            "SELECT gi.ProductID FROM GR_Items gi "
+            "LEFT JOIN Products p ON gi.ProductID = p.ProductID "
+            "WHERE p.ProductID IS NULL"
+        ).fetchall()
+        conn.close()
+        assert len(bad_dn) == 0, f"DN_Items with invalid ProductID: {bad_dn[:5]}"
+        assert len(bad_gr) == 0, f"GR_Items with invalid ProductID: {bad_gr[:5]}"
+
+    def test_no_negative_totals_or_quantities(self):
+        """No negative TotalNet on INV; no negative Quantity/Price on items."""
+        conn = get_connection()
+        neg_inv = conn.execute(
+            "SELECT COUNT(*) FROM INV WHERE TotalNet < 0"
+        ).fetchone()[0]
+        neg_dn_qty = conn.execute(
+            "SELECT COUNT(*) FROM DN_Items WHERE Quantity < 0"
+        ).fetchone()[0]
+        neg_dn_price = conn.execute(
+            "SELECT COUNT(*) FROM DN_Items WHERE UnitPrice < 0"
+        ).fetchone()[0]
+        neg_gr_qty = conn.execute(
+            "SELECT COUNT(*) FROM GR_Items WHERE Quantity < 0"
+        ).fetchone()[0]
+        neg_gr_cost = conn.execute(
+            "SELECT COUNT(*) FROM GR_Items WHERE UnitCost < 0"
+        ).fetchone()[0]
+        conn.close()
+        assert neg_inv == 0, f"{neg_inv} invoices with negative TotalNet"
+        assert neg_dn_qty == 0, f"{neg_dn_qty} DN items with negative Quantity"
+        assert neg_dn_price == 0, f"{neg_dn_price} DN items with negative UnitPrice"
+        assert neg_gr_qty == 0, f"{neg_gr_qty} GR items with negative Quantity"
+        assert neg_gr_cost == 0, f"{neg_gr_cost} GR items with negative UnitCost"
+
+    def test_doc_number_patterns(self):
+        """Document numbers follow expected ABBR/YYYY/NNN patterns."""
+        conn = get_connection()
+        patterns = {
+            "DN": (r"^DN/\d{4}/\d+$", "DN_Number", "DN"),
+            "INV": (r"^INV/\d{4}/\d+$", "INV_Number", "INV"),
+            "GR": (r"^GR/\d{4}/\d+$", "GR_Number", "GR"),
+            "CN": (r"^CN/\d{4}/\d+$", "CN_Number", "CN"),
+        }
+        for doc_type, (pattern, col, table) in patterns.items():
+            rows = conn.execute(f"SELECT {col} FROM {table}").fetchall()
+            assert len(rows) > 0, f"No {doc_type} documents found"
+            bad = [r[0] for r in rows if not re.match(pattern, r[0])]
+            assert len(bad) == 0, (
+                f"{doc_type} docs with bad number format: {bad[:5]}"
+            )
+        conn.close()
