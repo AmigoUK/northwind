@@ -8,7 +8,7 @@ from typing import Optional
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, DataTable, DirectoryTree, Input, Label, Static
+from textual.widgets import Button, DataTable, DirectoryTree, Input, Label, Select, Static
 from textual import on
 
 
@@ -310,6 +310,9 @@ class ImportCSVModal(ModalScreen):
         super().__init__()
         self._table = table
         self._rows: list[dict] = []
+        self._col_mapping_override: dict | None = None
+        self._path: str = ""
+        self._last_result: dict | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
@@ -350,43 +353,83 @@ class ImportCSVModal(ModalScreen):
             self._do_preview()
 
     def _do_preview(self) -> None:
-        from data.csv_import import parse_csv, TABLE_CONFIGS
+        try:
+            import csv as _csv
+            import os as _os
+            from data.csv_import import check_headers
 
-        path = self.query_one("#f-path", Input).value.strip()
-        if not path:
-            self._set_status("[b red]Please enter a file path.[/]")
-            return
+            path = self.query_one("#f-path", Input).value.strip()
+            if not path:
+                self._set_status("[b red]Please enter a file path.[/]")
+                return
 
-        rows, errors = parse_csv(path, self._table)
-        cfg = TABLE_CONFIGS[self._table]
+            expanded = _os.path.expanduser(path)
+            if not _os.path.isfile(expanded):
+                self._set_status(f"[b red]File not found: {path}[/]")
+                return
 
-        if errors and not rows:
-            self._set_status("\n".join(f"[b red]{e}[/]" for e in errors))
-            return
+            self._path = path
+            self._col_mapping_override = None
 
-        self._rows = rows
-        lines: list[str] = []
-        if errors:
-            lines.extend(f"[yellow]{e}[/]" for e in errors)
+            # Read headers only
+            with open(expanded, newline="", encoding="utf-8-sig") as f:
+                csv_headers = list(_csv.DictReader(f).fieldnames or [])
 
-        mapped_cols = set()
-        for row in rows[:1]:
-            mapped_cols = set(row.keys())
-        lines.append(f"[b]Columns:[/] {', '.join(c for c in cfg['columns'] if c in mapped_cols)}")
-        lines.append(f"[b]Rows:[/] {len(rows)}")
+            all_matched, auto_mapping = check_headers(self._table, csv_headers)
 
-        lines.append("")
-        for i, row in enumerate(rows[:3], start=1):
-            vals = [f"{k}={v}" for k, v in row.items() if v is not None]
-            lines.append(f"  {i}. {', '.join(vals[:4])}{'...' if len(vals) > 4 else ''}")
-        if len(rows) > 3:
-            lines.append(f"  ... and {len(rows) - 3} more rows")
+            if all_matched:
+                self._finish_preview(path)
+            else:
+                def after_reconcile(col_mapping):
+                    if col_mapping is None:
+                        self._set_status("[yellow]Import cancelled.[/]")
+                        return
+                    self._col_mapping_override = col_mapping
+                    self._finish_preview(path)
 
-        self._set_status("\n".join(lines))
+                self.app.push_screen(
+                    ReconciliationModal(self._table, csv_headers, auto_mapping),
+                    callback=after_reconcile,
+                )
+        except Exception as exc:
+            self._set_status(f"[b red]Preview error: {exc}[/]")
 
-        btn = self.query_one("#btn-preview", Button)
-        btn.label = f"Import {len(rows)} rows"
-        btn.variant = "success"
+    def _finish_preview(self, path: str) -> None:
+        try:
+            from data.csv_import import parse_csv, TABLE_CONFIGS
+
+            rows, errors = parse_csv(path, self._table, self._col_mapping_override)
+            cfg = TABLE_CONFIGS[self._table]
+
+            if errors and not rows:
+                self._set_status("\n".join(f"[b red]{e}[/]" for e in errors))
+                return
+
+            self._rows = rows
+            lines: list[str] = []
+            if errors:
+                lines.extend(f"[yellow]{e}[/]" for e in errors)
+
+            mapped_cols = set()
+            for row in rows[:1]:
+                mapped_cols = set(row.keys())
+            lines.append(f"[b]Columns:[/] {', '.join(c for c in cfg['columns'] if c in mapped_cols)}")
+            lines.append(f"[b]Rows:[/] {len(rows)}")
+
+            lines.append("")
+            for i, row in enumerate(rows[:3], start=1):
+                vals = [f"{k}={v}" for k, v in row.items() if v is not None]
+                lines.append(f"  {i}. {', '.join(vals[:4])}{'...' if len(vals) > 4 else ''}")
+            if len(rows) > 3:
+                lines.append(f"  ... and {len(rows) - 3} more rows")
+
+            self._set_status("\n".join(lines))
+
+            btn = self.query_one("#btn-preview", Button)
+            btn.label = f"Import {len(rows)} rows"
+            btn.variant = "success"
+        except Exception as exc:
+            self._set_status(f"[b red]Preview error: {exc}[/]")
 
     def _do_import(self) -> None:
         from data.csv_import import import_rows
@@ -395,34 +438,175 @@ class ImportCSVModal(ModalScreen):
             self._set_status("[b red]No rows to import. Preview first.[/]")
             return
 
-        result = import_rows(self._table, self._rows)
+        try:
+            result = import_rows(self._table, self._rows)
+        except Exception as exc:
+            self._set_status(f"[b red]Import error: {exc}[/]")
+            return
+
+        self._last_result = result
         parts = [f"[b green]Inserted: {result['inserted']}[/]"]
+        if result.get("updated"):
+            parts.append(f"[b cyan]Updated: {result['updated']}[/]")
         if result["skipped"]:
-            parts.append(f"[b yellow]Skipped (duplicates): {result['skipped']}[/]")
+            parts.append(f"[b yellow]Skipped (integrity errors): {result['skipped']}[/]")
         if result["errors"]:
             parts.append(f"[b red]Errors: {len(result['errors'])}[/]")
-            for row_num, msg in result["errors"][:5]:
-                parts.append(f"  Row {row_num}: {msg}")
+            for err in result["errors"][:5]:
+                if isinstance(err, tuple):
+                    parts.append(f"  Row {err[0]}: {err[1]}")
+                else:
+                    parts.append(f"  {err}")
 
         self._set_status("\n".join(parts))
 
+        # Persistent banner — survives modal close
+        total = result["inserted"] + result.get("updated", 0)
+        if total:
+            self.app.notify(
+                f"Imported {self._table}: {result['inserted']} inserted"
+                + (f", {result['updated']} updated" if result.get("updated") else ""),
+                severity="information",
+            )
+        elif result["errors"]:
+            self.app.notify(
+                f"Import {self._table}: {len(result['errors'])} error(s)",
+                severity="error",
+            )
+        elif result["skipped"]:
+            self.app.notify(
+                f"Import {self._table}: all rows skipped (duplicates)",
+                severity="warning",
+            )
+
+        # Reset button but do NOT auto-dismiss — let user read the result
         btn = self.query_one("#btn-preview", Button)
         btn.label = "Preview"
         btn.variant = "primary"
         self._rows = []
-
-        self.dismiss(result)
 
     def _set_status(self, text: str) -> None:
         self.query_one("#import-status", Static).update(text)
 
     @on(Button.Pressed, "#btn-cancel-import")
     def on_cancel_import(self) -> None:
+        self.dismiss(self._last_result)
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(self._last_result)
+
+
+class ReconciliationModal(ModalScreen):
+    """Manual column mapping when CSV headers don't auto-match DB fields.
+
+    Dismisses with a col_mapping dict {raw_csv_col: canonical_db_col} on Import,
+    or None on Cancel/ESC.
+    """
+
+    def __init__(
+        self,
+        table: str,
+        csv_headers: list[str],
+        auto_mapping: dict[str, str],
+    ) -> None:
+        super().__init__()
+        self._table = table
+        self._csv_headers = csv_headers
+        self._auto_mapping = auto_mapping  # pre-detected matches
+
+    def compose(self) -> ComposeResult:
+        from data.csv_import import TABLE_CONFIGS
+        cfg = TABLE_CONFIGS[self._table]
+        required = set(cfg["required"])
+        all_columns = cfg["columns"]
+
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Map CSV columns — {self._table}", classes="modal-title")
+            yield Label(
+                "Some columns could not be auto-matched. "
+                "Map each CSV column to a database field.",
+                classes="modal-subtitle",
+            )
+            yield Label("Required fields are marked *.", classes="modal-subtitle")
+            yield Label("", id="recon-error", classes="modal-subtitle")
+            with Vertical(id="recon-rows"):
+                for raw_col in self._csv_headers:
+                    label_text = raw_col
+                    if raw_col in self._auto_mapping:
+                        canon = self._auto_mapping[raw_col]
+                        if canon in required:
+                            label_text = f"{raw_col} *"
+                    else:
+                        # check if this raw_col maps to a required field via auto
+                        pass
+                    with Horizontal(classes="recon-row"):
+                        yield Label(label_text, classes="recon-csv-col", id=f"lbl-{_safe_id(raw_col)}")
+                        options = [("-- skip --", "")] + [(col, col) for col in all_columns]
+                        pre = self._auto_mapping.get(raw_col, "")
+                        yield Select(
+                            options,
+                            value=pre,
+                            id=f"sel-{_safe_id(raw_col)}",
+                            classes="recon-select",
+                        )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Cancel", id="btn-recon-cancel")
+                yield Button("Import", id="btn-recon-import", variant="success", disabled=True)
+            yield Label("ESC to close", classes="modal-hint")
+
+    def on_mount(self) -> None:
+        self._refresh_state()
+
+    def _refresh_state(self) -> None:
+        from data.csv_import import TABLE_CONFIGS
+        cfg = TABLE_CONFIGS[self._table]
+        required = set(cfg["required"])
+
+        mapped = set()
+        for raw_col in self._csv_headers:
+            sel = self.query_one(f"#sel-{_safe_id(raw_col)}", Select)
+            val = sel.value
+            if val and val != Select.BLANK:
+                mapped.add(val)
+
+        missing = [r for r in required if r not in mapped]
+        error_lbl = self.query_one("#recon-error", Label)
+        btn_import = self.query_one("#btn-recon-import", Button)
+        if missing:
+            error_lbl.update(f"[red]Still required: {', '.join(missing)}[/]")
+            btn_import.disabled = True
+        else:
+            error_lbl.update("")
+            btn_import.disabled = False
+
+    @on(Select.Changed)
+    def on_select_changed(self, _event: Select.Changed) -> None:
+        self._refresh_state()
+
+    @on(Button.Pressed, "#btn-recon-import")
+    def on_import(self) -> None:
+        mapping: dict[str, str] = {}
+        for raw_col in self._csv_headers:
+            sel = self.query_one(f"#sel-{_safe_id(raw_col)}", Select)
+            val = sel.value
+            if val and val != Select.BLANK:
+                mapping[raw_col] = val
+        self.dismiss(mapping)
+
+    @on(Button.Pressed, "#btn-recon-cancel")
+    def on_cancel(self) -> None:
         self.dismiss(None)
 
     def on_key(self, event) -> None:
         if event.key == "escape":
             self.dismiss(None)
+
+
+def _safe_id(raw: str) -> str:
+    """Convert a raw CSV column name to a safe DOM id fragment."""
+    import re
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", raw)
 
 
 class _FilteredDirectoryTree(DirectoryTree):

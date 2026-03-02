@@ -21,6 +21,33 @@ def fetch_all() -> list:
     return [list(r) for r in rows]
 
 
+def fetch_all_with_lines() -> list[dict]:
+    """Denormalized: one row per line item. Orders with no items get one row with NULL line-item columns."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT
+               o.OrderID,
+               o.CustomerID,       c.CompanyName              AS CustomerName,
+               o.EmployeeID,       e.LastName||', '||e.FirstName AS EmployeeName,
+               o.OrderDate,        o.RequiredDate,             o.ShippedDate,
+               o.ShipVia,          s.CompanyName              AS ShipperName,
+               o.Freight,
+               o.ShipName, o.ShipAddress, o.ShipCity,
+               o.ShipRegion, o.ShipPostalCode, o.ShipCountry,
+               od.ProductID,       p.ProductName,
+               od.Quantity,        od.UnitPrice,               od.Discount
+           FROM Orders o
+           LEFT JOIN Customers    c  ON o.CustomerID = c.CustomerID
+           LEFT JOIN Employees    e  ON o.EmployeeID = e.EmployeeID
+           LEFT JOIN Shippers     s  ON o.ShipVia    = s.ShipperID
+           LEFT JOIN OrderDetails od ON o.OrderID    = od.OrderID
+           LEFT JOIN Products     p  ON od.ProductID = p.ProductID
+           ORDER BY o.OrderID, od.ProductID"""
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def search(term: str) -> list:
     like = f"%{term}%"
     conn = get_connection()

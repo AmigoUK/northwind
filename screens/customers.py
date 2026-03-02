@@ -11,6 +11,12 @@ import data.customers as cdata
 from screens.modals import ConfirmDeleteModal, ImportCSVModal, PickerModal
 
 
+_EXPORT_HEADERS = [
+    "CustomerID", "CompanyName", "ContactName", "ContactTitle",
+    "Address", "City", "Region", "PostalCode", "Country", "Phone", "Fax",
+]
+
+
 class CustomerFormModal(ModalScreen):
     """Add (pk=None) or edit (pk=str) a customer. Dismisses with True on save."""
 
@@ -297,8 +303,12 @@ class CustomersPanel(Widget):
     def action_export_csv(self) -> None:
         from screens.export_helpers import export_csv_with_selector
         term = self.query_one("#search-box", Input).value
-        rows = cdata.search(term) if term else cdata.fetch_all()
-        export_csv_with_selector(self, "customers", ["ID", "Company", "Contact", "City", "Country", "Phone"], rows)
+        all_full = cdata.fetch_all_full()
+        if term:
+            t = term.lower()
+            all_full = [d for d in all_full if any(t in str(v).lower() for v in d.values())]
+        rows = [[d.get(col) for col in _EXPORT_HEADERS] for d in all_full]
+        export_csv_with_selector(self, "customers", _EXPORT_HEADERS, rows)
 
     def action_import_csv(self) -> None:
         def after(result):
