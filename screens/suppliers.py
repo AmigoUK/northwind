@@ -1,4 +1,9 @@
 """screens/suppliers.py — Suppliers panel, detail modal, and form modal."""
+
+_EXPORT_HEADERS = [
+    "SupplierID", "CompanyName", "ContactName", "ContactTitle",
+    "Address", "City", "Region", "PostalCode", "Country", "Phone", "Fax", "HomePage",
+]
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -291,8 +296,12 @@ class SuppliersPanel(Widget):
     def action_export_csv(self) -> None:
         from screens.export_helpers import export_csv_with_selector
         term = self.query_one("#search-box", Input).value
-        rows = sdata.search(term) if term else sdata.fetch_all()
-        export_csv_with_selector(self, "suppliers", ["ID", "Company", "Contact", "City", "Country", "Phone"], rows)
+        all_full = sdata.fetch_all_full()
+        if term:
+            t = term.lower()
+            all_full = [d for d in all_full if any(t in str(v).lower() for v in d.values())]
+        rows = [[d.get(col) for col in _EXPORT_HEADERS] for d in all_full]
+        export_csv_with_selector(self, "suppliers", _EXPORT_HEADERS, rows)
 
     def action_import_csv(self) -> None:
         def after(result):

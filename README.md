@@ -20,6 +20,31 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.7** | CSV Import | CSV import for master data — Customers, Suppliers, Products, Categories |
 | **v2.8** | File Selector & Export Cleanup | File browser modal for all exports/imports, centralized CSV export logic |
 | **v2.9** | CSV Round-Trip Fix | CSV import now accepts export display headers (ID, Company, Contact…) via alias mappings |
+| **v2.10** | Import/Export Fixes | Fix Ctrl+X/Ctrl+I keybindings globally; fix Products & Orders CSV import column mappings |
+| **v2.13** | AR/AP All Unpaid View | Reconciliation panel default "All Unpaid" view across all customers/suppliers; optional entity filter; sub-view toggle (All Unpaid / Statement) |
+
+---
+
+## Features (v2.13)
+
+### New in v2.13 — AR/AP All Unpaid View
+
+- **All Unpaid default view** — Reconciliation panel opens immediately showing all outstanding invoices (AR) or unallocated goods receipts (AP) — no entity pick required
+- **Sub-view toggle** — `[All Unpaid]` / `[Statement]` buttons (keyboard `U` / `S`) switch between the flat unpaid list and the per-entity running-balance ledger
+- **Optional filter** — `▼ Filter` button narrows the unpaid list to one customer/supplier; `✕ Clear` resets to all entities
+- **Pay Invoice from unpaid list** — select any INV row in the unpaid view and press `P` to register a payment directly
+- **AR Aging bar** — visible in the All Unpaid AR view
+- **4 new automated tests** — `fetch_all_unpaid_inv` and `fetch_all_unpaid_gr` (all + filtered)
+
+---
+
+## Features (v2.10)
+
+### New in v2.10 — Import/Export Fixes
+
+- **Ctrl+X / Ctrl+I keybindings** — export and import bindings now work correctly from any active panel
+- **Products CSV import fix** — column aliases corrected so exported Product CSVs re-import without errors
+- **Orders CSV import fix** — column aliases corrected so exported Order CSVs re-import without errors
 
 ---
 
@@ -401,7 +426,8 @@ northwind/
 | `N` | New record (in active panel) |
 | `F` | Focus search box (in active panel) |
 | `ctrl+r` | Run SQL query (SQL Query panel) |
-| `X` | Export current view to CSV |
+| `ctrl+X` | Export current view to CSV |
+| `ctrl+I` | Import CSV into current panel |
 | `R` | Refresh (Dashboard / Charts / Reports) |
 | `ESC` | Close modal / go back |
 

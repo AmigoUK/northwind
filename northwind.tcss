@@ -621,3 +621,27 @@ SettingsPanel .settings-section {
     height: auto;
     padding: 1 2;
 }
+
+/* ── ReconciliationModal ────────────────────────────────────────────────────*/
+.recon-row {
+    height: 3;
+    align: left middle;
+}
+
+.recon-csv-col {
+    width: 30;
+    height: 3;
+    content-align: left middle;
+}
+
+.recon-select {
+    width: 1fr;
+}
+
+#recon-rows {
+    height: auto;
+    max-height: 28;
+    overflow-y: auto;
+    border: solid $primary-darken-2;
+    padding: 0 1;
+}

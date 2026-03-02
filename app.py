@@ -1,5 +1,5 @@
 """
-app.py — Northwind Traders v2.10
+app.py — Northwind Traders v2.13
 Textual TUI entry point.
 """
 from __future__ import annotations
@@ -55,6 +55,7 @@ from screens.bank            import BankPanel
 from screens.cn              import CNPanel
 from screens.business        import BusinessDetailsPanel
 from screens.help            import HelpPanel
+from screens.reconciliation  import ReconciliationPanel
 
 # ── Terminal cleanup ──────────────────────────────────────────────────────────
 # Textual enables mouse reporting via escape sequences on startup. If the app
@@ -106,8 +107,9 @@ _NAV_GROUPS = [
         ("movements",  "SI/SO — Stock"),
     ]),
     ("── Finance ──", "nav-group-finance", [
-        ("cash",       "Cash Register"),
-        ("bank",       "Bank Account"),
+        ("cash",           "Cash Register"),
+        ("bank",           "Bank Account"),
+        ("reconciliation", "Reconciliation"),
     ]),
     ("── Analytics ──", "nav-group-analytics", [
         ("reports",    "Reports"),
@@ -152,7 +154,7 @@ class SidebarNav(Widget):
 
 
 class NorthwindApp(App):
-    TITLE = "Northwind Traders v2.10"
+    TITLE = "Northwind Traders v2.13"
     CSS_PATH = "northwind.tcss"
 
     BINDINGS = [
@@ -190,6 +192,7 @@ class NorthwindApp(App):
                 yield StockMovementsPanel(id="movements")
                 yield CashPanel(id="cash")
                 yield BankPanel(id="bank")
+                yield ReconciliationPanel(id="reconciliation")
                 yield SqlPanel(id="sql")
                 yield UsersPanel(id="users")
                 yield BusinessDetailsPanel(id="business")

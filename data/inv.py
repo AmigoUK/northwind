@@ -127,6 +127,26 @@ def create(customer_id: str, wz_ids: list[int], inv_date: str,
     return inv_id
 
 
+def _recalc_inv_status(inv_id: int, conn) -> None:
+    """Set INV.Status based on PaidAmount vs TotalNet.
+    issued/partial → partial  (0 < PaidAmount < TotalNet)
+    issued/partial → paid     (PaidAmount >= TotalNet)
+    Called by record_payment() and allocate_payment_to_inv()."""
+    row = conn.execute(
+        "SELECT TotalNet, COALESCE(PaidAmount, 0) FROM INV WHERE INV_ID=?", (inv_id,)
+    ).fetchone()
+    if not row:
+        return
+    total, paid = row[0], row[1]
+    if paid >= total:
+        status = "paid"
+    elif paid > 0:
+        status = "partial"
+    else:
+        status = "issued"
+    conn.execute("UPDATE INV SET Status=? WHERE INV_ID=?", (status, inv_id))
+
+
 def record_payment(inv_id: int, amount: float, method: str,
                    description: str = "",
                    date_override: str | None = None) -> int:
@@ -135,25 +155,20 @@ def record_payment(inv_id: int, amount: float, method: str,
     from data.bank import create_bank_entry
     conn = get_connection()
     row = conn.execute(
-        "SELECT CustomerID, INV_Number, TotalNet, COALESCE(PaidAmount, 0) "
+        "SELECT CustomerID, INV_Number, COALESCE(PaidAmount, 0) "
         "FROM INV WHERE INV_ID=?",
         (inv_id,),
     ).fetchone()
     if not row:
         conn.close()
         raise ValueError(f"INV #{inv_id} not found.")
-    customer_id, inv_number, total_net, paid_so_far = row
+    customer_id, inv_number, paid_so_far = row
     new_paid = paid_so_far + amount
-    if new_paid >= total_net:
-        new_status = "paid"
-    elif new_paid > 0:
-        new_status = "partial"
-    else:
-        new_status = "issued"
     conn.execute(
-        "UPDATE INV SET PaidAmount=?, Status=? WHERE INV_ID=?",
-        (new_paid, new_status, inv_id),
+        "UPDATE INV SET PaidAmount=? WHERE INV_ID=?",
+        (new_paid, inv_id),
     )
+    _recalc_inv_status(inv_id, conn)
     conn.commit()
     conn.close()
     desc = description or f"Payment for {inv_number}"

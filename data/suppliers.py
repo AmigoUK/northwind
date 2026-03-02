@@ -14,6 +14,17 @@ def fetch_all() -> list:
     return [list(r) for r in rows]
 
 
+def fetch_all_full() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT SupplierID, CompanyName, ContactName, ContactTitle, "
+        "Address, City, Region, PostalCode, Country, Phone, Fax, HomePage "
+        "FROM Suppliers ORDER BY SupplierID"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def fetch_for_picker() -> list:
     conn = get_connection()
     rows = conn.execute(

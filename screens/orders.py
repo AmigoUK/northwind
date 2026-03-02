@@ -1,5 +1,13 @@
 from __future__ import annotations
 """screens/orders.py — Orders panel, detail, form, and line-item modals."""
+
+_EXPORT_HEADERS = [
+    "OrderID", "CustomerID", "CustomerName", "EmployeeID", "EmployeeName",
+    "OrderDate", "RequiredDate", "ShippedDate", "ShipVia", "ShipperName",
+    "Freight", "ShipName", "ShipAddress", "ShipCity", "ShipRegion",
+    "ShipPostalCode", "ShipCountry",
+    "ProductID", "ProductName", "Quantity", "UnitPrice", "Discount",
+]
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -741,8 +749,17 @@ class OrdersPanel(Widget):
     def action_export_csv(self) -> None:
         from screens.export_helpers import export_csv_with_selector
         term = self.query_one("#search-box", Input).value
-        rows = odata.search(term) if term else odata.fetch_all()
-        export_csv_with_selector(self, "orders", ["ID", "Customer", "Employee", "Order Date", "Shipped", "Total"], rows)
+        all_full = odata.fetch_all_with_lines()
+        if term:
+            t = term.lower()
+            matching_ids = {
+                d["OrderID"] for d in all_full
+                if any(t in str(d.get(k, "")).lower()
+                       for k in ("OrderID", "CustomerID", "CustomerName", "EmployeeName"))
+            }
+            all_full = [d for d in all_full if d["OrderID"] in matching_ids]
+        rows = [[d.get(col) for col in _EXPORT_HEADERS] for d in all_full]
+        export_csv_with_selector(self, "orders", _EXPORT_HEADERS, rows)
 
     def action_import_csv(self) -> None:
         from screens.modals import ImportCSVModal

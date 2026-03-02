@@ -21,6 +21,24 @@ def fetch_all() -> list:
     return [list(r) for r in rows]
 
 
+def fetch_all_full() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT p.ProductID, p.ProductName,
+                  p.SupplierID, s.CompanyName AS SupplierName,
+                  p.CategoryID, c.CategoryName,
+                  p.QuantityPerUnit, p.UnitPrice,
+                  p.UnitsInStock, p.UnitsOnOrder,
+                  p.ReorderLevel, p.Discontinued
+           FROM Products p
+           LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+           LEFT JOIN Suppliers  s ON p.SupplierID = s.SupplierID
+           ORDER BY p.ProductID"""
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def fetch_for_picker() -> list:
     conn = get_connection()
     rows = conn.execute(
