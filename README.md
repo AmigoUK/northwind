@@ -395,6 +395,7 @@ northwind/
 │   ├── si_so.py        # SI/SO (Stock Issue / Stock Out) CRUD
 │   ├── cash.py         # Cash Register entries (CR/CP)
 │   ├── bank.py         # Bank Account entries
+│   ├── reconciliation.py # AR/AP reconciliation queries, aging, allocation (v2.13)
 │   └── ...             # customers, orders, products, employees, …
 ├── screens/            # Textual Widget subclasses (one per section)
 │   ├── login.py        # LoginScreen modal (PIN gate)
@@ -407,13 +408,15 @@ northwind/
 │   ├── dn.py           # DN Delivery Notes panel + modals + cancel button
 │   ├── inv.py          # INV Invoices panel + modals + CN integration
 │   ├── gr.py           # GR Goods Receipts panel + modals + cancel button
+│   ├── reconciliation.py # AR/AP Reconciliation panel — All Unpaid + Statement sub-views (v2.13)
 │   └── ...             # sql, settings, business, users, cash, bank, …
-└── tests/              # Automated test suite (v2.4)
+└── tests/              # Automated test suite — 172 tests across 7 modules
     ├── conftest.py     # Fresh temp DB per test
     ├── test_data.py    # Core business logic (19 tests)
     ├── test_delete_guards.py  # Delete guards + side-effects (26 tests)
     ├── test_cancellation.py   # DN/INV/GR cancellation (13 tests)
-    └── test_cn.py             # Credit Notes — all 3 types (24 tests)
+    ├── test_cn.py             # Credit Notes — all 3 types (24 tests)
+    └── test_reconciliation.py # AR/AP reconciliation + All Unpaid queries (14 tests)
 ```
 
 ---

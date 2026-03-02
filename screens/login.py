@@ -23,7 +23,7 @@ class LoginScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="login-box"):
-            yield Label("Northwind Traders", classes="login-title")
+            yield Label("Northwind Traders v2.13", classes="login-title")
             yield Label("Please log in", classes="login-subtitle")
             yield Label("Username")
             yield Input(placeholder="Username", id="f-username")
