@@ -6,6 +6,8 @@ Abbreviation mapping (v2.5):
   GR = Goods Receipt, SI = Stock Issue, SO = Stock Out,
   CR = Cash Receipt, CP = Cash Payment
 """
+from __future__ import annotations
+
 import hashlib
 import sqlite3
 import os

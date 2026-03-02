@@ -1,6 +1,9 @@
 """screens/modals.py — Shared modal dialogs: ConfirmActionModal, ConfirmDeleteModal, CleanDatabaseModal, PickerModal, ImportCSVModal, FileSelectModal."""
+from __future__ import annotations
+
 import os
 from pathlib import Path
+from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -439,7 +442,7 @@ class _FilteredDirectoryTree(DirectoryTree):
         return result
 
 
-class FileSelectModal(ModalScreen[str | None]):
+class FileSelectModal(ModalScreen[Optional[str]]):
     """File browser modal for open/save operations. Returns chosen path or None."""
 
     def __init__(

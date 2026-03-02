@@ -159,6 +159,8 @@ class NorthwindApp(App):
         Binding("ctrl+q", "confirm_quit", "Quit"),
         Binding("n",      "new",          "New",    show=True),
         Binding("f",      "search",       "Search", show=True),
+        Binding("ctrl+x", "export_csv",   "Export", show=True),
+        Binding("ctrl+i", "import_csv",   "Import", show=True),
         Binding("escape", "escape",       "Back",   show=False),
         Binding("question_mark", "open_help", "Help", show=True, key_display="?"),
     ]
@@ -278,6 +280,24 @@ class NorthwindApp(App):
         try:
             panel = self.query_one(f"#{current}")
             panel.action_focus_search()
+        except Exception:
+            pass
+
+    def action_export_csv(self) -> None:
+        """Delegate Ctrl+X to the active panel's export action."""
+        current = self.query_one(ContentSwitcher).current
+        try:
+            panel = self.query_one(f"#{current}")
+            panel.action_export_csv()
+        except Exception:
+            pass
+
+    def action_import_csv(self) -> None:
+        """Delegate Ctrl+I to the active panel's import action."""
+        current = self.query_one(ContentSwitcher).current
+        try:
+            panel = self.query_one(f"#{current}")
+            panel.action_import_csv()
         except Exception:
             pass
 
