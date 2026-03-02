@@ -54,6 +54,7 @@ from screens.cash            import CashPanel
 from screens.bank            import BankPanel
 from screens.cn              import CNPanel
 from screens.business        import BusinessDetailsPanel
+from screens.help            import HelpPanel
 
 # ── Terminal cleanup ──────────────────────────────────────────────────────────
 # Textual enables mouse reporting via escape sequences on startup. If the app
@@ -118,6 +119,9 @@ _NAV_GROUPS = [
         ("business",   "Business Details"),
         ("settings",   "Settings"),
     ]),
+    ("── Help ──", "nav-group-help", [
+        ("help",       "Help"),
+    ]),
 ]
 
 # Flat list derived from groups for use in switch_section() iteration
@@ -156,6 +160,7 @@ class NorthwindApp(App):
         Binding("n",      "new",          "New",    show=True),
         Binding("f",      "search",       "Search", show=True),
         Binding("escape", "escape",       "Back",   show=False),
+        Binding("question_mark", "open_help", "Help", show=True, key_display="?"),
     ]
 
     _current_user: dict | None = None
@@ -187,6 +192,7 @@ class NorthwindApp(App):
                 yield UsersPanel(id="users")
                 yield BusinessDetailsPanel(id="business")
                 yield SettingsPanel(id="settings")
+                yield HelpPanel(id="help")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -282,6 +288,10 @@ class NorthwindApp(App):
     def _on_quit_confirmed(self, confirmed: bool) -> None:
         if confirmed:
             self.exit()
+
+    def action_open_help(self) -> None:
+        """Switch to the Help panel."""
+        self.switch_section("help")
 
     def action_escape(self) -> None:
         """ESC is handled by individual modals; here it's a no-op at top level."""

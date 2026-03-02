@@ -590,3 +590,34 @@ SettingsPanel .settings-section {
     border: solid $primary-darken-2;
     margin: 1 0;
 }
+
+/* ── Help panel ──────────────────────────────────────────────────────────*/
+#help-sidebar {
+    width: 52;
+    height: 1fr;
+    padding-right: 1;
+}
+
+#help-sidebar DataTable {
+    height: 1fr;
+    border: solid $primary-darken-2;
+}
+
+#help-content {
+    width: 1fr;
+    height: 1fr;
+    overflow-y: auto;
+    padding: 0 1;
+}
+
+#help-content #help-topic-title {
+    text-style: bold;
+    color: $accent;
+    height: 2;
+    padding-left: 1;
+}
+
+#help-content #help-topic-body {
+    height: auto;
+    padding: 1 2;
+}
