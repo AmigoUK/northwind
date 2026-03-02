@@ -193,8 +193,6 @@ class SuppliersPanel(Widget):
         ("f", "focus_search",   "Search"),
         ("+", "new_product",    "New Product"),
         ("p", "new_gr",         "New GR"),
-        ("x", "export_csv",     "Export CSV"),
-        ("i", "import_csv",     "Import CSV"),
     ]
 
     _selected_pk = None
@@ -207,7 +205,6 @@ class SuppliersPanel(Widget):
                 yield Button("+ New",  id="btn-new",    variant="success")
                 yield Button("Open",   id="btn-open")
                 yield Button("Delete", id="btn-delete", variant="error")
-                yield Button("Import", id="btn-import", variant="warning")
                 yield Label("", id="count-label", classes="count-label")
 
     def on_mount(self) -> None:
@@ -296,10 +293,6 @@ class SuppliersPanel(Widget):
         term = self.query_one("#search-box", Input).value
         rows = sdata.search(term) if term else sdata.fetch_all()
         export_csv_with_selector(self, "suppliers", ["ID", "Company", "Contact", "City", "Country", "Phone"], rows)
-
-    @on(Button.Pressed, "#btn-import")
-    def on_btn_import(self) -> None:
-        self.action_import_csv()
 
     def action_import_csv(self) -> None:
         def after(result):

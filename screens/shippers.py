@@ -135,7 +135,6 @@ class ShippersPanel(Widget):
     BINDINGS = [
         ("n", "new_record",   "New Shipper"),
         ("f", "focus_search", "Search"),
-        ("x", "export_csv",   "Export CSV"),
     ]
 
     _selected_pk = None

@@ -246,8 +246,6 @@ class ProductsPanel(Widget):
         ("n", "new_record",   "New Product"),
         ("f", "focus_search", "Search"),
         ("l", "low_stock",    "Low Stock"),
-        ("x", "export_csv",   "Export CSV"),
-        ("i", "import_csv",   "Import CSV"),
     ]
 
     _selected_pk = None
@@ -261,7 +259,6 @@ class ProductsPanel(Widget):
                 yield Button("+ New",      id="btn-new",    variant="success")
                 yield Button("Open",       id="btn-open")
                 yield Button("Delete",     id="btn-delete", variant="error")
-                yield Button("Import",     id="btn-import", variant="warning")
                 yield Button("Low Stock",  id="btn-low")
                 yield Label("", id="count-label", classes="count-label")
 
@@ -355,10 +352,6 @@ class ProductsPanel(Widget):
         term = self.query_one("#search-box", Input).value
         rows = pdata.search(term) if term else pdata.fetch_all()
         export_csv_with_selector(self, "products", ["ID", "Product Name", "Category", "Supplier", "Price", "In Stock", "Discontinued"], rows)
-
-    @on(Button.Pressed, "#btn-import")
-    def on_btn_import(self) -> None:
-        self.action_import_csv()
 
     def action_import_csv(self) -> None:
         def after(result):

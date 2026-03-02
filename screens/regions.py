@@ -293,7 +293,6 @@ class RegionsPanel(Widget):
     BINDINGS = [
         ("n", "new_record",   "New"),
         ("f", "focus_search", "Search"),
-        ("x", "export_csv",   "Export CSV"),
     ]
 
     _selected_region_pk  = None

@@ -23,7 +23,6 @@ from db import get_connection
 class SqlPanel(Widget):
     BINDINGS = [
         Binding("ctrl+r", "run_query",  "Run"),
-        Binding("x",      "export_csv", "Export CSV"),
     ]
 
     def on_mount(self) -> None:

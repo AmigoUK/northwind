@@ -308,7 +308,6 @@ class EmployeesPanel(Widget):
         ("n", "new_record",   "New Employee"),
         ("f", "focus_search", "Search"),
         ("o", "org_chart",    "Org Chart"),
-        ("x", "export_csv",   "Export CSV"),
     ]
 
     _selected_pk = None

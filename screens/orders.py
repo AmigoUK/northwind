@@ -641,7 +641,6 @@ class OrdersPanel(Widget):
         ("n", "new_record",   "New Order"),
         ("f", "focus_search", "Search"),
         ("+", "add_item",     "Add Item"),
-        ("x", "export_csv",   "Export CSV"),
     ]
 
     _selected_pk = None
@@ -744,6 +743,13 @@ class OrdersPanel(Widget):
         term = self.query_one("#search-box", Input).value
         rows = odata.search(term) if term else odata.fetch_all()
         export_csv_with_selector(self, "orders", ["ID", "Customer", "Employee", "Order Date", "Shipped", "Total"], rows)
+
+    def action_import_csv(self) -> None:
+        from screens.modals import ImportCSVModal
+        def after(result):
+            if result:
+                self.refresh_data(self.query_one("#search-box", Input).value)
+        self.app.push_screen(ImportCSVModal(table="Orders"), callback=after)
 
     def action_add_item(self) -> None:
         if not self._selected_pk:

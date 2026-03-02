@@ -31,7 +31,6 @@ _REPORT_OPTIONS = [
 class ReportsPanel(Widget):
     BINDINGS = [
         ("r", "run_report", "Run Report"),
-        ("x", "export_csv", "Export CSV"),
     ]
 
     _last_headers: list = []
