@@ -26,6 +26,19 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.15** | Help System | Searchable help panel with FAQ category; context-sensitive `?` shortcut jumps to the relevant topic for the active panel |
 | **v2.16** | Demo Data UX | Test/Production mode switch in Settings; PIN-protected `TestModeWarningModal`; "Clean Database" modal clarifies what is preserved |
 | **v2.17** | Cash Register Integrity | Non-negative cash balance enforced at the data layer; GR cash payments fall back to bank when cash is insufficient; demo data generation never produces a negative cash register |
+| **v2.18** | Backup on Quit | Ctrl+Q dialog upgraded to Cancel / Quit / Backup & Quit; timestamped SQLite backup written to repo root with toast notification |
+
+---
+
+## Features (v2.18)
+
+### New in v2.18 — Backup on Quit
+
+- **Three-button quit dialog** — `Ctrl+Q` now shows **Cancel**, **Quit**, and **Backup & Quit** instead of the previous Yes/No
+- **Timestamped backup** — "Backup & Quit" copies `northwind.db` → `northwind_backup_YYYY-MM-DD_HH-MM-SS.db` in the working directory before exiting
+- **Toast notification** — a brief on-screen notification shows the backup filename on success, or an error message if the copy fails
+- **Safe-cancel default** — Cancel button receives focus by default; pressing Esc always cancels without quitting
+- **Keyboard shortcuts in the dialog** — `Esc` = cancel, `Q` = quit without backup, `B` = backup & quit
 
 ---
 
@@ -477,7 +490,7 @@ northwind/
 │   ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
 │   ├── reports.py      # Reports panel with 12 report types + CSV export
 │   ├── cn.py           # CN Credit Notes panel + creation wizard + detail modal (v2.4)
-│   ├── modals.py       # Shared modals: ConfirmDelete, CleanDatabase, TestModeWarning, FileSelectModal (v2.8, v2.16)
+│   ├── modals.py       # Shared modals: ConfirmDelete, CleanDatabase, TestModeWarning, FileSelectModal, QuitConfirmModal (v2.8, v2.16, v2.18)
 │   ├── export_helpers.py # Centralized CSV export logic + FileSelectModal integration (v2.8)
 │   ├── dn.py           # DN Delivery Notes panel + modals + cancel button
 │   ├── inv.py          # INV Invoices panel + modals + CN integration
@@ -502,7 +515,7 @@ northwind/
 
 | Key | Action |
 |-----|--------|
-| `ctrl+Q` | Quit (shows confirmation dialog) |
+| `ctrl+Q` | Quit (shows Cancel / Quit / Backup & Quit dialog) |
 | `N` | New record (in active panel) |
 | `F` | Focus search box (in active panel) |
 | `ctrl+r` | Run SQL query (SQL Query panel) |
@@ -514,6 +527,14 @@ northwind/
 | `P` | Pay selected Invoice (Reconciliation panel) |
 | `?` | Open Help (context-sensitive — jumps to topic for the active panel) |
 | `ESC` | Close modal / go back |
+
+**Quit dialog keys** (shown after `Ctrl+Q`)
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Cancel — stay in app |
+| `Q` | Quit without backup |
+| `B` | Backup & Quit |
 
 ---
 
@@ -575,3 +596,5 @@ northwind/
 | `Switch.Changed` async timing trap — setting `.value` enqueues the message rather than dispatching it in-place; a `_mode_switching` boolean flag is already `False` before the message fires; robust fix: compare `event.value` against the persisted DB state | `screens/settings.py` |
 | Data-layer balance guards — raise `ValueError` before any INSERT so the UI can catch and display the error without the DB ever seeing an invalid state | `data/cash.py` |
 | Graceful payment fallback — checking a resource constraint at the call site and re-routing (cash → bank) instead of raising, so automated flows never crash | `data/gr.py`, `data/demo.py` |
+| Parameterising `ModalScreen` return type (`ModalScreen[str]` vs `[bool]`) to return a named result string instead of a bare boolean — makes multi-outcome dialogs self-documenting | `screens/modals.py` |
+| `shutil.copy2()` for timestamped DB backup — preserves file metadata; wrapping in `try/except OSError` and surfacing via `self.notify()` keeps the TUI from crashing on permission errors | `app.py` |
