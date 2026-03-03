@@ -23,6 +23,32 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.10** | Import/Export Fixes | Fix Ctrl+X/Ctrl+I keybindings globally; fix Products & Orders CSV import column mappings |
 | **v2.13** | AR/AP All Unpaid View | Reconciliation panel default "All Unpaid" view across all customers/suppliers; optional entity filter; sub-view toggle (All Unpaid / Statement) |
 | **v2.14** | QR Codes on PDFs | QR code embedded in every PDF document header; toggle in Business Details → Documents; encodes doc type, number, date, counterparty, amount |
+| **v2.15** | Help System | Searchable help panel with FAQ category; context-sensitive `?` shortcut jumps to the relevant topic for the active panel |
+| **v2.16** | Demo Data UX | Test/Production mode switch in Settings; PIN-protected `TestModeWarningModal`; "Clean Database" modal clarifies what is preserved |
+
+---
+
+## Features (v2.16)
+
+### New in v2.16 — Demo Data Test/Production Switch + Clean Database
+
+- **Test/Production mode switch** — Settings › Demo Data gains a `Switch` widget that shows the current database mode; label reads "Test Mode" or "Production"
+- **Toggle Production → Test** — opens `TestModeWarningModal`: red bold warning that ~1 500 records will be added, PIN-protected, max 3 attempts; cancel reverts the switch
+- **Toggle Test → Production** — opens the existing `CleanDatabaseModal` with updated body text; cancel reverts the switch
+- **"Clean Database" button** (renamed from "Clean Demo Data") — same PIN modal, same behaviour; modal text now explicitly lists what is preserved: settings, business details, and user accounts
+- **`.modal-warning` CSS class** — red bold label style used in both modals for destructive-action summaries
+- **Async Switch.Changed fix** — `Switch.value` enqueues a message rather than firing synchronously; the handler guards against re-entrant modal launches by comparing the incoming value against the persisted DB state
+
+---
+
+## Features (v2.15)
+
+### New in v2.15 — Help System Overhaul
+
+- **Searchable Help panel** — full-text filter across all topics; sidebar table of contents with category column
+- **FAQ category** — curated answers to the most common workflow questions (how to invoice, cancel a DN, record a payment, etc.)
+- **All stale topics updated** — topics that referenced old Polish abbreviations (WZ, FV…) or missing features now reflect the current v2.14+ state
+- **Context-sensitive `?` shortcut** — pressing `?` from any panel switches to Help and pre-filters to the topic most relevant to that panel (e.g. `?` from Invoices → "Invoices" topic); second press with no filter shows all topics
 
 ---
 
@@ -420,19 +446,22 @@ northwind/
 │   ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
 │   ├── reports.py      # Reports panel with 12 report types + CSV export
 │   ├── cn.py           # CN Credit Notes panel + creation wizard + detail modal (v2.4)
-│   ├── modals.py       # Shared modals: ConfirmDelete, CancellationReason, FileSelectModal (v2.8)
+│   ├── modals.py       # Shared modals: ConfirmDelete, CleanDatabase, TestModeWarning, FileSelectModal (v2.8, v2.16)
 │   ├── export_helpers.py # Centralized CSV export logic + FileSelectModal integration (v2.8)
 │   ├── dn.py           # DN Delivery Notes panel + modals + cancel button
 │   ├── inv.py          # INV Invoices panel + modals + CN integration
 │   ├── gr.py           # GR Goods Receipts panel + modals + cancel button
 │   ├── reconciliation.py # AR/AP Reconciliation panel — All Unpaid + Statement sub-views (v2.13)
+│   ├── help.py         # Help panel — searchable topics + context-sensitive open_with_context() (v2.15)
 │   └── ...             # sql, settings, business, users, cash, bank, …
-└── tests/              # Automated test suite — 172 tests across 7 modules
+└── tests/              # Automated test suite — 172 tests across 8 modules
     ├── conftest.py     # Fresh temp DB per test
     ├── test_data.py    # Core business logic (19 tests)
     ├── test_delete_guards.py  # Delete guards + side-effects (26 tests)
     ├── test_cancellation.py   # DN/INV/GR cancellation (13 tests)
     ├── test_cn.py             # Credit Notes — all 3 types (24 tests)
+    ├── test_csv_import.py     # CSV import round-trip + alias mapping (28 tests)
+    ├── test_demo.py           # Demo data insert / clean / has_demo_data (48 tests)
     └── test_reconciliation.py # AR/AP reconciliation + All Unpaid queries (14 tests)
 ```
 
@@ -452,6 +481,7 @@ northwind/
 | `U` | Switch to All Unpaid view (Reconciliation panel) |
 | `S` | Switch to Statement view (Reconciliation panel) |
 | `P` | Pay selected Invoice (Reconciliation panel) |
+| `?` | Open Help (context-sensitive — jumps to topic for the active panel) |
 | `ESC` | Close modal / go back |
 
 ---
@@ -510,3 +540,5 @@ northwind/
 | Textual CSS specificity trap — `.parent Vertical` (0-1-1) beats `.child-class` (0-1-0); fix with 3-part `Widget .section Vertical` rule (0-1-2) | `northwind.tcss` |
 | JOIN vs LEFT JOIN in date-filtered reports — LEFT JOIN includes rows outside the date range; JOIN excludes them correctly | `data/reports.py` |
 | Scoped KPI query `kpis_for_period(date_from, date_to)` for period-specific charts bar vs global `kpis_extended()` | `data/dashboard.py` |
+| Context-sensitive navigation — storing a `{section_id: search_term}` map and calling `open_with_context()` to pre-filter the Help panel from any active panel | `app.py`, `screens/help.py` |
+| `Switch.Changed` async timing trap — setting `.value` enqueues the message rather than dispatching it in-place; a `_mode_switching` boolean flag is already `False` before the message fires; robust fix: compare `event.value` against the persisted DB state | `screens/settings.py` |
