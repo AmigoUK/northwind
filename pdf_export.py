@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from datetime import datetime
 
+import qrcode
 from fpdf import FPDF
 
 from data.settings import get_setting, get_currency_symbol
@@ -16,7 +18,7 @@ def _branding() -> dict:
         "co_phone", "co_email", "co_website", "co_vat", "co_tax_id",
         "co_bank_account", "co_logo_path",
         "doc_footer", "doc_theme",
-        "doc_title_dn", "doc_title_inv", "doc_title_cn", "doc_dn_show_prices",
+        "doc_title_dn", "doc_title_inv", "doc_title_cn", "doc_dn_show_prices", "doc_show_qr",
     ]
     return {k: get_setting(k, "") for k in keys}
 
@@ -31,6 +33,68 @@ _THEMES = {
 
 def _theme_colour(theme: str) -> tuple[int, int, int]:
     return _THEMES.get(theme, _THEMES["default"])
+
+
+def _build_qr_data(doc_type: str, fields: dict) -> str:
+    """Build a pipe-delimited QR payload for the given document type."""
+    def _safe(v):
+        return str(v or "").replace("|", ";")
+
+    if doc_type == "DN":
+        return "|".join(["DN", _safe(fields.get("DN_Number")), _safe(fields.get("DN_Date")),
+                         _safe(fields.get("CompanyName")), _safe(fields.get("Status"))])
+    if doc_type == "INV":
+        return "|".join(["INV", _safe(fields.get("INV_Number")), _safe(fields.get("INV_Date")),
+                         _safe(fields.get("CompanyName")), _safe(fields.get("TotalNet")),
+                         _safe(fields.get("Outstanding")), _safe(fields.get("PaymentMethod"))])
+    if doc_type == "GR":
+        return "|".join(["GR", _safe(fields.get("GR_Number")), _safe(fields.get("GR_Date")),
+                         _safe(fields.get("CompanyName")), _safe(fields.get("Status"))])
+    if doc_type == "CR":
+        return "|".join(["CR", _safe(fields.get("CR_Number")), _safe(fields.get("CR_Date")),
+                         _safe(fields.get("CompanyName")), _safe(fields.get("Amount"))])
+    if doc_type == "CP":
+        return "|".join(["CP", _safe(fields.get("CP_Number")), _safe(fields.get("CP_Date")),
+                         _safe(fields.get("CompanyName")), _safe(fields.get("Amount"))])
+    if doc_type == "CN":
+        return "|".join(["CN", _safe(fields.get("CN_Number")), _safe(fields.get("CN_Date")),
+                         _safe(fields.get("CompanyName")), _safe(fields.get("CN_Type"))])
+    if doc_type == "BANK":
+        counterparty = fields.get("CustomerName") or fields.get("SupplierName") or ""
+        return "|".join(["BANK", _safe(fields.get("Entry_Number")), _safe(fields.get("Entry_Date")),
+                         _safe(fields.get("Direction")), _safe(counterparty),
+                         _safe(fields.get("Amount"))])
+    return ""
+
+
+_QR_SIZE_MM = 20
+
+
+def _embed_qr(pdf, qr_data: str, x: float, y: float) -> None:
+    """Render qr_data as a QR code image and embed it in the PDF at (x, y)."""
+    tmp_path = None
+    try:
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=1,
+        )
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_path = tmp.name
+            img.save(tmp_path, format="PNG")
+        pdf.image(tmp_path, x=x, y=y, w=_QR_SIZE_MM, h=_QR_SIZE_MM)
+    except Exception:
+        pass  # QR failure must never abort PDF generation
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 
 class _NorthwindPDF(FPDF):
@@ -54,6 +118,7 @@ def _draw_header(
     title: str,
     doc_number: str,
     doc_date: str,
+    qr_data: str | None = None,
 ) -> None:
     """Draw the branded header (logo, company info, doc title/number) at top of page."""
     theme = _theme_colour(b.get("doc_theme", ""))
@@ -117,6 +182,11 @@ def _draw_header(
     pdf.cell(col_right_w, 5, f"Date: {doc_date}", align="R")
     right_y += 5
 
+    if qr_data:
+        qr_x = col_right_x + col_right_w - _QR_SIZE_MM
+        _embed_qr(pdf, qr_data, x=qr_x, y=right_y)
+        right_y += _QR_SIZE_MM
+
     # Move below both columns, draw horizontal rule
     bottom_y = max(left_y, right_y) + 4
     pdf.set_y(bottom_y)
@@ -153,7 +223,9 @@ def export_dn(dn_id: int, save_path: str | None = None) -> str:
     title = b.get("doc_title_dn") or "Delivery Note"
     doc_number = hdr.get("DN_Number", f"DN-{dn_id}")
     doc_date = hdr.get("DN_Date", "")
-    _draw_header(pdf, b, title, doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("DN", {**hdr, "CompanyName": (customer or {}).get("CompanyName", hdr.get("CompanyName", ""))}) if show_qr else None
+    _draw_header(pdf, b, title, doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin
@@ -301,7 +373,9 @@ def export_inv(inv_id: int, save_path: str | None = None) -> str:
     title = b.get("doc_title_inv") or "Invoice"
     doc_number = hdr.get("INV_Number", f"INV-{inv_id}")
     doc_date = hdr.get("INV_Date", "")
-    _draw_header(pdf, b, title, doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("INV", {**hdr, "CompanyName": (customer or {}).get("CompanyName", hdr.get("CompanyName", ""))}) if show_qr else None
+    _draw_header(pdf, b, title, doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin
@@ -559,7 +633,9 @@ def export_gr(gr_id: int, save_path: str | None = None) -> str:
 
     doc_number = hdr.get("GR_Number", f"GR-{gr_id}")
     doc_date = hdr.get("GR_Date", "")
-    _draw_header(pdf, b, "Goods Receipt", doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("GR", {**hdr, "CompanyName": (supplier or {}).get("CompanyName", hdr.get("CompanyName", ""))}) if show_qr else None
+    _draw_header(pdf, b, "Goods Receipt", doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin
@@ -690,7 +766,9 @@ def export_cr(cr_id: int, save_path: str | None = None) -> str:
 
     doc_number = hdr.get("CR_Number", f"CR-{cr_id}")
     doc_date = hdr.get("CR_Date", "")
-    _draw_header(pdf, b, "Cash Receipt", doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("CR", {**hdr, "CompanyName": (customer or {}).get("CompanyName", hdr.get("CompanyName", ""))}) if show_qr else None
+    _draw_header(pdf, b, "Cash Receipt", doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin
@@ -738,7 +816,9 @@ def export_cp(cp_id: int, save_path: str | None = None) -> str:
 
     doc_number = hdr.get("CP_Number", f"CP-{cp_id}")
     doc_date = hdr.get("CP_Date", "")
-    _draw_header(pdf, b, "Cash Payment", doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("CP", {**hdr, "CompanyName": (supplier or {}).get("CompanyName", hdr.get("CompanyName", ""))}) if show_qr else None
+    _draw_header(pdf, b, "Cash Payment", doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin
@@ -785,7 +865,9 @@ def export_bank_entry(entry_id: int, save_path: str | None = None) -> str:
 
     doc_number = hdr.get("Entry_Number", f"BANK-{entry_id}")
     doc_date = hdr.get("Entry_Date", "")
-    _draw_header(pdf, b, title, doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("BANK", hdr) if show_qr else None
+    _draw_header(pdf, b, title, doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin
@@ -851,7 +933,9 @@ def export_cn(cn_id: int, save_path: str | None = None) -> str:
     title = b.get("doc_title_cn") or "Credit Note"
     doc_number = hdr.get("CN_Number", f"CN-{cn_id}")
     doc_date = hdr.get("CN_Date", "")
-    _draw_header(pdf, b, title, doc_number, doc_date)
+    show_qr = b.get("doc_show_qr", "").lower() != "false"
+    qr_data = _build_qr_data("CN", {**hdr, "CompanyName": (customer or {}).get("CompanyName", hdr.get("CompanyName", ""))}) if show_qr else None
+    _draw_header(pdf, b, title, doc_number, doc_date, qr_data=qr_data)
 
     margin = pdf.l_margin
     page_w = pdf.w - pdf.l_margin - pdf.r_margin

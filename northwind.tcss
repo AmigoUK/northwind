@@ -448,12 +448,19 @@ BusinessDetailsPanel TabbedContent {
 }
 
 /* Override the broad `.panel-container Vertical { height: 1fr }` rule so    */
-/* each settings section sizes to its content and the tab can scroll          */
+/* each settings section sizes to its content and the tab can scroll.         */
+/* The descendant Vertical selector (specificity 0-1-2) beats the blanket     */
+/* `.panel-container Vertical` rule (0-1-1) that would force height: 1fr.     */
 BusinessDetailsPanel .settings-section {
     height: auto;
 }
 
+BusinessDetailsPanel .settings-section Vertical {
+    height: auto;
+}
+
 BusinessDetailsPanel TabPane {
+    height: 1fr;
     overflow-y: auto;
 }
 
@@ -535,6 +542,28 @@ BusinessDetailsPanel TabPane {
 .setting-row Label {
     width: 1fr;
     content-align: left middle;
+}
+
+/* ── Logo browse row (Input + Browse button) ────────────────────────────────*/
+.logo-browse-row {
+    height: auto;
+    margin-top: 0;
+}
+
+.logo-browse-row Input {
+    width: 1fr;
+}
+
+.logo-browse-row Button {
+    width: auto;
+    min-width: 12;
+    margin-left: 1;
+}
+
+.logo-hint {
+    color: $text-muted;
+    height: 1;
+    margin-top: 0;
 }
 
 /* ── Settings panel — override `.panel-container Vertical { height: 1fr }` ─*/

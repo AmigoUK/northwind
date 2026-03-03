@@ -5,7 +5,7 @@ from textual.widget import Widget
 from textual.widgets import DataTable, Label, Static
 
 import data.dashboard as ddata
-from data.settings import get_currency_symbol
+from data.settings import get_currency_symbol, get_setting
 
 
 class DashboardPanel(Widget):
@@ -15,7 +15,7 @@ class DashboardPanel(Widget):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="panel-container"):
-            yield Label("Northwind Dashboard", classes="panel-title")
+            yield Label("Dashboard", classes="panel-title", id="dashboard-title")
             with Horizontal(id="kpi-row"):
                 with Vertical(classes="kpi-card"):
                     yield Static("", id="kpi-customers-val", classes="kpi-value")
@@ -51,6 +51,9 @@ class DashboardPanel(Widget):
             yield DataTable(id="recent-tbl", cursor_type="row", zebra_stripes=True)
 
     def on_mount(self) -> None:
+        name = get_setting("co_name", "").strip()
+        if name:
+            self.query_one("#dashboard-title", Label).update(f"{name} — Dashboard")
         tbl = self.query_one("#recent-tbl", DataTable)
         for label, width in [
             ("ID", 7), ("Customer", 28), ("Order Date", 12),

@@ -1,5 +1,5 @@
 """
-app.py — Northwind Traders v2.13
+app.py — Northwind Traders v2.14
 Textual TUI entry point.
 """
 from __future__ import annotations
@@ -154,7 +154,7 @@ class SidebarNav(Widget):
 
 
 class NorthwindApp(App):
-    TITLE = "Northwind Traders v2.13"
+    TITLE = "Northwind Traders v2.14"
     CSS_PATH = "northwind.tcss"
 
     BINDINGS = [

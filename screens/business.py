@@ -3,6 +3,9 @@
 Stores company identity, contact, tax/legal info, logo path and document
 defaults in the existing AppSettings key-value store.  No new DB table.
 """
+import os
+import shutil
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
@@ -10,6 +13,8 @@ from textual.widgets import Button, Input, Label, Select, Switch, TabbedContent,
 from textual import on
 
 import data.settings as app_settings
+
+_APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class BusinessDetailsPanel(Widget):
@@ -50,9 +55,14 @@ class BusinessDetailsPanel(Widget):
                             with Vertical(classes="form-field"):
                                 yield Label("Website")
                                 yield Input(placeholder="https://example.com", id="f-co-website")
-                            with Vertical(classes="form-field"):
-                                yield Label("Logo path (for PDFs)")
-                                yield Input(placeholder="/path/to/logo.png", id="f-co-logo-path")
+                        yield Label("Company Logo (for PDFs)")
+                        with Horizontal(classes="logo-browse-row"):
+                            yield Input(placeholder="No logo selected", id="f-co-logo-path")
+                            yield Button("Browse...", id="btn-browse-logo")
+                        yield Label(
+                            "Recommended: PNG or JPG, transparent background, 300×100 px, max 1 MB",
+                            classes="logo-hint",
+                        )
 
                 # Tab 2 — Tax & Legal
                 with TabPane("Tax & Legal", id="tab-tax"):
@@ -99,6 +109,9 @@ class BusinessDetailsPanel(Widget):
                         with Horizontal(classes="setting-row"):
                             yield Label("Show unit prices on DN delivery notes")
                             yield Switch(id="sw-dn-prices", value=True)
+                        with Horizontal(classes="setting-row"):
+                            yield Label("Show QR codes on all documents")
+                            yield Switch(id="sw-show-qr", value=True)
 
             yield Button("Save", id="btn-save", variant="primary")
 
@@ -123,6 +136,32 @@ class BusinessDetailsPanel(Widget):
         self.query_one("#f-doc-title-gr",    Input).value = gs("doc_title_gr",    "Goods Receipt")
         self.query_one("#sw-dn-prices", Switch).value = (
             gs("doc_dn_show_prices", "true").lower() == "true"
+        )
+        self.query_one("#sw-show-qr", Switch).value = (
+            gs("doc_show_qr", "true").lower() != "false"
+        )
+
+    @on(Button.Pressed, "#btn-browse-logo")
+    def on_browse_logo(self) -> None:
+        from screens.modals import FileSelectModal
+
+        def after(path) -> None:
+            if not path:
+                return
+            assets_dir = os.path.join(_APP_DIR, "assets")
+            os.makedirs(assets_dir, exist_ok=True)
+            ext = os.path.splitext(path)[1] or ".png"
+            dest = os.path.join(assets_dir, f"logo{ext}")
+            try:
+                shutil.copy2(path, dest)
+                self.query_one("#f-co-logo-path", Input).value = dest
+                self.notify("Logo copied to assets/ and path set. Click Save.", severity="information")
+            except Exception as e:
+                self.notify(f"Could not copy logo: {e}", severity="error")
+
+        self.app.push_screen(
+            FileSelectModal(title="Select Company Logo", mode="open", default_path="~"),
+            callback=after,
         )
 
     @on(Button.Pressed, "#btn-save")
@@ -149,4 +188,5 @@ class BusinessDetailsPanel(Widget):
         ss("doc_title_gr",    self.query_one("#f-doc-title-gr",    Input).value.strip())
         dn_prices = self.query_one("#sw-dn-prices", Switch).value
         ss("doc_dn_show_prices", "true" if dn_prices else "false")
+        ss("doc_show_qr", "true" if self.query_one("#sw-show-qr", Switch).value else "false")
         self.notify("Business details saved.", severity="information")

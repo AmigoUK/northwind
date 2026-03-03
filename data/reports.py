@@ -14,8 +14,8 @@ def sales_by_customer(date_from: str = "0001-01-01",
                   COUNT(DISTINCT o.OrderID) AS Orders,
                   COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Revenue
            FROM Customers c
-           LEFT JOIN Orders o ON c.CustomerID = o.CustomerID
-                             AND o.OrderDate BETWEEN ? AND ?
+           JOIN Orders o ON c.CustomerID = o.CustomerID
+                        AND o.OrderDate BETWEEN ? AND ?
            LEFT JOIN OrderDetails od ON o.OrderID = od.OrderID
            GROUP BY c.CustomerID, c.CompanyName
            ORDER BY Revenue DESC""",
@@ -38,8 +38,8 @@ def sales_by_product(date_from: str = "0001-01-01",
            FROM Products p
            LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
            LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
-           LEFT JOIN Orders o ON od.OrderID = o.OrderID
-                             AND o.OrderDate BETWEEN ? AND ?
+           JOIN Orders o ON od.OrderID = o.OrderID
+                        AND o.OrderDate BETWEEN ? AND ?
            GROUP BY p.ProductID, p.ProductName, c.CategoryName
            ORDER BY Revenue DESC""",
         (date_from, date_to),
@@ -400,6 +400,109 @@ def cash_bank_trend(
         "cash": _to_running(cash_by_date),
         "bank":  _to_running(bank_by_date),
     }
+
+
+def supplier_spending(date_from: str = "0001-01-01",
+                      date_to:   str = "9999-12-31") -> tuple[list, list]:
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT s.SupplierID, s.CompanyName,
+                  COUNT(DISTINCT gr.GR_ID) AS Receipts,
+                  COALESCE(SUM(gi.UnitCost * gi.Quantity), 0) AS TotalSpend
+           FROM Suppliers s
+           JOIN GR gr ON s.SupplierID = gr.SupplierID
+                     AND gr.GR_Date BETWEEN ? AND ?
+                     AND gr.Status != 'cancelled'
+           LEFT JOIN GR_Items gi ON gr.GR_ID = gi.GR_ID
+           GROUP BY s.SupplierID, s.CompanyName
+           ORDER BY TotalSpend DESC""",
+        (date_from, date_to),
+    ).fetchall()
+    conn.close()
+    headers = [("ID", 4), ("Supplier Name", 30), ("Receipts", 9), ("Total Spend", 12)]
+    data = [[r["SupplierID"], r["CompanyName"], r["Receipts"], f"{sym}{r['TotalSpend']:.2f}"] for r in rows]
+    return headers, data
+
+
+def stock_valuation() -> tuple[list, list]:
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT p.ProductID, p.ProductName, c.CategoryName,
+                  p.UnitsInStock,
+                  ROUND(p.UnitPrice, 2) AS UnitPrice,
+                  ROUND(p.UnitsInStock * p.UnitPrice, 2) AS StockValue
+           FROM Products p
+           LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+           WHERE p.Discontinued = 0
+           ORDER BY StockValue DESC"""
+    ).fetchall()
+    conn.close()
+    total = sum(r["StockValue"] for r in rows)
+    headers = [("ID", 4), ("Product Name", 26), ("Category", 16), ("In Stock", 9), ("Unit Price", 10), ("Stock Value", 12)]
+    data = [[r["ProductID"], r["ProductName"], r["CategoryName"] or "",
+             r["UnitsInStock"], f"{sym}{r['UnitPrice']:.2f}", f"{sym}{r['StockValue']:.2f}"]
+            for r in rows]
+    data.append(["", "TOTAL", "", "", "", f"{sym}{total:.2f}"])
+    return headers, data
+
+
+def ap_aging() -> tuple[list, list]:
+    sym = get_currency_symbol()
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT gr.GR_Number, s.CompanyName AS Supplier, gr.GR_Date,
+                  COALESCE(SUM(gi.UnitCost * gi.Quantity), 0) AS TotalCost,
+                  COALESCE(paid.PaidAmount, 0) AS Paid,
+                  COALESCE(SUM(gi.UnitCost * gi.Quantity), 0)
+                    - COALESCE(paid.PaidAmount, 0) AS Outstanding
+           FROM GR gr
+           LEFT JOIN Suppliers s ON gr.SupplierID = s.SupplierID
+           LEFT JOIN GR_Items gi ON gr.GR_ID = gi.GR_ID
+           LEFT JOIN (
+               SELECT GR_ID, SUM(Amount) AS PaidAmount
+               FROM CP
+               WHERE GR_ID IS NOT NULL
+               GROUP BY GR_ID
+           ) paid ON gr.GR_ID = paid.GR_ID
+           WHERE gr.Status = 'received'
+           GROUP BY gr.GR_ID, gr.GR_Number, s.CompanyName, gr.GR_Date, paid.PaidAmount
+           HAVING Outstanding > 0.009
+           ORDER BY gr.GR_Date ASC"""
+    ).fetchall()
+    conn.close()
+
+    def _bucket(gr_date_str):
+        if not gr_date_str:
+            return "—", 0
+        try:
+            due = _datetime.strptime(gr_date_str, "%Y-%m-%d").date()
+            days = (_date.today() - due).days
+            if days <= 0:
+                return "Current", 0
+            elif days <= 30:
+                return "1–30", days
+            elif days <= 60:
+                return "31–60", days
+            elif days <= 90:
+                return "61–90", days
+            else:
+                return "90+", days
+        except Exception:
+            return "—", 0
+
+    headers = [("GR#", 14), ("Supplier", 22), ("GR Date", 10),
+               ("Total", 10), ("Paid", 10), ("Outstanding", 12), ("Days", 5), ("Bucket", 8)]
+    data = []
+    for r in rows:
+        bkt, days = _bucket(r["GR_Date"])
+        data.append([
+            r["GR_Number"], r["Supplier"] or "", r["GR_Date"] or "",
+            f"{sym}{r['TotalCost']:.2f}", f"{sym}{r['Paid']:.2f}",
+            f"{sym}{r['Outstanding']:.2f}", str(days), bkt,
+        ])
+    return headers, data
 
 
 def orders_by_date_range(date_from: str = "0001-01-01",

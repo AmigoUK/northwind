@@ -97,8 +97,8 @@ class LineItemFormModal(ModalScreen):
                     yield Label("Quantity:")
                     yield Input(id="f-qty", value="1", placeholder="1")
                 with Vertical(classes="form-field"):
-                    yield Label("Discount (0.00 - 1.00):")
-                    yield Input(id="f-disc", value="0.00", placeholder="0.00")
+                    yield Label("Discount %:")
+                    yield Input(id="f-disc", value="0", placeholder="0")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Add", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
@@ -139,7 +139,7 @@ class LineItemFormModal(ModalScreen):
         if qty < 1:
             self.notify("Quantity must be at least 1.", severity="error")
             return
-        disc = max(0.0, min(1.0, disc))
+        disc = max(0.0, min(100.0, disc)) / 100.0
         try:
             odata.add_line_item(self.order_id, self._product_id, price, qty, disc)
             self.notify(f"'{self._product_name}' added to order.", severity="information")

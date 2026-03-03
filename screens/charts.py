@@ -230,6 +230,7 @@ class ChartsPanel(Widget):
             self._date_to   = f"{val}-12-31"
             self.query_one("#chart-date-from", Input).value = self._date_from
             self.query_one("#chart-date-to",   Input).value = self._date_to
+        self._load_kpis()
         self._render_active_tab()
 
     # ── Date filter ───────────────────────────────────────────────────────────
@@ -262,6 +263,7 @@ class ChartsPanel(Widget):
 
         self._date_from = df
         self._date_to   = dt
+        self._load_kpis()
         self._render_active_tab()
         self.notify(f"Filter: {df} → {dt}", severity="information")
 
@@ -278,20 +280,14 @@ class ChartsPanel(Widget):
 
     def _load_kpis(self) -> None:
         try:
-            kpis = ddata.kpis()
-            ext  = ddata.kpis_extended()
-            sym  = get_currency_symbol()
-            aov  = kpis["revenue"] / kpis["orders"] if kpis["orders"] else 0.0
-            self.query_one("#kpi-revenue",   Static).update(
-                f"Rev: {sym}{kpis['revenue']:,.0f}")
-            self.query_one("#kpi-orders",    Static).update(
-                f"Orders: {kpis['orders']}")
-            self.query_one("#kpi-aov",       Static).update(
-                f"AOV: {sym}{aov:,.0f}")
-            self.query_one("#kpi-customers", Static).update(
-                f"Customers: {kpis['customers']}")
-            self.query_one("#kpi-pending",   Static).update(
-                f"Pending: {ext['pending_orders']}")
+            kpis    = ddata.kpis_for_period(self._date_from, self._date_to)
+            pending = ddata.kpis_extended()["pending_orders"]
+            sym     = get_currency_symbol()
+            self.query_one("#kpi-revenue",   Static).update(f"Rev: {sym}{kpis['revenue']:,.0f}")
+            self.query_one("#kpi-orders",    Static).update(f"Orders: {kpis['orders']}")
+            self.query_one("#kpi-aov",       Static).update(f"AOV: {sym}{kpis['aov']:,.0f}")
+            self.query_one("#kpi-customers", Static).update(f"Customers: {kpis['customers']}")
+            self.query_one("#kpi-pending",   Static).update(f"Pending: {pending}")
         except Exception:
             pass
 
