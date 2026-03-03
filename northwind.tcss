@@ -537,6 +537,22 @@ BusinessDetailsPanel TabPane {
     content-align: left middle;
 }
 
+/* ── Logo browse row (Input + Browse button) ────────────────────────────────*/
+.logo-browse-row {
+    height: auto;
+    margin-top: 0;
+}
+
+.logo-browse-row Input {
+    width: 1fr;
+}
+
+.logo-browse-row Button {
+    width: auto;
+    min-width: 12;
+    margin-left: 1;
+}
+
 /* ── Settings panel — override `.panel-container Vertical { height: 1fr }` ─*/
 /* so each section sizes to content and the panel scrolls                     */
 SettingsPanel .panel-container {
