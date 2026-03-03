@@ -390,23 +390,41 @@ Database migration is automatic — existing databases are migrated on startup.
 
 ## Installation
 
+### Quick start
+
+**Linux / macOS**
 ```bash
-# 1. Clone
 git clone git@github.com:AmigoUK/northwind.git
 cd northwind
+bash install.sh      # one-time: checks Python 3.9+, installs all packages
+bash app.sh          # run the app (re-checks deps on every launch)
+```
 
-# 2. Install dependencies (Python 3.9+)
-pip install -r requirements.txt
-
-# 3. (macOS) Ensure pip-installed scripts are on PATH
-#    Add to ~/.zshrc or ~/.bashrc:
-export PATH="$PATH:$(python3 -m site --user-base)/bin"
-
-# 4. Run
-python3 app.py
+**Windows**
+```
+git clone git@github.com:AmigoUK/northwind.git
+cd northwind
+install.bat          ← one-time installer
+app.bat              ← run the app (auto-installs if deps are missing)
 ```
 
 Default login: **username** `admin` / **PIN** `1234`
+
+### Manual installation (all platforms)
+```bash
+# Requires Python 3.9+
+pip install -r requirements.txt
+python3 app.py          # Linux / macOS
+python  app.py          # Windows
+```
+
+### What the scripts do
+| Script | Platform | Purpose |
+|--------|----------|---------|
+| `install.sh` | Linux/macOS | Checks Python ≥ 3.9, runs `pip3 install -r requirements.txt` |
+| `app.sh` | Linux/macOS | Checks deps on every launch; calls `install.sh` if any are missing |
+| `install.bat` | Windows | Checks Python ≥ 3.9, runs `pip install -r requirements.txt` |
+| `app.bat` | Windows | Checks deps on every launch; calls `install.bat` if any are missing |
 
 ---
 
