@@ -521,16 +521,16 @@ def seed_data():
     # Note: some CustomerIDs above (VINET, TOMSP etc.) are not in our 10-customer seed,
     # so we use customers that ARE in our seed for orders.
     orders_adjusted = [
-        (10248, "ALFKI", 5, "1996-07-04", "1996-08-01", "1996-07-16", 3, 32.38, "Alfreds Futterkiste",       "Obere Str. 57",       "Berlin",    None,   "12209", "Germany"),
-        (10249, "ANATR", 6, "1996-07-05", "1996-08-16", "1996-07-10", 1, 11.61, "Ana Trujillo",              "Avda. de la Constitución 2222","México D.F.",None,"05021","Mexico"),
-        (10250, "AROUT", 4, "1996-07-08", "1996-08-05", "1996-07-12", 2, 65.83, "Around the Horn",           "120 Hanover Sq.",     "London",    None,   "WA1 1DP","UK"),
-        (10251, "BERGS", 3, "1996-07-08", "1996-08-05", "1996-07-15", 1, 41.34, "Berglunds snabbköp",        "Berguvsvägen 8",      "Luleå",     None,   "S-958 22","Sweden"),
-        (10252, "BLAUS", 4, "1996-07-09", "1996-08-06", "1996-07-11", 2, 51.30, "Blauer See Delikatessen",   "Forsterstr. 57",      "Mannheim",  None,   "68306", "Germany"),
-        (10253, "BLONP", 3, "1996-07-10", "1996-07-24", "1996-07-16", 2, 58.17, "Blondesddsl père et fils",  "24, place Kléber",    "Strasbourg",None,   "67000", "France"),
-        (10254, "BOLID", 5, "1996-07-11", "1996-08-08", "1996-07-23", 2, 22.98, "Bólido Comidas preparadas", "C/ Araquil, 67",      "Madrid",    None,   "28023", "Spain"),
-        (10255, "BONAP", 9, "1996-07-12", "1996-08-09", "1996-07-15", 3, 148.33,"Bon app'",                  "12, rue des Bouchers","Marseille", None,   "13008", "France"),
-        (10256, "BOTTM", 3, "1996-07-15", "1996-08-12", "1996-07-17", 2, 13.97, "Bottom-Dollar Markets",     "23 Tsawassen Blvd.", "Tsawassen", "BC",   "T2F 8M4","Canada"),
-        (10257, "BSBEV", 4, "1996-07-16", "1996-08-13", "1996-07-22", 3, 81.91, "B's Beverages",             "Fauntleroy Circus",   "London",    None,   "EC2 5NT","UK"),
+        (10248, "ALFKI", 5, "2026-07-04", "2026-08-01", "2026-07-16", 3, 32.38, "Alfreds Futterkiste",       "Obere Str. 57",       "Berlin",    None,   "12209", "Germany"),
+        (10249, "ANATR", 6, "2026-07-05", "2026-08-16", "2026-07-10", 1, 11.61, "Ana Trujillo",              "Avda. de la Constitución 2222","México D.F.",None,"05021","Mexico"),
+        (10250, "AROUT", 4, "2026-07-08", "2026-08-05", "2026-07-12", 2, 65.83, "Around the Horn",           "120 Hanover Sq.",     "London",    None,   "WA1 1DP","UK"),
+        (10251, "BERGS", 3, "2026-07-08", "2026-08-05", "2026-07-15", 1, 41.34, "Berglunds snabbköp",        "Berguvsvägen 8",      "Luleå",     None,   "S-958 22","Sweden"),
+        (10252, "BLAUS", 4, "2026-07-09", "2026-08-06", "2026-07-11", 2, 51.30, "Blauer See Delikatessen",   "Forsterstr. 57",      "Mannheim",  None,   "68306", "Germany"),
+        (10253, "BLONP", 3, "2026-07-10", "2026-07-24", "2026-07-16", 2, 58.17, "Blondesddsl père et fils",  "24, place Kléber",    "Strasbourg",None,   "67000", "France"),
+        (10254, "BOLID", 5, "2026-07-11", "2026-08-08", "2026-07-23", 2, 22.98, "Bólido Comidas preparadas", "C/ Araquil, 67",      "Madrid",    None,   "28023", "Spain"),
+        (10255, "BONAP", 9, "2026-07-12", "2026-08-09", "2026-07-15", 3, 148.33,"Bon app'",                  "12, rue des Bouchers","Marseille", None,   "13008", "France"),
+        (10256, "BOTTM", 3, "2026-07-15", "2026-08-12", "2026-07-17", 2, 13.97, "Bottom-Dollar Markets",     "23 Tsawassen Blvd.", "Tsawassen", "BC",   "T2F 8M4","Canada"),
+        (10257, "BSBEV", 4, "2026-07-16", "2026-08-13", "2026-07-22", 3, 81.91, "B's Beverages",             "Fauntleroy Circus",   "London",    None,   "EC2 5NT","UK"),
     ]
     c.executemany(
         "INSERT INTO Orders (OrderID,CustomerID,EmployeeID,OrderDate,RequiredDate,ShippedDate,ShipVia,Freight,ShipName,ShipAddress,ShipCity,ShipRegion,ShipPostalCode,ShipCountry) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",

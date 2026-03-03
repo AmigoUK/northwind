@@ -10,7 +10,7 @@ def fetch_all() -> list:
                   c.CompanyName AS Customer,
                   e.LastName || ', ' || e.FirstName AS Employee,
                   o.OrderDate, o.ShippedDate,
-                  COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Total
+                  ROUND(COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0), 2) AS Total
            FROM Orders o
            LEFT JOIN Customers   c  ON o.CustomerID  = c.CustomerID
            LEFT JOIN Employees   e  ON o.EmployeeID  = e.EmployeeID
@@ -56,7 +56,7 @@ def search(term: str) -> list:
                   c.CompanyName AS Customer,
                   e.LastName || ', ' || e.FirstName AS Employee,
                   o.OrderDate, o.ShippedDate,
-                  COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0) AS Total
+                  ROUND(COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0.0), 2) AS Total
            FROM Orders o
            LEFT JOIN Customers   c  ON o.CustomerID  = c.CustomerID
            LEFT JOIN Employees   e  ON o.EmployeeID  = e.EmployeeID
@@ -91,7 +91,7 @@ def fetch_lines(order_id) -> list:
     conn = get_connection()
     rows = conn.execute(
         """SELECT od.ProductID, p.ProductName, od.Quantity, od.UnitPrice, od.Discount,
-                  od.UnitPrice * od.Quantity * (1.0 - od.Discount) AS LineTotal
+                  ROUND(od.UnitPrice * od.Quantity * (1.0 - od.Discount), 2) AS LineTotal
            FROM OrderDetails od
            JOIN Products p ON od.ProductID=p.ProductID
            WHERE od.OrderID=?
@@ -105,7 +105,7 @@ def fetch_lines(order_id) -> list:
 def fetch_totals(order_id) -> dict | None:
     conn = get_connection()
     row = conn.execute(
-        """SELECT COALESCE(SUM(od.UnitPrice*od.Quantity*(1.0-od.Discount)),0.0) AS subtotal,
+        """SELECT ROUND(COALESCE(SUM(od.UnitPrice*od.Quantity*(1.0-od.Discount)),0.0),2) AS subtotal,
                   o.Freight
            FROM Orders o
            LEFT JOIN OrderDetails od ON o.OrderID=od.OrderID

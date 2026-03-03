@@ -677,8 +677,9 @@ class OrdersPanel(Widget):
         tbl.clear()
         rows = odata.search(term) if term else odata.fetch_all()
         for row in rows:
-            tbl.add_row(*[str(c) if c is not None else "" for c in row],
-                        key=str(row[0]))
+            cells = [str(c) if c is not None else "" for c in row]
+            cells[5] = f"{row[5]:.2f}" if row[5] is not None else "0.00"
+            tbl.add_row(*cells, key=str(row[0]))
         try:
             self.query_one("#count-label", Label).update(f"{len(rows)} records")
         except Exception:
