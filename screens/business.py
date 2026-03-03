@@ -99,6 +99,9 @@ class BusinessDetailsPanel(Widget):
                         with Horizontal(classes="setting-row"):
                             yield Label("Show unit prices on DN delivery notes")
                             yield Switch(id="sw-dn-prices", value=True)
+                        with Horizontal(classes="setting-row"):
+                            yield Label("Show QR codes on all documents")
+                            yield Switch(id="sw-show-qr", value=True)
 
             yield Button("Save", id="btn-save", variant="primary")
 
@@ -123,6 +126,9 @@ class BusinessDetailsPanel(Widget):
         self.query_one("#f-doc-title-gr",    Input).value = gs("doc_title_gr",    "Goods Receipt")
         self.query_one("#sw-dn-prices", Switch).value = (
             gs("doc_dn_show_prices", "true").lower() == "true"
+        )
+        self.query_one("#sw-show-qr", Switch).value = (
+            gs("doc_show_qr", "true").lower() != "false"
         )
 
     @on(Button.Pressed, "#btn-save")
@@ -149,4 +155,5 @@ class BusinessDetailsPanel(Widget):
         ss("doc_title_gr",    self.query_one("#f-doc-title-gr",    Input).value.strip())
         dn_prices = self.query_one("#sw-dn-prices", Switch).value
         ss("doc_dn_show_prices", "true" if dn_prices else "false")
+        ss("doc_show_qr", "true" if self.query_one("#sw-show-qr", Switch).value else "false")
         self.notify("Business details saved.", severity="information")

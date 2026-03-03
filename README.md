@@ -22,6 +22,18 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.9** | CSV Round-Trip Fix | CSV import now accepts export display headers (ID, Company, Contact…) via alias mappings |
 | **v2.10** | Import/Export Fixes | Fix Ctrl+X/Ctrl+I keybindings globally; fix Products & Orders CSV import column mappings |
 | **v2.13** | AR/AP All Unpaid View | Reconciliation panel default "All Unpaid" view across all customers/suppliers; optional entity filter; sub-view toggle (All Unpaid / Statement) |
+| **v2.14** | QR Codes on PDFs | QR code embedded in every PDF document header; toggle in Business Details → Documents; encodes doc type, number, date, counterparty, amount |
+
+---
+
+## Features (v2.14)
+
+### New in v2.14 — QR Codes on All PDF Documents
+
+- **QR code in every PDF header** — all 6 document types (WZ/DN, FV/INV, PZ/GR, KP/CR, KW/CP, Bank) embed a scannable 20 mm QR code flush with the top-right corner of the branded header
+- **Pipe-delimited payload** — each QR encodes doc type, number, date, counterparty name and key financial fields (e.g. `FV|INV/2026/001|2026-03-03|Acme Corp|1250.00|0.00|bank transfer`)
+- **Toggle in Business Details → Documents tab** — "Show QR codes on all documents" switch; on by default (fresh DB with no saved setting shows QR)
+- **Safe by design** — QR generation wrapped in `try/except`; any failure is silently skipped so PDF export always succeeds
 
 ---
 
@@ -364,7 +376,8 @@ Default login: **username** `admin` / **PIN** `1234`
 | `plotext` | ≥ 5.2 | ASCII charts in terminal (v2.0) |
 | `fpdf2` | ≥ 2.7 | PDF generation — branded delivery notes & invoices (v2.1) |
 | `python-barcode` | ≥ 0.15 | GS1-128 / EAN-13 barcodes in PDFs *(planned)* |
-| `Pillow` | ≥ 10.0 | Company logo embedding in PDFs (v2.1) |
+| `Pillow` | ≥ 10.0 | Company logo embedding in PDFs; QR image conversion (v2.1, v2.14) |
+| `qrcode` | ≥ 7.4 | QR code generation for all PDF document types (v2.14) |
 
 Install all at once:
 ```bash
@@ -481,3 +494,7 @@ northwind/
 | Stacking `ModalScreen` instances — pushing a file browser from within an import modal | `screens/modals.py` |
 | Extracting duplicated logic into a shared helper with callback-based modal integration | `screens/export_helpers.py` |
 | Header alias maps with `setdefault` to accept multiple CSV column naming conventions without overriding exact matches | `data/csv_import.py` |
+| `qrcode` library — `QRCode(version=None, fit=True)` for auto-sizing; `ERROR_CORRECT_M` for 15 % damage tolerance | `pdf_export.py` |
+| `tempfile.NamedTemporaryFile(delete=False)` pattern: close handle inside `with`, then read file, then `os.remove()` — required on Windows | `pdf_export.py` |
+| `.convert("RGB")` to strip PNG alpha channel before fpdf2 embedding | `pdf_export.py` |
+| Defensive `try/except Exception: pass` wrapper so QR failure never aborts PDF generation | `pdf_export.py` |
