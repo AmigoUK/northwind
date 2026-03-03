@@ -145,7 +145,7 @@ class BusinessDetailsPanel(Widget):
     def on_browse_logo(self) -> None:
         from screens.modals import FileSelectModal
 
-        def after(path: str | None) -> None:
+        def after(path) -> None:
             if not path:
                 return
             assets_dir = os.path.join(_APP_DIR, "assets")
