@@ -30,10 +30,13 @@ A terminal-based warehouse/distribution management application built on the clas
 
 ### New in v2.14 — QR Codes on All PDF Documents
 
-- **QR code in every PDF header** — all 6 document types (WZ/DN, FV/INV, PZ/GR, KP/CR, KW/CP, Bank) embed a scannable 20 mm QR code flush with the top-right corner of the branded header
-- **Pipe-delimited payload** — each QR encodes doc type, number, date, counterparty name and key financial fields (e.g. `FV|INV/2026/001|2026-03-03|Acme Corp|1250.00|0.00|bank transfer`)
+- **QR code in every PDF header** — all 7 document types (DN, INV, GR, CR, CP, Bank, CN) embed a scannable 20 mm QR code flush with the top-right corner of the branded header
+- **Pipe-delimited payload** — each QR encodes doc type, number, date, counterparty name and key financial fields (e.g. `INV|INV/2026/001|2026-03-03|Acme Corp|1250.00|0.00|bank transfer`)
 - **Toggle in Business Details → Documents tab** — "Show QR codes on all documents" switch; on by default (fresh DB with no saved setting shows QR)
 - **Safe by design** — QR generation wrapped in `try/except`; any failure is silently skipped so PDF export always succeeds
+- **Supplier Spending report** — new report type (now 12 total); shows GR totals per supplier with date-range filter
+- **Company logo browser** — Business Details → Company tab has a Browse button; selected image is copied to `assets/logo<ext>` inside the app folder
+- **Sales report JOIN fix** — `sales_by_customer` and `sales_by_product` now use inner JOIN so customers/products with no orders in the selected period are excluded
 
 ---
 
@@ -353,7 +356,7 @@ Database migration is automatic — existing databases are migrated on startup.
 git clone git@github.com:AmigoUK/northwind.git
 cd northwind
 
-# 2. Install dependencies (Python 3.10+)
+# 2. Install dependencies (Python 3.9+)
 pip install -r requirements.txt
 
 # 3. (macOS) Ensure pip-installed scripts are on PATH
@@ -375,7 +378,6 @@ Default login: **username** `admin` / **PIN** `1234`
 | `textual` | ≥ 0.80.0 | TUI framework |
 | `plotext` | ≥ 5.2 | ASCII charts in terminal (v2.0) |
 | `fpdf2` | ≥ 2.7 | PDF generation — branded delivery notes & invoices (v2.1) |
-| `python-barcode` | ≥ 0.15 | GS1-128 / EAN-13 barcodes in PDFs *(planned)* |
 | `Pillow` | ≥ 10.0 | Company logo embedding in PDFs; QR image conversion (v2.1, v2.14) |
 | `qrcode` | ≥ 7.4 | QR code generation for all PDF document types (v2.14) |
 
@@ -392,14 +394,16 @@ pip install -r requirements.txt
 northwind/
 ├── app.py              # Textual App entry point, login flow, sidebar nav
 ├── db.py               # SQLite schema DDL + seed data
-├── pdf_export.py       # PDF generation for all document types (v2.1–v2.4)
+├── pdf_export.py       # PDF generation for all document types (v2.1–v2.14)
 ├── northwind.tcss      # Textual CSS (layout, modals, panels, charts)
 ├── requirements.txt    # Python dependencies
+├── assets/             # Static assets — company logo copied here via Business Details browse
+├── CLAUDE.md           # Claude Code context — per-commit checklist, architecture notes
 ├── data/               # Data-access layer (pure SQL, no UI)
 │   ├── settings.py     # AppSettings key-value store (currency, theme, business details)
 │   ├── users.py        # AppUsers CRUD + PIN authentication + role hierarchy (v2.4)
 │   ├── dashboard.py    # KPI aggregations + kpis_extended()
-│   ├── reports.py      # 11 report queries (sales, stock, trend, overdue…)
+│   ├── reports.py      # 12 report queries (sales, stock, trend, overdue, supplier spending…)
 │   ├── delete_guards.py # Centralized delete guards + side-effect handlers (v2.4)
 │   ├── dn.py           # DN (Delivery Note) CRUD + issue + cancel workflow
 │   ├── inv.py          # INV (Invoice) CRUD + cancel
@@ -414,7 +418,7 @@ northwind/
 │   ├── login.py        # LoginScreen modal (PIN gate)
 │   ├── dashboard.py    # Dashboard KPI cards + recent orders
 │   ├── charts.py       # Charts panel — Sales Trend / Category Mix / Employees / Cash & Bank Account
-│   ├── reports.py      # Reports panel with 11 report types + CSV export
+│   ├── reports.py      # Reports panel with 12 report types + CSV export
 │   ├── cn.py           # CN Credit Notes panel + creation wizard + detail modal (v2.4)
 │   ├── modals.py       # Shared modals: ConfirmDelete, CancellationReason, FileSelectModal (v2.8)
 │   ├── export_helpers.py # Centralized CSV export logic + FileSelectModal integration (v2.8)
@@ -445,6 +449,9 @@ northwind/
 | `ctrl+X` | Export current view to CSV |
 | `ctrl+I` | Import CSV into current panel |
 | `R` | Refresh (Dashboard / Charts / Reports) |
+| `U` | Switch to All Unpaid view (Reconciliation panel) |
+| `S` | Switch to Statement view (Reconciliation panel) |
+| `P` | Pay selected Invoice (Reconciliation panel) |
 | `ESC` | Close modal / go back |
 
 ---
@@ -498,3 +505,8 @@ northwind/
 | `tempfile.NamedTemporaryFile(delete=False)` pattern: close handle inside `with`, then read file, then `os.remove()` — required on Windows | `pdf_export.py` |
 | `.convert("RGB")` to strip PNG alpha channel before fpdf2 embedding | `pdf_export.py` |
 | Defensive `try/except Exception: pass` wrapper so QR failure never aborts PDF generation | `pdf_export.py` |
+| `shutil.copy2()` to copy a user-selected file into the app's `assets/` folder with metadata preserved | `screens/business.py` |
+| Python 3.9 compat — `X \| Y` union type syntax requires 3.10+; use `Optional[X]` or omit annotation | `screens/business.py` |
+| Textual CSS specificity trap — `.parent Vertical` (0-1-1) beats `.child-class` (0-1-0); fix with 3-part `Widget .section Vertical` rule (0-1-2) | `northwind.tcss` |
+| JOIN vs LEFT JOIN in date-filtered reports — LEFT JOIN includes rows outside the date range; JOIN excludes them correctly | `data/reports.py` |
+| Scoped KPI query `kpis_for_period(date_from, date_to)` for period-specific charts bar vs global `kpis_extended()` | `data/dashboard.py` |
