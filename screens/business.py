@@ -59,6 +59,10 @@ class BusinessDetailsPanel(Widget):
                         with Horizontal(classes="logo-browse-row"):
                             yield Input(placeholder="No logo selected", id="f-co-logo-path")
                             yield Button("Browse...", id="btn-browse-logo")
+                        yield Label(
+                            "Recommended: PNG or JPG, transparent background, 300×100 px, max 1 MB",
+                            classes="logo-hint",
+                        )
 
                 # Tab 2 — Tax & Legal
                 with TabPane("Tax & Legal", id="tab-tax"):
