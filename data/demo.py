@@ -38,6 +38,14 @@ _SEASONALITY = {
     (2026, 1): 0.7, (2026, 2): 0.8,
 }
 
+# Realistic stock-intake reasons for SI documents
+_SI_REASONS = [
+    "Inventory count — surplus found",
+    "Supplier delivery correction — extra units",
+    "Customer return — goods restocked",
+    "Inter-location transfer inbound",
+]
+
 # Additional customers to reach 30 total
 _EXTRA_CUSTOMERS = [
     ("CACTU", "Cactus Comidas para llevar", "Patricio Simpson", "Sales Agent", "Cerrito 333", "Buenos Aires", None, "1010", "Argentina", "(1) 135-5555", "(1) 135-4892"),
@@ -220,7 +228,7 @@ def _generate_gr(rng, date_str, year, supplier_ids, product_catalog, stock,
     gr_id = gr_draft(supplier_id, date_str, supplier_doc_ref=f"SUP-{counts['GR']:04d}",
                      payment_method=payment_method, year_override=year)
     for pid in chosen:
-        qty = rng.randint(20, 100)
+        qty = rng.randint(12, 30)   # avg ≈ 21 units — buys ~190 units/day vs 160 sold
         cost = round(product_catalog[pid]["price"] * rng.uniform(0.5, 0.75), 2)
         gr_add(gr_id, pid, qty, cost)
         stock[pid] = stock.get(pid, 0) + qty
@@ -433,7 +441,7 @@ def _generate_stock_adjustment(rng, date_str, year, stock, product_catalog,
             qty = rng.randint(5, 25)
             items.append({"product_id": pid, "quantity": qty})
             stock[pid] = stock.get(pid, 0) + qty
-        create_si(date_str, reason="Inventory count adjustment",
+        create_si(date_str, reason=rng.choice(_SI_REASONS),
                   items=items, year_override=year)
         counts["SI"] += 1
     else:
@@ -457,10 +465,20 @@ def _generate_stock_adjustment(rng, date_str, year, stock, product_catalog,
 
 def _generate_transfer(rng, date_str, counts):
     """Transfer cash to bank."""
-    from data.cash import transfer_to_bank
+    from data.cash import transfer_to_bank, get_cash_balance
 
     amount = round(rng.uniform(500, 5000), 2)
-    transfer_to_bank(amount, "Periodic deposit", date_override=date_str)
+    balance = get_cash_balance()
+    if balance <= 0:
+        return  # nothing to sweep
+    amount = min(amount, balance)
+    date_obj = date.fromisoformat(date_str)
+    desc = (
+        "Monthly cash sweep — mid-month"
+        if date_obj.day == 15
+        else "Monthly cash sweep — start of month"
+    )
+    transfer_to_bank(amount, desc, date_override=date_str)
     counts["transfers"] += 1
 
 
@@ -492,6 +510,15 @@ def insert_demo_data() -> dict:
 
     import db
     db.seed_data()  # idempotent — only seeds if Categories is empty
+
+    # Opening working capital: initial bank deposit at business start
+    from data.bank import create_bank_entry as _create_opening_entry
+    _create_opening_entry(
+        direction="in",
+        amount=150_000.00,
+        description="Opening capital — initial working capital deposit",
+        date_override="2025-01-01",
+    )
 
     # Phase 0: Expand master data
     _insert_additional_customers()
@@ -576,6 +603,10 @@ def insert_demo_data() -> dict:
         # 7. Transfers on 1st and 15th
         if day.day in (1, 15):
             _generate_transfer(rng, date_str, counts)
+
+    # Post-loop: collect outstanding AR from invoices whose due dates fall after loop end
+    for day in _business_days(date(2026, 2, 2), date(2026, 4, 30)):
+        _process_payments(rng, str(day), day.year, unpaid_invs, counts)
 
     # Final: read actual DB counts for auto-generated docs (CP, CR, BankEntry)
     conn = get_connection()

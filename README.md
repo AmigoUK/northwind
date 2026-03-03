@@ -25,6 +25,19 @@ A terminal-based warehouse/distribution management application built on the clas
 | **v2.14** | QR Codes on PDFs | QR code embedded in every PDF document header; toggle in Business Details → Documents; encodes doc type, number, date, counterparty, amount |
 | **v2.15** | Help System | Searchable help panel with FAQ category; context-sensitive `?` shortcut jumps to the relevant topic for the active panel |
 | **v2.16** | Demo Data UX | Test/Production mode switch in Settings; PIN-protected `TestModeWarningModal`; "Clean Database" modal clarifies what is preserved |
+| **v2.17** | Cash Register Integrity | Non-negative cash balance enforced at the data layer; GR cash payments fall back to bank when cash is insufficient; demo data generation never produces a negative cash register |
+
+---
+
+## Features (v2.17)
+
+### New in v2.17 — Cash Register Integrity
+
+- **Non-negative balance enforced** — `create_cp()` and `transfer_to_bank()` in `data/cash.py` now raise `ValueError` if the requested amount exceeds the current cash register balance; the UI surfaces this as an error notification and refuses the operation
+- **`get_cash_balance()` helper** — single source of truth in `data/cash.py` that returns CR total minus CP total; used by both guards and by the GR fallback
+- **GR cash-payment fallback** — when receiving a GR with `payment_method="cash"`, `data/gr.py` checks the balance first and silently switches to a bank payment if cash is insufficient; no crash, no negative register
+- **Demo data stays ≥ $0** — `_generate_transfer()` in `data/demo.py` skips the monthly cash sweep when the register is empty and clamps the sweep amount to the available balance; demo generation (Settings → Insert Demo Data) now always produces a non-negative cash register throughout the full 13-month history
+- **Cash & Bank report** — the Cash & Bank Account Status chart will no longer show a –$78 k dip after inserting demo data
 
 ---
 
@@ -434,9 +447,9 @@ northwind/
 │   ├── dn.py           # DN (Delivery Note) CRUD + issue + cancel workflow
 │   ├── inv.py          # INV (Invoice) CRUD + cancel
 │   ├── cn.py           # CN (Credit Note) CRUD + business logic (v2.4)
-│   ├── gr.py           # GR (Goods Receipt) CRUD + cancel
+│   ├── gr.py           # GR (Goods Receipt) CRUD + cancel; cash→bank fallback on receive (v2.17)
 │   ├── si_so.py        # SI/SO (Stock Issue / Stock Out) CRUD
-│   ├── cash.py         # Cash Register entries (CR/CP)
+│   ├── cash.py         # Cash Register entries (CR/CP); get_cash_balance() + non-negative guards (v2.17)
 │   ├── bank.py         # Bank Account entries
 │   ├── reconciliation.py # AR/AP reconciliation queries, aging, allocation (v2.13)
 │   └── ...             # customers, orders, products, employees, …
@@ -542,3 +555,5 @@ northwind/
 | Scoped KPI query `kpis_for_period(date_from, date_to)` for period-specific charts bar vs global `kpis_extended()` | `data/dashboard.py` |
 | Context-sensitive navigation — storing a `{section_id: search_term}` map and calling `open_with_context()` to pre-filter the Help panel from any active panel | `app.py`, `screens/help.py` |
 | `Switch.Changed` async timing trap — setting `.value` enqueues the message rather than dispatching it in-place; a `_mode_switching` boolean flag is already `False` before the message fires; robust fix: compare `event.value` against the persisted DB state | `screens/settings.py` |
+| Data-layer balance guards — raise `ValueError` before any INSERT so the UI can catch and display the error without the DB ever seeing an invalid state | `data/cash.py` |
+| Graceful payment fallback — checking a resource constraint at the call site and re-routing (cash → bank) instead of raising, so automated flows never crash | `data/gr.py`, `data/demo.py` |

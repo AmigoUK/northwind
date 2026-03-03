@@ -59,6 +59,15 @@ def cash_balance_cr() -> float:
     return val
 
 
+def get_cash_balance() -> float:
+    """Return current cash balance (CR total minus CP total)."""
+    conn = get_connection()
+    cr = conn.execute("SELECT COALESCE(SUM(Amount), 0) FROM CR").fetchone()[0]
+    cp = conn.execute("SELECT COALESCE(SUM(Amount), 0) FROM CP").fetchone()[0]
+    conn.close()
+    return cr - cp
+
+
 def delete_cr(pk) -> None:
     from data.delete_guards import before_delete_cr
     before_delete_cr(pk)  # decrement INV.PaidAmount if linked
@@ -100,6 +109,11 @@ def create_cp(supplier_id: int | None, gr_id: int | None,
               amount: float, description: str = "",
               date_override: str | None = None) -> int:
     """Create a CP cash payment. Returns CP_ID."""
+    balance = get_cash_balance()
+    if balance < amount:
+        raise ValueError(
+            f"Insufficient cash: balance ${balance:.2f}, payment ${amount:.2f}"
+        )
     from datetime import date
     cp_date = date_override or str(date.today())
     year_override = int(cp_date[:4]) if date_override else None
@@ -136,6 +150,11 @@ def delete_cp(pk) -> None:
 def transfer_to_bank(amount: float, description: str = "",
                      date_override: str | None = None) -> tuple[int, int]:
     """Create CP (cash out) + BankEntry (in) atomically. Returns (cp_id, entry_id)."""
+    balance = get_cash_balance()
+    if balance < amount:
+        raise ValueError(
+            f"Insufficient cash: balance ${balance:.2f}, transfer ${amount:.2f}"
+        )
     from datetime import date
     conn = get_connection()
     today = date_override or str(date.today())

@@ -189,7 +189,8 @@ class TestGRWorkflow:
 
     def test_cash_payment_doc_on_receive(self):
         """Receiving a GR with payment_method='cash' auto-creates a CP."""
-        from data.cash import fetch_all_cp
+        from data.cash import fetch_all_cp, create_cr
+        create_cr(None, None, 100.0, "seed cash for test")  # fund cash register
         cp_before = len(fetch_all_cp())
         gr_id = gr.create_draft(1, str(date.today()), payment_method="cash")
         gr.add_item(gr_id, 1, 5, 10.00)

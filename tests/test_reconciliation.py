@@ -217,6 +217,7 @@ def test_supplier_statement_has_gr_cp_bankout(test_db):
              gr_date="2026-01-05", status="received")
     conn.close()
 
+    cash_data.create_cr(None, None, 100.0, "seed cash for test", "2026-01-06")
     cash_data.create_cp(1, None, 50.0, "partial payment", "2026-01-10")
     bank_data.create_bank_entry("out", 100.0, "wire payment", supplier_id=1,
                                 date_override="2026-01-15")
@@ -235,6 +236,7 @@ def test_allocate_cp_to_gr_sets_gr_id(test_db):
                      gr_date="2026-01-05", status="received")
     conn.close()
 
+    cash_data.create_cr(None, None, 200.0, "seed cash for test", "2026-01-06")
     cp_id = cash_data.create_cp(1, None, 200.0, "payment", "2026-01-10")
     rdata.allocate_payment_to_gr("cp", cp_id, gr_id)
 

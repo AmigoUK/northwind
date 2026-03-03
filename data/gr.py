@@ -139,6 +139,10 @@ def receive(gr_id: int, date_override: str | None = None) -> None:
     # Auto-generate payment document
     desc = f"Payment for {gr_number}"
     if payment_method == "cash":
+        from data.cash import get_cash_balance
+        if get_cash_balance() < total:
+            payment_method = "bank"  # insufficient cash — fall back to bank
+    if payment_method == "cash":
         create_cp(supplier_id=supplier_id, gr_id=gr_id, amount=total,
                   description=desc, date_override=date_override)
     elif payment_method == "bank":
