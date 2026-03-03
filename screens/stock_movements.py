@@ -333,6 +333,10 @@ class StockMovementsPanel(Widget):
         except Exception:
             pass
 
+    def refresh_data(self) -> None:
+        self._refresh_si()
+        self._refresh_so()
+
     @on(DataTable.RowHighlighted, "#si-tbl")
     def on_si_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key:

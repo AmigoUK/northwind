@@ -353,6 +353,10 @@ class RegionsPanel(Widget):
         except Exception:
             pass
 
+    def refresh_data(self) -> None:
+        self.refresh_regions()
+        self.refresh_territories()
+
     @on(Input.Changed, "#regions-search")
     def on_regions_search(self, event: Input.Changed) -> None:
         self.refresh_regions(event.value)
