@@ -116,6 +116,12 @@ ModalScreen {
     margin-bottom: 1;
 }
 
+.modal-warning {
+    color: $error;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
 .modal-dialog Label {
     height: 1;
     margin-top: 1;

@@ -16,13 +16,15 @@ from textual import on, work
 
 import data.settings as app_settings
 from data.demo import has_demo_data, insert_demo_data, clean_demo_data, demo_status
-from screens.modals import ConfirmActionModal, CleanDatabaseModal
+from screens.modals import ConfirmActionModal, CleanDatabaseModal, TestModeWarningModal
 
 # Document keys to show in the notification (excludes metadata like elapsed_seconds)
 _DOC_KEYS = {"DN", "INV", "GR", "CN", "SI", "SO", "CR", "CP", "BankEntry"}
 
 
 class SettingsPanel(Widget):
+    _mode_switching: bool = False
+
     def compose(self) -> ComposeResult:
         with Vertical(classes="panel-container"):
             yield Label("Settings", classes="panel-title")
@@ -49,6 +51,10 @@ class SettingsPanel(Widget):
                     yield Switch(id="f-show-disc", value=False)
             with Vertical(classes="settings-section"):
                 yield Label("Demo Data", classes="settings-label")
+                with Horizontal(classes="setting-row"):
+                    yield Label("Mode")
+                    yield Switch(id="f-mode", value=False)
+                    yield Label("Production", id="mode-label")
                 yield Static(
                     "Populate all data (master + transactional) for demos, "
                     "or clean everything for production use.",
@@ -60,7 +66,7 @@ class SettingsPanel(Widget):
                         "Insert Demo Data", id="btn-demo-insert", variant="success",
                     )
                     yield Button(
-                        "Clean Demo Data", id="btn-demo-clean", variant="error",
+                        "Clean Database", id="btn-demo-clean", variant="error",
                     )
             yield Button("Save Settings", id="btn-save", variant="primary")
 
@@ -83,6 +89,9 @@ class SettingsPanel(Widget):
         self.query_one("#f-show-disc", Switch).value = (
             app_settings.get_setting("show_discontinued", "false").lower() == "true"
         )
+        is_test = app_settings.get_setting("production_mode", "false").lower() != "true"
+        self.query_one("#f-mode", Switch).value = is_test
+        self.query_one("#mode-label", Label).update("Test Mode" if is_test else "Production")
         self._refresh_demo_status()
 
     def _refresh_demo_status(self) -> None:
@@ -91,6 +100,11 @@ class SettingsPanel(Widget):
         demo_exists = has_demo_data()
         self.query_one("#btn-demo-insert", Button).disabled = demo_exists
         self.query_one("#btn-demo-clean", Button).disabled = not demo_exists
+        is_test = app_settings.get_setting("production_mode", "false").lower() != "true"
+        self._mode_switching = True
+        self.query_one("#f-mode", Switch).value = is_test
+        self._mode_switching = False
+        self.query_one("#mode-label", Label).update("Test Mode" if is_test else "Production")
 
     def refresh_data(self) -> None:
         """Called by app.switch_section() to keep demo status current."""
@@ -112,6 +126,36 @@ class SettingsPanel(Widget):
         show_disc = self.query_one("#f-show-disc", Switch).value
         app_settings.set_setting("show_discontinued", "true" if show_disc else "false")
         self.notify("Settings saved.", severity="information")
+
+    @on(Switch.Changed, "#f-mode")
+    def on_mode_changed(self, event: Switch.Changed) -> None:
+        if self._mode_switching:
+            return
+        # Ignore programmatic syncs: Switch.Changed is posted asynchronously so
+        # _mode_switching is already False by the time the message is delivered.
+        # If the new value already matches the persisted DB state it is not a
+        # real user toggle — skip it.
+        db_is_test = app_settings.get_setting("production_mode", "false").lower() != "true"
+        if event.value == db_is_test:
+            return
+        if event.value:                          # OFF → ON  (Production → Test)
+            self._mode_switching = True
+            event.switch.value = False           # revert until confirmed
+            self._mode_switching = False
+            self.app.push_screen(TestModeWarningModal(), self._on_test_mode_confirmed)
+        else:                                    # ON → OFF  (Test → Production)
+            self._mode_switching = True
+            event.switch.value = True            # revert until confirmed
+            self._mode_switching = False
+            self.app.push_screen(CleanDatabaseModal(), self._on_demo_clean_confirmed)
+
+    def _on_test_mode_confirmed(self, confirmed: bool) -> None:
+        if not confirmed:
+            return
+        self.query_one("#btn-demo-insert", Button).disabled = True
+        self.query_one("#btn-demo-clean",  Button).disabled = True
+        self.query_one("#demo-status", Static).update("Status: Inserting demo data...")
+        self._run_demo_insert()
 
     @on(Button.Pressed, "#btn-demo-insert")
     def do_demo_insert(self) -> None:
@@ -160,6 +204,10 @@ class SettingsPanel(Widget):
 
     def _on_demo_clean_confirmed(self, confirmed: bool) -> None:
         if not confirmed:
+            self._mode_switching = True
+            self.query_one("#f-mode", Switch).value = True   # revert to Test
+            self._mode_switching = False
+            self.query_one("#mode-label", Label).update("Test Mode")
             return
         deleted = clean_demo_data()
         total = sum(deleted.values())
