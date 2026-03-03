@@ -8,6 +8,7 @@ from textual.widgets import Button, DataTable, Input, Label, Select, Static
 from textual import on
 
 import data.reports as rdata
+from db import get_connection
 
 
 _REPORT_OPTIONS = [
@@ -59,7 +60,28 @@ class ReportsPanel(Widget):
                 yield Label("", id="count-label", classes="count-label")
 
     def on_mount(self) -> None:
-        self._run_report("customer")
+        self._populate_date_defaults()
+        dates = self._get_validated_dates()
+        if dates:
+            self._run_report("customer", *dates)
+        else:
+            self._run_report("customer")
+
+    def _populate_date_defaults(self) -> None:
+        """Pre-fill date inputs with the most-recent year found in Orders."""
+        try:
+            conn = get_connection()
+            row = conn.execute(
+                "SELECT MAX(strftime('%Y', OrderDate)) FROM Orders "
+                "WHERE OrderDate IS NOT NULL"
+            ).fetchone()
+            conn.close()
+            if row and row[0]:
+                yr = row[0]
+                self.query_one("#date-from", Input).value = f"{yr}-01-01"
+                self.query_one("#date-to",   Input).value = f"{yr}-12-31"
+        except Exception:
+            pass
 
     @on(Select.Changed, "#report-type")
     def on_report_changed(self, event: Select.Changed) -> None:
