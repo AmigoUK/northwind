@@ -166,7 +166,7 @@ class ChartsPanel(Widget):
                 yield Label("  [R] Refresh")
             with Horizontal(classes="charts-date-row"):
                 yield Label("From:")
-                yield Input(placeholder="YYYY-MM-DD", id="chart-date-from")
+                yield Input(placeholder="2026-01-01", id="chart-date-from")
                 yield Label("To:")
                 yield Input(placeholder="YYYY-MM-DD", id="chart-date-to")
                 yield Button("Apply", id="btn-chart-apply", variant="primary")
@@ -212,6 +212,7 @@ class ChartsPanel(Widget):
                 self._date_to   = f"{most_recent}-12-31"
             else:
                 sel.value = "all"
+                self.query_one("#chart-date-from", Input).value = "2026-01-01"
         except Exception:
             pass
 

@@ -5,7 +5,9 @@ Textual TUI entry point.
 from __future__ import annotations
 
 import atexit
+import datetime
 import os
+import shutil
 import signal
 import sys
 
@@ -335,9 +337,28 @@ class NorthwindApp(App):
         """Show a confirmation dialog before quitting."""
         self.push_screen(QuitConfirmModal(), self._on_quit_confirmed)
 
-    def _on_quit_confirmed(self, confirmed: bool) -> None:
-        if confirmed:
+    def _on_quit_confirmed(self, result: str) -> None:
+        if result == "backup":
+            path = self._do_backup()
+            if path:
+                self.notify(f"Backup saved: {path}", title="Backup", timeout=4)
             self.exit()
+        elif result == "quit":
+            self.exit()
+        # "cancel" → do nothing
+
+    def _do_backup(self) -> str:
+        """Copy northwind.db → northwind_backup_YYYY-MM-DD_HH-MM-SS.db.
+        Returns the backup filename, or '' on error."""
+        src = "northwind.db"
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        dst = f"northwind_backup_{stamp}.db"
+        try:
+            shutil.copy2(src, dst)
+            return dst
+        except OSError as e:
+            self.notify(f"Backup failed: {e}", severity="error", timeout=6)
+            return ""
 
     def action_open_help(self) -> None:
         """Switch to the Help panel, pre-filtered to the current panel's context."""

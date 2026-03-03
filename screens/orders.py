@@ -35,7 +35,7 @@ class ShipOrderModal(ModalScreen):
         with Vertical(classes="confirm-dialog"):
             yield Label(f"Mark Order #{self.order_id} as Shipped", classes="modal-title")
             yield Label("Shipped Date (YYYY-MM-DD):")
-            yield Input(id="f-date", placeholder="1996-07-20")
+            yield Input(id="f-date", placeholder="2026-07-20")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Save", id="btn-save", variant="primary")
                 yield Button("Cancel", id="btn-cancel")
@@ -181,10 +181,10 @@ class OrderFormModal(ModalScreen):
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Order Date (YYYY-MM-DD):")
-                    yield Input(id="f-orderdate", placeholder="1996-07-04")
+                    yield Input(id="f-orderdate", placeholder="2026-07-01")
                 with Vertical(classes="form-field"):
                     yield Label("Required Date (YYYY-MM-DD):")
-                    yield Input(id="f-reqdate", placeholder="1996-08-01")
+                    yield Input(id="f-reqdate", placeholder="2026-08-01")
                 with Vertical(classes="form-field"):
                     yield Label("Freight:")
                     yield Input(id="f-freight", value="0.00", placeholder="0.00")
@@ -536,10 +536,10 @@ class OrderHeaderEditModal(ModalScreen):
             with Horizontal(classes="form-row"):
                 with Vertical(classes="form-field"):
                     yield Label("Order Date (YYYY-MM-DD):")
-                    yield Input(id="f-orderdate", placeholder="1996-07-04")
+                    yield Input(id="f-orderdate", placeholder="2026-07-01")
                 with Vertical(classes="form-field"):
                     yield Label("Required Date (YYYY-MM-DD):")
-                    yield Input(id="f-reqdate", placeholder="1996-08-01")
+                    yield Input(id="f-reqdate", placeholder="2026-08-01")
                 with Vertical(classes="form-field"):
                     yield Label("Freight:")
                     yield Input(id="f-freight", placeholder="0.00")

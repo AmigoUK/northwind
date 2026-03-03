@@ -86,33 +86,53 @@ class ConfirmDeleteModal(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class QuitConfirmModal(ModalScreen[bool]):
-    """Ask the user to confirm quitting the app. Returns True if confirmed."""
+class QuitConfirmModal(ModalScreen[str]):
+    """Quit confirmation with optional DB backup. Returns 'cancel'|'quit'|'backup'."""
+
+    DEFAULT_CSS = """
+    QuitConfirmModal { align: center middle; }
+    QuitConfirmModal > Vertical {
+        width: 60; height: auto; padding: 2 4;
+        border: thick $primary;
+        background: $surface;
+    }
+    QuitConfirmModal Label { width: 1fr; text-align: center; margin-bottom: 1; }
+    QuitConfirmModal #buttons { layout: horizontal; width: 1fr;
+                                height: auto; align-horizontal: center; }
+    QuitConfirmModal Button { margin: 0 1; }
+    """
 
     def compose(self) -> ComposeResult:
-        with Vertical(classes="confirm-dialog"):
-            yield Label("Quit Northwind Traders?", classes="modal-title")
-            yield Label("Press Y to quit or N / ESC to cancel.", classes="modal-subtitle")
-            with Horizontal(classes="modal-buttons"):
-                yield Button("Quit", id="btn-yes", variant="error")
-                yield Button("Cancel", id="btn-no", variant="primary")
+        with Vertical():
+            yield Label("Quit Northwind Traders?")
+            yield Label("Unsaved changes will be lost.", id="sub")
+            with Horizontal(id="buttons"):
+                yield Button("Cancel",        id="cancel",  variant="default")
+                yield Button("Quit",          id="quit",    variant="warning")
+                yield Button("Backup & Quit", id="backup",  variant="success")
 
     def on_mount(self) -> None:
-        self.query_one("#btn-no").focus()  # safe default: Cancel focused
+        self.query_one("#cancel", Button).focus()
 
     def on_key(self, event) -> None:
-        if event.key == "y":
-            self.dismiss(True)
-        elif event.key in ("n", "escape"):
-            self.dismiss(False)
+        if event.key == "escape":
+            self.dismiss("cancel")
+        elif event.key == "q":
+            self.dismiss("quit")
+        elif event.key == "b":
+            self.dismiss("backup")
 
-    @on(Button.Pressed, "#btn-yes")
-    def on_yes(self) -> None:
-        self.dismiss(True)
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss("cancel")
 
-    @on(Button.Pressed, "#btn-no")
-    def on_no(self) -> None:
-        self.dismiss(False)
+    @on(Button.Pressed, "#quit")
+    def _quit(self) -> None:
+        self.dismiss("quit")
+
+    @on(Button.Pressed, "#backup")
+    def _backup(self) -> None:
+        self.dismiss("backup")
 
 
 class CancellationReasonModal(ModalScreen):
