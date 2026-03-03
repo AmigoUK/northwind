@@ -83,6 +83,27 @@ def kpis_extended() -> dict:
     }
 
 
+def kpis_for_period(date_from: str, date_to: str) -> dict:
+    """Revenue, orders, customers, AOV for a specific date range (used by Charts KPI bar)."""
+    conn = get_connection()
+    orders = conn.execute(
+        "SELECT COUNT(DISTINCT OrderID) FROM Orders "
+        "WHERE OrderDate BETWEEN ? AND ?", (date_from, date_to)
+    ).fetchone()[0] or 0
+    revenue = conn.execute(
+        """SELECT COALESCE(SUM(od.UnitPrice * od.Quantity * (1.0 - od.Discount)), 0)
+           FROM Orders o JOIN OrderDetails od ON o.OrderID = od.OrderID
+           WHERE o.OrderDate BETWEEN ? AND ?""", (date_from, date_to)
+    ).fetchone()[0] or 0.0
+    customers = conn.execute(
+        "SELECT COUNT(DISTINCT CustomerID) FROM Orders "
+        "WHERE OrderDate BETWEEN ? AND ?", (date_from, date_to)
+    ).fetchone()[0] or 0
+    conn.close()
+    aov = revenue / orders if orders else 0.0
+    return {"revenue": revenue, "orders": orders, "customers": customers, "aov": aov}
+
+
 def finance_kpis() -> dict:
     """Returns cash_balance, bank_balance, ar_due_30d."""
     from datetime import date, timedelta

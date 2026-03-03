@@ -25,6 +25,9 @@ _REPORT_OPTIONS = [
     ("Cash & Bank Account Status",   "liquidity"),
     ("AR Aging",                    "ar_aging"),
     ("Incoming Payments (30 days)", "payment_forecast"),
+    ("Supplier Spending",           "supplier_spending"),
+    ("Stock Valuation",             "stock_val"),
+    ("AP Aging (Payables)",         "ap_aging_pay"),
 ]
 
 
@@ -152,6 +155,15 @@ class ReportsPanel(Widget):
                 headers, rows = rdata.payment_forecast()
                 if not rows:
                     self.notify("No payments due in the next 30 days.", severity="information")
+                    return
+            elif report_type == "supplier_spending":
+                headers, rows = rdata.supplier_spending(date_from, date_to)
+            elif report_type == "stock_val":
+                headers, rows = rdata.stock_valuation()
+            elif report_type == "ap_aging_pay":
+                headers, rows = rdata.ap_aging()
+                if not rows:
+                    self.notify("No unpaid goods receipts found.", severity="information")
                     return
             else:
                 return
