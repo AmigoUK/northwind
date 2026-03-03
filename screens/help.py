@@ -83,3 +83,7 @@ class HelpPanel(Widget):
     def refresh_data(self) -> None:
         """Called by switch_section() — no-op, content is static."""
         pass
+
+    def open_with_context(self, query: str) -> None:
+        """Pre-filter help for the calling panel's context. Called by action_open_help."""
+        self.query_one("#help-search", Input).value = query

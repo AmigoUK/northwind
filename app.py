@@ -132,6 +132,33 @@ _SECTIONS = [(key, label) for _, _, items in _NAV_GROUPS for key, label in items
 # IDs of sections visible only to admins
 _ADMIN_SECTIONS = {"sql", "users", "business", "settings"}
 
+# Map section IDs → help search terms for context-sensitive ? shortcut
+_HELP_CONTEXT: dict = {
+    "dashboard":      "dashboard",
+    "customers":      "customer",
+    "orders":         "order",
+    "products":       "product",
+    "employees":      "employee",
+    "suppliers":      "supplier",
+    "categories":     "category",
+    "shippers":       "shipper",
+    "regions":        "region",
+    "dn":             "delivery",
+    "inv":            "invoice",
+    "cn":             "credit",
+    "gr":             "goods receipt",
+    "movements":      "stock movement",
+    "cash":           "cash",
+    "bank":           "bank",
+    "reconciliation": "reconciliation",
+    "reports":        "report",
+    "charts":         "chart",
+    "sql":            "sql",
+    "users":          "users",
+    "business":       "business",
+    "settings":       "settings",
+}
+
 
 class SidebarNav(Widget):
     """Left navigation sidebar."""
@@ -313,8 +340,12 @@ class NorthwindApp(App):
             self.exit()
 
     def action_open_help(self) -> None:
-        """Switch to the Help panel."""
+        """Switch to the Help panel, pre-filtered to the current panel's context."""
+        current = self.query_one(ContentSwitcher).current
         self.switch_section("help")
+        if current != "help":
+            context = _HELP_CONTEXT.get(current, "")
+            self.query_one(HelpPanel).open_with_context(context)
 
     def action_escape(self) -> None:
         """ESC is handled by individual modals; here it's a no-op at top level."""
