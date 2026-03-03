@@ -62,13 +62,14 @@ HELP_TOPICS: list[HelpTopic] = [
         body=(
             "[b]User Roles[/b]\n\n"
             "The app supports role-based access control.\n\n"
-            "• [b]Admin[/b] — full access to all panels including SQL, "
-            "Users, Business Details, and Settings\n"
-            "• [b]User[/b] — access to master data, documents, finance, "
-            "and analytics panels\n\n"
+            "• [b]user[/b] — view + create records in master data, documents, "
+            "finance, and analytics\n"
+            "• [b]manager[/b] — all of the above + delete records and documents\n"
+            "• [b]admin[/b] — all of the above + cancel documents, issue CNs, "
+            "manage users, access SQL Query, Business Details, and Settings\n\n"
             "Admin-only panels are hidden from the sidebar for non-admin users."
         ),
-        keywords=["role", "permission", "access", "admin", "user"],
+        keywords=["role", "permission", "access", "admin", "user", "manager", "delete", "cancel"],
     ),
 
     # ── Key Bindings ──────────────────────────────────────────────────────────
@@ -82,6 +83,9 @@ HELP_TOPICS: list[HelpTopic] = [
             "• [b]F[/b] — focus the search / filter box\n"
             "• [b]?[/b] — open Help\n"
             "• [b]Ctrl+Q[/b] — quit with confirmation\n"
+            "• [b]Ctrl+X[/b] — export current view to CSV\n"
+            "• [b]Ctrl+I[/b] — import CSV into current panel\n"
+            "• [b]R[/b] — refresh (Dashboard / Charts / Reports)\n"
             "• [b]Escape[/b] — close current modal"
         ),
         keywords=["shortcut", "hotkey", "key", "keyboard", "binding"],
@@ -91,15 +95,25 @@ HELP_TOPICS: list[HelpTopic] = [
         title="Panel Shortcuts",
         body=(
             "[b]Panel Shortcuts[/b]\n\n"
-            "Many panels define their own key bindings:\n\n"
-            "• [b]R[/b] — run report (Reports panel)\n"
-            "• [b]Ctrl+X[/b] — export to CSV\n"
-            "• [b]D[/b] — delete selected record\n"
-            "• [b]E[/b] — edit selected record\n\n"
+            "Per-panel bindings (active when no Input is focused):\n\n"
+            "[b]Documents (DN / GR / INV):[/b]\n"
+            "• [b]+[/b] — add a line item to the open document\n\n"
+            "[b]Products:[/b]\n"
+            "• [b]L[/b] — toggle Low Stock filter\n\n"
+            "[b]Employees:[/b]\n"
+            "• [b]O[/b] — open Org Chart view\n\n"
+            "[b]SQL Query:[/b]\n"
+            "• [b]Ctrl+R[/b] — run the current query\n\n"
+            "[b]Reconciliation:[/b]\n"
+            "• [b]U[/b] — All Unpaid view\n"
+            "• [b]S[/b] — Statement view (per-customer/supplier ledger)\n"
+            "• [b]P[/b] — Pay Invoice (AR only)\n"
+            "• [b]A[/b] — Allocate a cash receipt or bank entry to an invoice\n\n"
             "Check the footer bar at the bottom for available actions "
             "in the current panel."
         ),
-        keywords=["shortcut", "panel", "report", "delete", "edit"],
+        keywords=["shortcut", "panel", "report", "delete", "edit",
+                  "reconciliation", "allocate", "unpaid", "low stock", "org chart"],
     ),
     HelpTopic(
         category="Key Bindings",
@@ -122,9 +136,13 @@ HELP_TOPICS: list[HelpTopic] = [
         body=(
             "[b]Dashboard[/b]\n\n"
             "The Dashboard is your landing page after login.\n\n"
-            "• Shows KPI cards: total customers, orders, products, revenue\n"
-            "• Displays recent orders in a summary table\n"
-            "• Data refreshes each time you navigate to the Dashboard"
+            "KPI cards shown:\n"
+            "• Orders Today, Revenue MTD, Low Stock count\n"
+            "• Pending Orders, Avg Fulfilment Days, MoM trend (↑/↓)\n"
+            "• Cash Register Balance, Bank Account Balance\n"
+            "• Open Invoices, Open DNs\n\n"
+            "• Press [b]R[/b] to refresh KPI data\n"
+            "• Displays recent orders in a summary table"
         ),
         keywords=["home", "kpi", "summary", "landing"],
     ),
@@ -319,9 +337,13 @@ HELP_TOPICS: list[HelpTopic] = [
             "(money out)\n"
             "• Each entry: date, description, amount, reference\n"
             "• Running balance displayed at the top\n"
-            "• Link entries to invoices or credit notes"
+            "• [b]CR (Cash Receipt)[/b] entries link to INV references\n"
+            "• [b]CP (Cash Payment)[/b] entries link to GR references\n"
+            "• Entries can be allocated to open invoices via the "
+            "Reconciliation panel"
         ),
-        keywords=["cash", "receipt", "payment", "petty cash", "register"],
+        keywords=["cash", "receipt", "payment", "petty cash", "register",
+                  "cr", "cp", "cash receipt", "cash payment"],
     ),
     HelpTopic(
         category="Finance",
@@ -329,12 +351,40 @@ HELP_TOPICS: list[HelpTopic] = [
         body=(
             "[b]Bank Account[/b]\n\n"
             "Track bank transactions.\n\n"
-            "• Record deposits, withdrawals, and transfers\n"
+            "• Record money in and money out entries\n"
             "• Each entry: date, description, amount, reference\n"
             "• Running balance displayed at the top\n"
-            "• Link entries to invoices, credit notes, or cash transfers"
+            "• Link entries to invoices, credit notes, or cash transfers\n"
+            "• Bank entries can be allocated to open INV or GR documents "
+            "via the Reconciliation panel\n"
+            "• Use bank transfers to record movements between "
+            "the bank and cash register"
         ),
-        keywords=["bank", "deposit", "withdrawal", "transfer", "account"],
+        keywords=["bank", "deposit", "withdrawal", "transfer", "account",
+                  "bank transfer", "money in", "money out"],
+    ),
+
+    HelpTopic(
+        category="Finance",
+        title="Reconciliation (AR/AP)",
+        body=(
+            "[b]Reconciliation — Accounts Receivable & Payable[/b]\n\n"
+            "[b]AR (Accounts Receivable)[/b] — track what customers owe you\n"
+            "• Default view: All Unpaid invoices across all customers\n"
+            "• [b]U[/b] → All Unpaid view\n"
+            "• [b]S[/b] → Statement (per-customer ledger)\n"
+            "• [b]P[/b] → Pay Invoice (register a manual payment)\n"
+            "• [b]A[/b] → Allocate a cash receipt or bank entry to an invoice\n"
+            "• Filter by customer with the ▼ Filter button\n\n"
+            "[b]AP (Accounts Payable)[/b] — track what you owe suppliers\n"
+            "• Default view: All Unpaid goods receipts across all suppliers\n"
+            "• [b]U[/b] / [b]S[/b] / [b]A[/b] work the same as AR\n"
+            "• P is not available on AP (no direct supplier pay)\n\n"
+            "Use the AR Aging / AP Aging reports for an overdue overview."
+        ),
+        keywords=["reconciliation", "ar", "ap", "accounts receivable",
+                  "accounts payable", "unpaid", "aging", "payment",
+                  "allocate", "statement", "outstanding"],
     ),
 
     # ── Analytics ─────────────────────────────────────────────────────────────
@@ -346,15 +396,26 @@ HELP_TOPICS: list[HelpTopic] = [
             "Run pre-built business reports.\n\n"
             "• Select a report type from the dropdown\n"
             "• Press [b]R[/b] to run the selected report\n"
-            "• Available reports include:\n"
+            "• Export results to CSV with [b]Ctrl+X[/b]\n\n"
+            "[b]Available report types:[/b]\n"
             "  – Sales by Customer / Product / Employee\n"
             "  – Top 10 Products by Revenue\n"
             "  – Low Stock Alert\n"
+            "  – Orders by Date Range\n"
             "  – Monthly Revenue Trend\n"
-            "  – AR Aging and more\n"
-            "• Export results to CSV with [b]Ctrl+X[/b]"
+            "  – Order Fulfilment Time\n"
+            "  – Category Revenue\n"
+            "  – Repeat Customers\n"
+            "  – Overdue Orders\n"
+            "  – Cash & Bank Status\n"
+            "  – AR Aging / AP Aging (Payables)\n"
+            "  – Incoming Payments (30 days)\n"
+            "  – Supplier Spending\n"
+            "  – Stock Valuation"
         ),
-        keywords=["report", "analysis", "analytics", "sales"],
+        keywords=["report", "analysis", "analytics", "sales",
+                  "aging", "forecast", "supplier spending",
+                  "stock valuation", "fulfilment"],
     ),
     HelpTopic(
         category="Analytics",
@@ -402,13 +463,23 @@ HELP_TOPICS: list[HelpTopic] = [
         title="PDF Export",
         body=(
             "[b]PDF Export[/b]\n\n"
-            "Generate PDF documents from issued documents.\n\n"
-            "• Available for Invoices and other issued documents\n"
-            "• Configure company details in Business Details panel\n"
-            "• PDF includes header, line items, and totals\n"
-            "• Saved to the exports directory"
+            "All 7 document types support PDF export: "
+            "[b]DN, INV, CN, GR, CR, CP, Bank Entry[/b]\n\n"
+            "• Click [b][PDF][/b] in any document detail modal\n"
+            "• A file browser opens to choose the save location\n"
+            "• PDF includes:\n"
+            "  – Company header (logo, name, address)\n"
+            "  – Branded colour theme\n"
+            "  – Line items table with totals\n"
+            "  – QR code (scannable, encodes key document fields)\n\n"
+            "[b]Configure branding in Business Details (Admin only):[/b]\n"
+            "• Company logo — Browse button copies image to assets/\n"
+            "• Colour theme, document titles, footer text\n"
+            "• QR on/off toggle\n"
+            "• VAT number and Tax ID printed on applicable documents"
         ),
-        keywords=["pdf", "print", "document", "export"],
+        keywords=["pdf", "print", "document", "export",
+                  "qr", "qr code", "logo", "branding", "theme", "footer"],
     ),
 
     # ── Admin ─────────────────────────────────────────────────────────────────
@@ -434,23 +505,38 @@ HELP_TOPICS: list[HelpTopic] = [
             "Manage application user accounts.\n\n"
             "• [b]Admin only[/b]\n"
             "• Create, edit, and delete user accounts\n"
-            "• Assign roles (admin or user)\n"
-            "• Set or reset user PINs"
+            "• Assign roles (user / manager / admin)\n"
+            "• Set or reset user PINs\n\n"
+            "See [b]Getting Started → User Roles[/b] for a full "
+            "description of each role's permissions."
         ),
-        keywords=["user", "role", "account", "admin", "permission"],
+        keywords=["user", "role", "account", "admin", "permission", "manager"],
     ),
     HelpTopic(
         category="Admin",
         title="Business Details",
         body=(
             "[b]Business Details[/b]\n\n"
-            "Configure your company information.\n\n"
-            "• [b]Admin only[/b]\n"
-            "• Company name, address, tax ID, contact info\n"
-            "• Bank details for invoices and documents\n"
-            "• This information appears on generated PDFs"
+            "Configure company information and PDF branding. "
+            "[b]Admin only.[/b]\n\n"
+            "Three tabs:\n\n"
+            "[b]Company tab[/b]\n"
+            "• Company name, address, city, postal, country, phone, "
+            "email, website\n"
+            "• [b]Company Logo[/b] — Browse button; file copied to "
+            "assets/logo.<ext>\n"
+            "  Recommended: PNG, transparent background, 300×100 px, max 1 MB\n\n"
+            "[b]Tax & Legal tab[/b]\n"
+            "• VAT Number, Tax ID / NIP, Bank Account\n\n"
+            "[b]Documents tab[/b]\n"
+            "• Footer note, colour theme (Default / Blue / Green / Monochrome)\n"
+            "• Custom titles for DN / INV / GR documents\n"
+            "• Toggle: Show unit prices on DN delivery notes\n"
+            "• Toggle: Show QR codes on all documents"
         ),
-        keywords=["business", "company", "config", "branding"],
+        keywords=["business", "company", "config", "branding",
+                  "logo", "vat", "tax", "theme", "footer",
+                  "qr", "colour", "pdf settings"],
     ),
     HelpTopic(
         category="Admin",
@@ -509,5 +595,170 @@ HELP_TOPICS: list[HelpTopic] = [
             "for the current context"
         ),
         keywords=["keyboard", "shortcut", "not working", "focus", "input"],
+    ),
+
+    # ── FAQ ───────────────────────────────────────────────────────────────────
+    HelpTopic(
+        category="FAQ",
+        title="How do I create an invoice?",
+        body=(
+            "[b]How do I create an invoice?[/b]\n\n"
+            "Standard workflow:\n\n"
+            "1. Create a [b]DN (Delivery Note)[/b] linked to an order "
+            "(Documents → DN → N)\n"
+            "2. Add line items, then click [b]Issue[/b] — stock is reduced\n"
+            "3. Open [b]Documents → INV[/b] and press [b]N[/b] — link to the "
+            "issued DN\n"
+            "4. Add pricing line items, then click [b]Issue[/b] — invoice is "
+            "finalised\n"
+            "5. The invoice now appears in AR Reconciliation as unpaid"
+        ),
+        keywords=["invoice", "create", "workflow", "billing"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I pay an invoice?",
+        body=(
+            "[b]How do I pay an invoice?[/b]\n\n"
+            "1. Go to [b]Finance → Reconciliation[/b] (AR tab)\n"
+            "2. Press [b]U[/b] to see All Unpaid invoices\n"
+            "3. Select the invoice and press [b]P[/b] — Pay Invoice\n"
+            "4. Enter the payment amount and date, confirm\n"
+            "5. Alternatively, press [b]A[/b] — Allocate — to match an "
+            "existing Cash Receipt or Bank entry to the invoice"
+        ),
+        keywords=["pay", "payment", "invoice", "reconciliation"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I cancel a document?",
+        body=(
+            "[b]How do I cancel a document?[/b]\n\n"
+            "Cancellation requires [b]admin[/b] role.\n\n"
+            "1. Open the document (DN / INV / GR / etc.)\n"
+            "2. Click the [b]Cancel[/b] button in the detail modal\n"
+            "3. Confirm the cancellation dialog\n"
+            "4. Stock and financial effects are automatically reversed\n\n"
+            "Note: a CN (Credit Note) is the preferred way to reverse "
+            "a financed invoice — use Cancel only for administrative corrections."
+        ),
+        keywords=["cancel", "undo", "void", "reverse"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="Why can't I delete this record?",
+        body=(
+            "[b]Why can't I delete this record?[/b]\n\n"
+            "Deletion is blocked when the record is referenced by other data:\n\n"
+            "• A [b]Customer[/b] with orders cannot be deleted\n"
+            "• A [b]Product[/b] on any order or document cannot be deleted\n"
+            "• A [b]Supplier[/b] linked to products cannot be deleted\n\n"
+            "You need [b]manager[/b] or [b]admin[/b] role to delete records.\n\n"
+            "To remove a record: first reassign or remove its dependent data, "
+            "then delete."
+        ),
+        keywords=["delete", "guard", "blocked", "error", "referential"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I correct a wrong invoice?",
+        body=(
+            "[b]How do I correct a wrong invoice?[/b]\n\n"
+            "Use a [b]Credit Note (CN)[/b] to reverse or adjust an issued "
+            "invoice:\n\n"
+            "1. Go to [b]Documents → CN[/b] and press [b]N[/b]\n"
+            "2. Link the CN to the original issued invoice\n"
+            "3. Add line items for the amount to credit\n"
+            "4. Click [b]Issue[/b] — the credit is applied\n\n"
+            "For a full reversal, match all line items from the original invoice. "
+            "For a partial correction, enter only the difference."
+        ),
+        keywords=["credit note", "correction", "refund", "cn"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I add a company logo to PDFs?",
+        body=(
+            "[b]How do I add a company logo to PDFs?[/b]\n\n"
+            "1. Go to [b]Admin → Business Details[/b] (admin only)\n"
+            "2. On the [b]Company[/b] tab, click [b]Browse[/b] next to "
+            "Company Logo\n"
+            "3. Select an image file (PNG recommended, 300×100 px, max 1 MB)\n"
+            "4. The file is copied to [i]assets/logo.<ext>[/i] automatically\n"
+            "5. Click [b]Save[/b] — the logo now appears on all generated PDFs\n\n"
+            "For best results: transparent background, landscape orientation."
+        ),
+        keywords=["logo", "pdf", "branding", "image"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="What's the difference between Cash Register and Bank Account?",
+        body=(
+            "[b]Cash Register vs Bank Account[/b]\n\n"
+            "[b]Cash Register[/b]\n"
+            "• Physical cash on hand\n"
+            "• CR entries (Cash Receipts) link to customer invoices\n"
+            "• CP entries (Cash Payments) link to supplier goods receipts\n\n"
+            "[b]Bank Account[/b]\n"
+            "• Electronic bank balance\n"
+            "• Records deposits, withdrawals, and transfers\n"
+            "• Bank entries can be allocated to open invoices via Reconciliation\n\n"
+            "Both panels show a running balance and support CSV export. "
+            "Use [b]Finance → Reconciliation[/b] to match entries to documents."
+        ),
+        keywords=["cash", "bank", "difference"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I see all unpaid invoices?",
+        body=(
+            "[b]How do I see all unpaid invoices?[/b]\n\n"
+            "1. Go to [b]Finance → Reconciliation[/b]\n"
+            "2. Make sure the [b]AR[/b] (Accounts Receivable) tab is active\n"
+            "3. Press [b]U[/b] — switches to All Unpaid view\n"
+            "   All outstanding invoices across all customers are listed\n\n"
+            "To see unpaid invoices for a single customer:\n"
+            "4. Use the ▼ Filter button to select a customer\n"
+            "5. Press [b]S[/b] — Statement view shows their ledger\n\n"
+            "Run the [b]AR Aging[/b] report (Analytics → Reports) for an "
+            "overdue breakdown by aging bucket."
+        ),
+        keywords=["unpaid", "outstanding", "ar", "receivable"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I import existing data?",
+        body=(
+            "[b]How do I import existing data?[/b]\n\n"
+            "CSV import is supported for: Customers, Suppliers, Products, "
+            "Categories.\n\n"
+            "1. Prepare a CSV file with headers matching the expected columns\n"
+            "   (Headers from a CSV export of the same panel will always work)\n"
+            "2. Navigate to the panel (e.g. Master Data → Customers)\n"
+            "3. Press [b]Ctrl+I[/b] — a file browser opens\n"
+            "4. Select your CSV file and confirm\n"
+            "5. Validation errors are reported per row — fix and re-import\n\n"
+            "Tip: export a small sample first to see the expected column format."
+        ),
+        keywords=["import", "csv", "migrate", "upload"],
+    ),
+    HelpTopic(
+        category="FAQ",
+        title="How do I set up company branding for PDFs?",
+        body=(
+            "[b]How do I set up company branding for PDFs?[/b]\n\n"
+            "Go to [b]Admin → Business Details[/b] (admin role required).\n\n"
+            "[b]Step 1 — Company info[/b]\n"
+            "• Fill in company name, address, phone, email on the Company tab\n"
+            "• Upload your logo via the Browse button\n\n"
+            "[b]Step 2 — Tax & Legal[/b]\n"
+            "• Enter VAT Number and Tax ID — these print on applicable documents\n\n"
+            "[b]Step 3 — Documents tab[/b]\n"
+            "• Choose a colour theme (Default / Blue / Green / Monochrome)\n"
+            "• Set a footer note (e.g. payment terms, thank-you message)\n"
+            "• Optionally enable QR codes and customise document titles\n\n"
+            "Click [b]Save[/b] — all future PDFs will use the new settings."
+        ),
+        keywords=["branding", "pdf", "theme", "setup"],
     ),
 ]
