@@ -576,6 +576,10 @@ SettingsPanel .settings-section {
     height: auto;
 }
 
+SettingsPanel .settings-section Vertical {
+    height: auto;
+}
+
 /* ── Demo Data section ─────────────────────────────────────────────────────*/
 #demo-description {
     color: $text-muted;
