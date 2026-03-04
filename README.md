@@ -524,61 +524,19 @@ northwind/
 
 ## What I Learned
 
-| Concept | Where it appears |
-|---------|-----------------|
-| SQLite with `sqlite3` — CRUD, JOINs, aggregations, transactions | `db.py`, `data/*.py` |
-| `cursor.description` to read column names dynamically | `screens/sql.py` |
-| `INSERT OR REPLACE` as a key-value upsert | `data/settings.py` |
-| `hashlib.sha256` for one-way PIN hashing | `data/users.py` |
-| Textual `ModalScreen` + `dismiss()` callback pattern | all form modals |
-| Role-based UI (same app, different views per role) | `app.py` `_apply_role_visibility()` |
-| Textual `ContentSwitcher` for single-page navigation | `app.py` |
-| `TextArea` widget for multi-line code input | `screens/sql.py` |
-| CSV export with Python's `csv` module + centralized helper pattern | `screens/export_helpers.py` |
-| MVC-style layered architecture (`data/` + `screens/`) | whole project |
-| CSS `1fr` columns for multi-column form rows | `northwind.tcss`, all form modals |
-| `plotext` for ANSI ASCII charts inside Textual `Static` widgets | `screens/charts.py` |
-| `TabbedContent` + `TabPane` for multi-view panels | `screens/charts.py`, regions |
-| SQL window functions: `strftime`, `julianday`, `AVG` | `data/reports.py`, `data/dashboard.py` |
-| Document workflow state machine (draft → issued) | `data/dn.py`, `data/inv.py`, `data/gr.py` |
-| Key-value settings store for business/document config | `data/settings.py`, `screens/business.py` |
-| `fpdf2` subclassing for custom footers and multi-column layouts | `pdf_export.py` |
-| Embedding images and drawing shapes/lines with FPDF primitives | `pdf_export.py` |
-| Reusable PDF helpers (`_draw_header`, `_draw_amount_box`, `_draw_signature_line`) shared across document types | `pdf_export.py` |
-| Generating voucher-style single-entry PDFs (CR, CP, Bank) vs multi-line table PDFs (DN, INV, GR) | `pdf_export.py` |
-| CSS selector specificity in Textual — type+class beats class alone; later rules win on equal specificity | `northwind.tcss` |
-| `dock: bottom` to pin a widget (Save button) regardless of sibling content height | `northwind.tcss` |
-| `overflow-y: auto` on `TabPane` to make long forms scrollable within a tab | `northwind.tcss` |
-| `TabbedContent` inside a panel to split a long settings page into navigable tabs | `screens/business.py` |
-| Grouping related fields into 2- and 3-column `form-row` layouts to reduce vertical height | `screens/business.py` |
-| Merging redundant sections (Company Identity + Contact Details) into one compact block | `screens/business.py` |
-| Balancing widget height (Select `height: 2`) vs readability to keep forms within one screen | `northwind.tcss` |
-| Hierarchical RBAC — numeric role levels with `has_permission()` comparator | `data/users.py` |
-| Centralized delete guards returning `(bool, list[str])` reason tuples | `data/delete_guards.py` |
-| Side-effect handlers that run before DELETE — payment reversal, stock restoration | `data/delete_guards.py` |
-| Document cancellation as a state-machine transition with audit fields (CancelledAt/By/Reason) | `data/dn.py`, `data/inv.py`, `data/gr.py` |
-| Credit note (CN) pattern — recording original vs corrected values per line item | `data/cn.py` |
-| In-place INV.TotalNet adjustment on CN creation + status recalculation | `data/cn.py` |
-| Multi-step creation wizard in a single ModalScreen (pick INV → type → items → confirm) | `screens/cn.py` |
-| `conn.execute()` vs `conn.executescript()` for reliable schema migration on existing databases | `db.py` |
-| pytest fixtures with `tmp_path` for isolated per-test SQLite databases | `tests/conftest.py` |
-| Testing cross-document effects: Order → DN → INV → CR → CN → verify all balances | `tests/test_cn.py` |
-| Textual `DirectoryTree` subclassing with `filter_paths()` for extension-based file filtering | `screens/modals.py` |
-| Stacking `ModalScreen` instances — pushing a file browser from within an import modal | `screens/modals.py` |
-| Extracting duplicated logic into a shared helper with callback-based modal integration | `screens/export_helpers.py` |
-| Header alias maps with `setdefault` to accept multiple CSV column naming conventions without overriding exact matches | `data/csv_import.py` |
-| `qrcode` library — `QRCode(version=None, fit=True)` for auto-sizing; `ERROR_CORRECT_M` for 15 % damage tolerance | `pdf_export.py` |
-| `tempfile.NamedTemporaryFile(delete=False)` pattern: close handle inside `with`, then read file, then `os.remove()` — required on Windows | `pdf_export.py` |
-| `.convert("RGB")` to strip PNG alpha channel before fpdf2 embedding | `pdf_export.py` |
-| Defensive `try/except Exception: pass` wrapper so QR failure never aborts PDF generation | `pdf_export.py` |
-| `shutil.copy2()` to copy a user-selected file into the app's `assets/` folder with metadata preserved | `screens/business.py` |
-| Python 3.9 compat — `X \| Y` union type syntax requires 3.10+; use `Optional[X]` or omit annotation | `screens/business.py` |
-| Textual CSS specificity trap — `.parent Vertical` (0-1-1) beats `.child-class` (0-1-0); fix with 3-part `Widget .section Vertical` rule (0-1-2) | `northwind.tcss` |
-| JOIN vs LEFT JOIN in date-filtered reports — LEFT JOIN includes rows outside the date range; JOIN excludes them correctly | `data/reports.py` |
-| Scoped KPI query `kpis_for_period(date_from, date_to)` for period-specific charts bar vs global `kpis_extended()` | `data/dashboard.py` |
-| Context-sensitive navigation — storing a `{section_id: search_term}` map and calling `open_with_context()` to pre-filter the Help panel from any active panel | `app.py`, `screens/help.py` |
-| `Switch.Changed` async timing trap — setting `.value` enqueues the message rather than dispatching it in-place; a `_mode_switching` boolean flag is already `False` before the message fires; robust fix: compare `event.value` against the persisted DB state | `screens/settings.py` |
-| Data-layer balance guards — raise `ValueError` before any INSERT so the UI can catch and display the error without the DB ever seeing an invalid state | `data/cash.py` |
-| Graceful payment fallback — checking a resource constraint at the call site and re-routing (cash → bank) instead of raising, so automated flows never crash | `data/gr.py`, `data/demo.py` |
-| Parameterising `ModalScreen` return type (`ModalScreen[str]` vs `[bool]`) to return a named result string instead of a bare boolean — makes multi-outcome dialogs self-documenting | `screens/modals.py` |
-| `shutil.copy2()` for timestamped DB backup — preserves file metadata; wrapping in `try/except OSError` and surfacing via `self.notify()` keeps the TUI from crashing on permission errors | `app.py` |
+| Concept | What I learned | Where |
+|---------|---------------|-------|
+| **SQLite & SQL** | CRUD, multi-table JOINs, aggregations, transactions; window functions (`strftime`, `julianday`); `INSERT OR REPLACE` as a key-value upsert; reading column names from `cursor.description`; `conn.execute()` vs `conn.executescript()` for safe schema migration; why JOIN vs LEFT JOIN matters in date-filtered queries (LEFT JOIN lets zero-revenue rows leak through) | `db.py`, `data/*.py` |
+| **MVC layered architecture** | Keeping all SQL in a pure `data/` layer and all Textual widget code in `screens/` so queries are independently testable; centralising delete guards as `(bool, reasons)` tuples with side-effect handlers (stock restore, payment reversal) that execute before the DELETE | `data/`, `screens/`, `data/delete_guards.py` |
+| **Textual widgets & navigation** | `ContentSwitcher` for single-page panel routing; `ModalScreen.dismiss(value)` callback pattern; stacking modals (file browser pushed from within an import modal); `TabbedContent`/`TabPane`; `TextArea` for freeform SQL input; `DirectoryTree` subclassing with `filter_paths()` for extension-based browsing | `app.py`, `screens/*.py` |
+| **Textual CSS layout** | `1fr` grid columns for compact multi-column form rows; CSS selector specificity rules (type+class beats class alone, later rule wins on tie); `dock: bottom` to pin a Save button regardless of sibling height; `overflow-y: auto` on a `TabPane` to make long forms scrollable; balancing `height: 2` on Select widgets to keep forms on one screen | `northwind.tcss` |
+| **Role-based access control** | One-way PIN hashing with `hashlib.sha256`; numeric role levels (user=1 / manager=2 / admin=3) compared with a `has_permission()` helper; hiding sidebar items and entire panels at login so the app surface adapts to the authenticated role | `data/users.py`, `app.py` |
+| **Document workflow state machine** | Enforcing draft → issued → cancelled transitions at the data layer; recording audit fields (CancelledAt / CancelledBy / CancelReason) on cancellation; Credit Notes capture original vs corrected line-item values and adjust the parent invoice's `TotalNet` and status in a single transaction | `data/dn.py`, `data/inv.py`, `data/gr.py`, `data/cn.py` |
+| **PDF generation with fpdf2** | Subclassing `FPDF` for custom headers/footers; shared drawing helpers (`_draw_header`, `_draw_amount_box`, `_draw_signature_line`) reused across all document types; voucher-style single-entry PDFs (CR/CP/Bank) vs multi-line table PDFs (DN/INV/GR); embedding a company logo with Pillow (`.convert("RGB")` to strip PNG alpha before fpdf2 accepts it); generating QR codes with `qrcode` and a `tempfile.NamedTemporaryFile(delete=False)` pattern that works on Windows | `pdf_export.py` |
+| **CSV round-trip import/export** | Exporting with `csv.writer` through a centralized helper that integrates with the file-browser modal; accepting both internal DB column names and human-readable display headers via an alias map with `setdefault` so exact matches always take priority | `screens/export_helpers.py`, `data/csv_import.py` |
+| **Multi-step modal wizard** | Implementing a multi-step flow (pick invoice → select CN type → choose line items → confirm) inside a single `ModalScreen`, keeping all intermediate state local and committing to the DB only on final confirmation | `screens/cn.py` |
+| **Finance integrity & fallback routing** | Raising `ValueError` at the data layer before any INSERT so the UI can display the error without the DB ever seeing an invalid state; checking a resource constraint at the call site and re-routing (cash → bank account) instead of raising, so automated GR payment flows never crash on an insufficient cash balance | `data/cash.py`, `data/gr.py` |
+| **Async UI timing traps** | `Switch.Changed` enqueues its message rather than firing in-place, so a `_mode_switching` guard flag is already `False` by the time the handler runs; robust fix: compare `event.value` against the value persisted in the DB rather than an in-memory flag | `screens/settings.py` |
+| **Context-sensitive help** | Storing a `{panel_id: keyword}` map in the app; calling `open_with_context(keyword)` to pre-filter the Help panel when `?` is pressed, so the user lands on the relevant topic for whichever panel is active | `app.py`, `screens/help.py` |
+| **Automated testing** | `tmp_path` fixture in `conftest.py` for a fresh isolated SQLite DB per test; testing full cross-document chains (Order → DN → INV → CR → CN → verify all balances update correctly); 172 tests across 8 modules with zero external dependencies | `tests/` |
+| **Python compatibility & file utilities** | `X \| Y` union type syntax requires Python 3.10+; use `Optional[X]` or bare annotation for 3.9 compat; `shutil.copy2()` to copy a user-selected logo into `assets/` with metadata preserved; same function for timestamped DB backups wrapped in `try/except OSError` so a permission error surfaces as a toast, not a crash | `screens/business.py`, `app.py` |
