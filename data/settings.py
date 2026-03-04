@@ -34,3 +34,8 @@ def get_theme_name() -> str:
 
 def get_backorder_allowed() -> bool:
     return get_setting("backorder_allowed", "false").lower() == "true"
+
+
+def get_backup_path() -> str:
+    """Return the configured backup directory, or '' for the working directory."""
+    return get_setting("backup_path", "")

@@ -636,6 +636,7 @@ def _seed_settings() -> None:
         ("doc_title_gr",      "Goods Receipt"),
         ("doc_dn_show_prices","true"),
         ("doc_title_cn",      "Credit Note"),
+        ("backup_path",       ""),   # "" = use working directory
     ]
     for key, value in defaults:
         conn.execute(

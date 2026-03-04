@@ -7,6 +7,8 @@ Educational patterns:
 - ConfirmActionModal for destructive actions (demo data insert/clean)
 - @work(thread=True) to run long operations without freezing the TUI
 """
+import os
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
@@ -68,6 +70,19 @@ class SettingsPanel(Widget):
                     yield Button(
                         "Clean Database", id="btn-demo-clean", variant="error",
                     )
+            with Vertical(classes="settings-section"):
+                yield Label("Backup & Restore", classes="settings-label")
+                yield Label("Backup Directory (blank = app folder)")
+                with Horizontal(classes="logo-browse-row"):
+                    yield Input(placeholder="~/backups", id="f-backup-path")
+                    yield Button("Browse...", id="btn-browse-backup")
+                yield Label("Restore Database", classes="settings-label")
+                yield Static(
+                    "Replaces the live database with a chosen backup file. "
+                    "The app will exit and must be relaunched.",
+                    classes="modal-subtitle",
+                )
+                yield Button("Restore from Backup...", id="btn-restore", variant="warning")
             yield Button("Save Settings", id="btn-save", variant="primary")
 
     def on_mount(self) -> None:
@@ -92,6 +107,7 @@ class SettingsPanel(Widget):
         is_test = app_settings.get_setting("production_mode", "false").lower() != "true"
         self.query_one("#f-mode", Switch).value = is_test
         self.query_one("#mode-label", Label).update("Test Mode" if is_test else "Production")
+        self.query_one("#f-backup-path", Input).value = app_settings.get_backup_path()
         self._refresh_demo_status()
 
     def _refresh_demo_status(self) -> None:
@@ -125,6 +141,8 @@ class SettingsPanel(Widget):
         app_settings.set_setting("backorder_allowed", "true" if backorder else "false")
         show_disc = self.query_one("#f-show-disc", Switch).value
         app_settings.set_setting("show_discontinued", "true" if show_disc else "false")
+        backup_path = self.query_one("#f-backup-path", Input).value.strip()
+        app_settings.set_setting("backup_path", backup_path)
         self.notify("Settings saved.", severity="information")
 
     @on(Switch.Changed, "#f-mode")
@@ -215,3 +233,68 @@ class SettingsPanel(Widget):
                     "Production mode enabled.",
                     severity="warning")
         self._refresh_demo_status()
+
+    @on(Button.Pressed, "#btn-browse-backup")
+    def on_browse_backup(self) -> None:
+        from screens.modals import FileSelectModal
+
+        def after(path) -> None:
+            if not path:
+                return
+            directory = os.path.dirname(path)
+            self.query_one("#f-backup-path", Input).value = directory
+            app_settings.set_setting("backup_path", directory)
+
+        self.app.push_screen(
+            FileSelectModal(
+                title="Choose Backup Directory",
+                mode="save",
+                default_path=app_settings.get_backup_path() or "~/",
+                suggested_name="northwind_backup.db",
+                file_filter=".db",
+            ),
+            after,
+        )
+
+    @on(Button.Pressed, "#btn-restore")
+    def on_restore(self) -> None:
+        from screens.modals import FileSelectModal, ConfirmActionModal
+
+        def do_restore(confirmed: bool) -> None:
+            if not confirmed:
+                return
+            import shutil as _shutil
+            import sqlite3 as _sqlite3
+            try:
+                src = _sqlite3.connect(self._restore_path)
+                dst = _sqlite3.connect("northwind.db")
+                src.backup(dst)
+                src.close()
+                dst.close()
+                self.notify("Database restored. Relaunching...", timeout=3)
+                self.app.set_timer(1.5, self.app.exit)
+            except Exception as e:
+                self.notify(f"Restore failed: {e}", severity="error", timeout=8)
+
+        def after_pick(path) -> None:
+            if not path:
+                return
+            self._restore_path = path
+            self.app.push_screen(
+                ConfirmActionModal(
+                    title="Restore Database?",
+                    message=f"Replace live DB with:\n{path}\n\nApp will exit after restore.",
+                    confirm_label="Restore & Exit",
+                ),
+                do_restore,
+            )
+
+        self.app.push_screen(
+            FileSelectModal(
+                title="Select Backup File",
+                mode="open",
+                default_path=app_settings.get_backup_path() or "~/",
+                file_filter=".db",
+            ),
+            after_pick,
+        )

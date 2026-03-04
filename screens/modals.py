@@ -135,6 +135,58 @@ class QuitConfirmModal(ModalScreen[str]):
         self.dismiss("backup")
 
 
+class BackupDoneModal(ModalScreen[bool]):
+    """Show backup result before the app exits.
+    success=True  → single 'OK, Exit' button.
+    success=False → 'Exit Anyway' + 'Cancel' buttons."""
+
+    DEFAULT_CSS = """
+    BackupDoneModal { align: center middle; }
+    BackupDoneModal > Vertical {
+        width: 64; height: auto; padding: 2 4;
+        border: thick $primary; background: $surface;
+    }
+    BackupDoneModal Label { width: 1fr; text-align: center; margin-bottom: 1; }
+    BackupDoneModal #msg  { color: $success; }
+    BackupDoneModal #err  { color: $error; }
+    BackupDoneModal #buttons { layout: horizontal; width: 1fr;
+                               height: auto; align-horizontal: center; }
+    BackupDoneModal Button { margin: 0 1; }
+    """
+
+    def __init__(self, success: bool, message: str) -> None:
+        super().__init__()
+        self._success = success
+        self._message = message
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Label("Backup Complete" if self._success else "Backup Failed")
+            label_id = "msg" if self._success else "err"
+            yield Label(self._message, id=label_id)
+            with Horizontal(id="buttons"):
+                if self._success:
+                    yield Button("OK, Exit", id="ok", variant="success")
+                else:
+                    yield Button("Exit Anyway", id="ok",    variant="warning")
+                    yield Button("Cancel",      id="cancel", variant="default")
+
+    def on_mount(self) -> None:
+        self.query_one("#ok", Button).focus()
+
+    def on_key(self, event) -> None:
+        if event.key in ("enter", "escape"):
+            self.dismiss(event.key == "enter" or self._success)
+
+    @on(Button.Pressed, "#ok")
+    def _ok(self) -> None:
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss(False)
+
+
 class CancellationReasonModal(ModalScreen):
     """Ask for a mandatory cancellation reason. Returns reason string or None."""
 
