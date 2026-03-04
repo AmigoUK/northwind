@@ -18,6 +18,7 @@
 ## Per-Commit README Checklist
 Every version bump must update ALL of these or the README drifts:
 1. `app.py` TITLE string (`TITLE = "Northwind Traders vX.Y"`)
+1a. `screens/login.py` login title label (`"Northwind Traders vX.Y"`) — **must match app.py**
 2. README version table — new row
 3. README `## Features (vX.Y)` block — new section at top
 4. README Project Structure — stale version refs in file comments
