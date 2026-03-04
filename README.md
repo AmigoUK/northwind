@@ -3,6 +3,10 @@
 A terminal-based warehouse/distribution management application built on the classic
 **Northwind** sample database. Stack: **Python + Textual + SQLite**.
 
+## Contents
+
+[Version History](#version-history) · [Features](#features-v218) · [Screenshots](#screenshots) · [Installation](#installation) · [Dependencies](#dependencies) · [Project Structure](#project-structure) · [Key Bindings](#key-bindings) · [What I Learned](#what-i-learned)
+
 ---
 
 ## Version History
@@ -291,110 +295,336 @@ Database migration is automatic — existing databases are migrated on startup.
 
 > Click any thumbnail to view full size.
 
-### Dashboard & Analytics
+**Sections:** [Login](#login) · [Dashboard & Analytics](#dashboard--analytics) · [Master Data](#master-data) · [Order → Delivery Note Workflow](#order--delivery-note-workflow) · [Invoices & Credit Notes](#invoices--credit-notes) · [Goods Receipts & Stock](#goods-receipts--stock) · [Finance — Cash & Bank](#finance--cash--bank) · [Reconciliation](#reconciliation) · [Admin & Settings](#admin--settings) · [Help & Keyboard](#help--keyboard)
+
+---
+
+### Login
+
+PIN-based login gate — the first screen users see on every launch. The app supports multiple user accounts with three roles (admin / manager / user); admin-only panels (SQL editor, Users, Business Details, Settings) are hidden from the sidebar for non-admin logins.
 
 <table>
   <tr>
     <td align="center">
-      <a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" width="260" alt="Dashboard"/></a><br/>
-      <sub><b>Dashboard (10 KPI cards + recent orders)</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/charts.png"><img src="screenshots/charts.png" width="260" alt="Charts"/></a><br/>
-      <sub><b>Charts (Sales Trend sparkline + period selector)</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/reports-lv.png"><img src="screenshots/reports-lv.png" width="260" alt="Reports"/></a><br/>
-      <sub><b>Reports (11 report types + date range filter)</b></sub>
+      <a href="screenshots/login-window.png">
+        <img src="screenshots/login-window.png" width="160" alt="Login — PIN authentication"/>
+      </a><br/>
+      <sub><b>Login — PIN authentication</b></sub>
     </td>
   </tr>
 </table>
+
+---
+
+### Dashboard & Analytics
+
+The dashboard displays 10 KPI cards updated in real time: Orders Today, Revenue MTD, Low Stock alert count, Pending Orders, Average Fulfilment Days, month-over-month trend arrow, Cash Register balance, Bank Account balance, Open Invoices, and Open DNs. The Charts panel plots a Sales Trend sparkline, Top Products bar chart, and Top Employees bar chart (press `R` to refresh). The Reports panel offers 11 report types with a date-range filter and CSV export.
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/dashboard.png">
+        <img src="screenshots/dashboard.png" width="160" alt="Dashboard — 10 KPI cards"/>
+      </a><br/>
+      <sub><b>Dashboard — 10 KPI cards</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/charts.png">
+        <img src="screenshots/charts.png" width="160" alt="Charts — Sales Trend + bar charts"/>
+      </a><br/>
+      <sub><b>Charts — Sales Trend + bar charts</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/reports.png">
+        <img src="screenshots/reports.png" width="160" alt="Reports — 11 types + date-range filter"/>
+      </a><br/>
+      <sub><b>Reports — 11 types + date-range filter</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
 
 ### Master Data
 
+Seven CRUD panels cover the core reference data: Customers, Orders, Products, Employees, Suppliers, Categories, Shippers, and Regions. Every list view supports live search (`F`), keyboard navigation, and a detail modal (`Enter`) for editing. Products track stock levels with a Low Stock toggle; discontinued products can be hidden via Settings.
+
 <table>
   <tr>
     <td align="center">
-      <a href="screenshots/customers-lv.png"><img src="screenshots/customers-lv.png" width="260" alt="Customers list"/></a><br/>
-      <sub><b>Customers list view</b></sub>
+      <a href="screenshots/customers-lv.png">
+        <img src="screenshots/customers-lv.png" width="160" alt="Customers — list with live filter"/>
+      </a><br/>
+      <sub><b>Customers — list with live filter</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/customers-dv.png"><img src="screenshots/customers-dv.png" width="260" alt="Customer detail"/></a><br/>
-      <sub><b>Customer detail modal</b></sub>
+      <a href="screenshots/customers-dv-edit.png">
+        <img src="screenshots/customers-dv-edit.png" width="160" alt="Customer — detail / edit modal"/>
+      </a><br/>
+      <sub><b>Customer — detail / edit modal</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/products-lv.png"><img src="screenshots/products-lv.png" width="260" alt="Products"/></a><br/>
-      <sub><b>Products list (Low Stock toggle)</b></sub>
+      <a href="screenshots/orders-lv.png">
+        <img src="screenshots/orders-lv.png" width="160" alt="Orders — list view"/>
+      </a><br/>
+      <sub><b>Orders — list view</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/products-lv.png">
+        <img src="screenshots/products-lv.png" width="160" alt="Products — list with stock levels"/>
+      </a><br/>
+      <sub><b>Products — list with stock levels</b></sub>
     </td>
   </tr>
 </table>
 
-### Document Workflow
+---
+
+### Order → Delivery Note Workflow
+
+The core outbound flow converts a Sales Order into one or more Delivery Notes (DN) and then into Invoices. From the Order detail, press `D` to create a DN pre-populated with the order lines; products with insufficient stock are flagged (stock-control mode is configurable). Each DN can be exported to a branded A4 PDF — with or without pricing, with an embedded QR code, and with a related-document log at the bottom. Pressing `N` from the DN list creates a new standalone DN without an underlying order.
 
 <table>
   <tr>
     <td align="center">
-      <a href="screenshots/wz-dv.png"><img src="screenshots/wz-dv.png" width="260" alt="DN Delivery Note"/></a><br/>
-      <sub><b>DN Delivery Note detail</b></sub>
+      <a href="screenshots/orders-dv-posible-action.png">
+        <img src="screenshots/orders-dv-posible-action.png" width="160" alt="Order detail — available actions"/>
+      </a><br/>
+      <sub><b>Order detail — available actions</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/inv-dv-from-delivery-notes.png"><img src="screenshots/inv-dv-from-delivery-notes.png" width="260" alt="INV Invoice"/></a><br/>
-      <sub><b>INV Invoice (generated from delivery note)</b></sub>
+      <a href="screenshots/orders-dn-add-product-dynamic-filter.png">
+        <img src="screenshots/orders-dn-add-product-dynamic-filter.png" width="160" alt="DN — adding product (dynamic filter)"/>
+      </a><br/>
+      <sub><b>DN — adding product (dynamic filter)</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/odrers-dv.png"><img src="screenshots/odrers-dv.png" width="260" alt="Order detail"/></a><br/>
-      <sub><b>Order detail view</b></sub>
+      <a href="screenshots/transforming-order-to-dn.png">
+        <img src="screenshots/transforming-order-to-dn.png" width="160" alt="Converting Order → Delivery Note"/>
+      </a><br/>
+      <sub><b>Converting Order → Delivery Note</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/dn-stock-contr.png">
+        <img src="screenshots/dn-stock-contr.png" width="160" alt="DN — stock-control validation"/>
+      </a><br/>
+      <sub><b>DN — stock-control validation</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <a href="screenshots/invoice_pdf.png"><img src="screenshots/invoice_pdf.png" width="260" alt="INV Invoice PDF"/></a><br/>
-      <sub><b>INV Invoice — exported PDF (v2.1)</b></sub>
+      <a href="screenshots/dn-without-pricing.png">
+        <img src="screenshots/dn-without-pricing.png" width="160" alt="DN PDF — pricing hidden (configurable)"/>
+      </a><br/>
+      <sub><b>DN PDF — pricing hidden (configurable)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/saving-dn-pdf.png">
+        <img src="screenshots/saving-dn-pdf.png" width="160" alt="Saving DN as branded A4 PDF"/>
+      </a><br/>
+      <sub><b>Saving DN as branded A4 PDF</b></sub>
     </td>
   </tr>
 </table>
 
-### Finance & Admin
+---
+
+### Invoices & Credit Notes
+
+An Invoice (INV) is generated from one or more approved Delivery Notes in a single action. The INV detail shows the linked DNs, payment terms, and outstanding balance. Paid invoices can be partially or fully settled; the All Unpaid view aggregates outstanding balances across all customers. When a billing error occurs, a Credit Note (CN) reverses specific line items against the original invoice. Both INV and CN export to PDF with a QR code.
 
 <table>
   <tr>
     <td align="center">
-      <a href="screenshots/cash-lv.png"><img src="screenshots/cash-lv.png" width="260" alt="Kasa"/></a><br/>
-      <sub><b>Cash Register with CR/CP tabs</b></sub>
+      <a href="screenshots/new-inv-based-on-dn1.png">
+        <img src="screenshots/new-inv-based-on-dn1.png" width="160" alt="Select DNs to invoice"/>
+      </a><br/>
+      <sub><b>Select DNs to invoice</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/bank-lv.png"><img src="screenshots/bank-lv.png" width="260" alt="Bank"/></a><br/>
-      <sub><b>Bank Account entries</b></sub>
+      <a href="screenshots/new-inv-based-on-dn2.png">
+        <img src="screenshots/new-inv-based-on-dn2.png" width="160" alt="Invoice preview from DNs"/>
+      </a><br/>
+      <sub><b>Invoice preview from DNs</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/new-inv-based-on-dn3-posible-actions.png">
+        <img src="screenshots/new-inv-based-on-dn3-posible-actions.png" width="160" alt="Invoice detail — possible actions"/>
+      </a><br/>
+      <sub><b>Invoice detail — possible actions</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/new-inv-based-on-dn4-pdf.png">
+        <img src="screenshots/new-inv-based-on-dn4-pdf.png" width="160" alt="Invoice exported to PDF"/>
+      </a><br/>
+      <sub><b>Invoice exported to PDF</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### Goods Receipts & Stock
+
+Goods Receipts (GR) record inbound deliveries from suppliers and automatically increase stock levels on confirmation. A GR can be paid via Cash or Bank at the point of entry; if the cash register balance is insufficient, the payment automatically falls back to the bank account (v2.17 integrity guard). Stock Issues (SI) and Stock Outs (SO) adjust inventory directly for write-offs or internal consumption.
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/stock-in-from-supplier.png">
+        <img src="screenshots/stock-in-from-supplier.png" width="160" alt="GR — goods receipt list"/>
+      </a><br/>
+      <sub><b>GR — goods receipt list</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/stock-in-from-supplier-dv.png">
+        <img src="screenshots/stock-in-from-supplier-dv.png" width="160" alt="GR — detail with supplier & items"/>
+      </a><br/>
+      <sub><b>GR — detail with supplier &amp; items</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### Finance — Cash & Bank
+
+The Cash Register panel records Cash Receipts (CR) from customers and Cash Payments (CP) to suppliers, and shows a running balance. The balance can never go negative — any operation that would cause an overdraft is rejected with an error message. The Bank Account panel logs all electronic transfers and bank-backed GR payments. Both panels support PDF export for individual entries, and the Cash Register includes a one-click transfer-to-bank action.
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/cash-register-lv.png">
+        <img src="screenshots/cash-register-lv.png" width="160" alt="Cash Register — CR/CP ledger"/>
+      </a><br/>
+      <sub><b>Cash Register — CR/CP ledger</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/cash-register-transfer2bank.png">
+        <img src="screenshots/cash-register-transfer2bank.png" width="160" alt="Transfer cash → bank account"/>
+      </a><br/>
+      <sub><b>Transfer cash → bank account</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/cash-register-control-never-less-than-0.png">
+        <img src="screenshots/cash-register-control-never-less-than-0.png" width="160" alt="Non-negative balance enforcement"/>
+      </a><br/>
+      <sub><b>Non-negative balance enforcement</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/bank-acc-log.png">
+        <img src="screenshots/bank-acc-log.png" width="160" alt="Bank Account — entry log"/>
+      </a><br/>
+      <sub><b>Bank Account — entry log</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <a href="screenshots/cash-in-receipt.png"><img src="screenshots/cash-in-receipt.png" width="260" alt="CR Cash Receipt PDF"/></a><br/>
-      <sub><b>CR Cash Receipt — exported PDF (v2.2)</b></sub>
+      <a href="screenshots/register-paym-from-customer.png">
+        <img src="screenshots/register-paym-from-customer.png" width="160" alt="Register customer payment (CR)"/>
+      </a><br/>
+      <sub><b>Register customer payment (CR)</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### Reconciliation
+
+The Reconciliation panel is the AR/AP control centre. The default "All Unpaid" view lists every open invoice across all customers (or all outstanding GRs across all suppliers) in a single scrollable table. Filtering by entity switches to a Statement view for one customer or supplier — showing the document trail, payment history, and net outstanding balance. Press `S` to toggle between All Unpaid and Statement; `P` to record a payment directly from the panel.
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/reconciliation.png">
+        <img src="screenshots/reconciliation.png" width="160" alt="Reconciliation — All Unpaid view"/>
+      </a><br/>
+      <sub><b>Reconciliation — All Unpaid view</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/bank-transfer-pdf.png"><img src="screenshots/bank-transfer-pdf.png" width="260" alt="Bank Entry PDF"/></a><br/>
-      <sub><b>Bank Account Entry — exported PDF (v2.2)</b></sub>
+      <a href="screenshots/reconciliation-customer-statement.png">
+        <img src="screenshots/reconciliation-customer-statement.png" width="160" alt="Customer statement view"/>
+      </a><br/>
+      <sub><b>Customer statement view</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### Admin & Settings
+
+Business Details stores company identity (name, address, VAT, bank account, logo) used on all PDFs — changes take effect immediately on next export. The Settings panel configures currency, theme (Ctrl+P palette), stock-control rules, Demo/Production mode, and the new Backup & Restore controls. User Management handles account creation, PIN resets, and role assignment. The SQL Query editor accepts any read/write SQLite statement and renders results in a live DataTable. All admin panels are hidden from non-admin users.
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/business-details-set.png">
+        <img src="screenshots/business-details-set.png" width="160" alt="Business Details — company identity"/>
+      </a><br/>
+      <sub><b>Business Details — company identity</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/settings1.png">
+        <img src="screenshots/settings1.png" width="160" alt="Settings — currency & theme"/>
+      </a><br/>
+      <sub><b>Settings — currency &amp; theme</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/settings2-themes.png">
+        <img src="screenshots/settings2-themes.png" width="160" alt="Theme picker (Ctrl+P)"/>
+      </a><br/>
+      <sub><b>Theme picker (Ctrl+P)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/backup.png">
+        <img src="screenshots/backup.png" width="160" alt="Backup & Restore settings"/>
+      </a><br/>
+      <sub><b>Backup &amp; Restore settings</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <a href="screenshots/sql-query.png"><img src="screenshots/sql-query.png" width="260" alt="SQL Query"/></a><br/>
+      <a href="screenshots/user-mngmt.png">
+        <img src="screenshots/user-mngmt.png" width="160" alt="User Management"/>
+      </a><br/>
+      <sub><b>User Management</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/SQL-Query-editor.png">
+        <img src="screenshots/SQL-Query-editor.png" width="160" alt="SQL Query editor"/>
+      </a><br/>
       <sub><b>SQL Query editor</b></sub>
     </td>
-    <td align="center">
-      <a href="screenshots/themes.png"><img src="screenshots/themes.png" width="260" alt="Theme picker"/></a><br/>
-      <sub><b>Theme picker</b></sub>
-    </td>
   </tr>
+</table>
+
+---
+
+### Help & Keyboard
+
+The built-in Help panel (`?`) contains a searchable FAQ organised by category. Pressing `?` from any panel pre-filters the help index to the current context (e.g. pressing `?` on the Invoice list jumps to the "invoice" topic). The keyboard cheat-sheet screenshots show the complete shortcut reference available from within the app.
+
+<table>
   <tr>
     <td align="center">
-      <a href="screenshots/business-details-settings.png"><img src="screenshots/business-details-settings.png" width="260" alt="Business Details"/></a><br/>
-      <sub><b>Business Details — tabbed layout (v2.2)</b></sub>
+      <a href="screenshots/help.png">
+        <img src="screenshots/help.png" width="160" alt="Help panel — context-sensitive search"/>
+      </a><br/>
+      <sub><b>Help panel — context-sensitive search</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/general-settings.png"><img src="screenshots/general-settings.png" width="260" alt="General Settings"/></a><br/>
-      <sub><b>General Settings panel</b></sub>
+      <a href="screenshots/key-cheat-sheet1.png">
+        <img src="screenshots/key-cheat-sheet1.png" width="160" alt="Keyboard cheat sheet (page 1)"/>
+      </a><br/>
+      <sub><b>Keyboard cheat sheet (page 1)</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/key-cheat-sheet2.png">
+        <img src="screenshots/key-cheat-sheet2.png" width="160" alt="Keyboard cheat sheet (page 2)"/>
+      </a><br/>
+      <sub><b>Keyboard cheat sheet (page 2)</b></sub>
     </td>
   </tr>
 </table>
