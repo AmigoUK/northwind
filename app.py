@@ -1,5 +1,5 @@
 """
-app.py — Northwind Traders v2.17
+app.py — Northwind Traders v2.18
 Textual TUI entry point.
 """
 from __future__ import annotations
@@ -46,7 +46,7 @@ from screens.login      import LoginScreen
 from screens.sql        import SqlPanel
 from screens.users      import UsersPanel
 from screens.settings   import SettingsPanel
-from screens.modals          import QuitConfirmModal
+from screens.modals          import QuitConfirmModal, BackupDoneModal
 from screens.charts          import ChartsPanel
 from screens.dn              import DNPanel
 from screens.inv             import INVPanel
@@ -183,7 +183,7 @@ class SidebarNav(Widget):
 
 
 class NorthwindApp(App):
-    TITLE = "Northwind Traders v2.17"
+    TITLE = "Northwind Traders v2.18"
     CSS_PATH = "northwind.tcss"
 
     BINDINGS = [
@@ -339,26 +339,36 @@ class NorthwindApp(App):
 
     def _on_quit_confirmed(self, result: str) -> None:
         if result == "backup":
-            path = self._do_backup()
-            if path:
-                self.notify(f"Backup saved: {path}", title="Backup", timeout=4)
-            self.exit()
+            outcome = self._do_backup()
+            if outcome.startswith("ERROR:"):
+                self.push_screen(
+                    BackupDoneModal(success=False, message=outcome[6:]),
+                    lambda exit_anyway: self.exit() if exit_anyway else None,
+                )
+            else:
+                self.push_screen(
+                    BackupDoneModal(success=True, message=outcome),
+                    lambda _: self.exit(),
+                )
         elif result == "quit":
             self.exit()
         # "cancel" → do nothing
 
     def _do_backup(self) -> str:
-        """Copy northwind.db → northwind_backup_YYYY-MM-DD_HH-MM-SS.db.
-        Returns the backup filename, or '' on error."""
-        src = "northwind.db"
+        """Copy northwind.db → northwind_backup_YYYY-MM-DD_HH-MM-SS.db in the
+        configured backup directory (or cwd if blank).
+        Returns the destination path, or 'ERROR:<msg>' on failure."""
+        import data.settings
+        src   = "northwind.db"
         stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        dst = f"northwind_backup_{stamp}.db"
+        fname = f"northwind_backup_{stamp}.db"
+        bdir  = data.settings.get_backup_path()
+        dst   = os.path.join(os.path.expanduser(bdir), fname) if bdir else fname
         try:
             shutil.copy2(src, dst)
             return dst
         except OSError as e:
-            self.notify(f"Backup failed: {e}", severity="error", timeout=6)
-            return ""
+            return f"ERROR:{e}"
 
     def action_open_help(self) -> None:
         """Switch to the Help panel, pre-filtered to the current panel's context."""
